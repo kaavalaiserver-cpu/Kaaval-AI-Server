@@ -1,0 +1,267 @@
+.cameras-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cameras-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.cameras-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cameras-header-left h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.camera-counts {
+  display: flex;
+  gap: 12px;
+}
+
+.cam-count {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.cam-count.online {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.cam-count.offline {
+  background: rgba(227, 27, 35, 0.15);
+  color: var(--red);
+}
+
+.cameras-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.view-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.view-toggle button {
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: var(--bg-card);
+  color: var(--text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.view-toggle button.active {
+  background: var(--navy);
+  color: #fff;
+}
+
+.cameras-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+  color: var(--text-dim);
+  font-size: 0.95rem;
+}
+
+/* Grid View */
+.cameras-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.camera-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.camera-card:hover {
+  transform: translateY(-2px);
+}
+
+.camera-card.online {
+  border-left: 3px solid #22c55e;
+}
+
+.camera-card.offline {
+  border-left: 3px solid var(--red);
+}
+
+.cam-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px 10px;
+  color: var(--text-primary);
+}
+
+.cam-card-id {
+  flex: 1;
+  font-weight: 700;
+  font-size: 0.95rem;
+  font-family: monospace;
+}
+
+.cam-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.cam-dot.on {
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+.cam-dot.off {
+  background: var(--red);
+  box-shadow: 0 0 8px rgba(227, 27, 35, 0.4);
+}
+
+.cam-card-body {
+  padding: 0 16px 14px;
+}
+
+.cam-card-location {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.cam-card-stats {
+  display: flex;
+  gap: 20px;
+}
+
+.cam-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.cam-stat-val {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cam-stat-val.green { color: #22c55e; }
+.cam-stat-val.red { color: var(--red); }
+
+.cam-stat-lbl {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cam-card-footer {
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+/* List View */
+.cameras-list {
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.cameras-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cameras-list th {
+  padding: 12px 16px;
+  text-align: left;
+  background: var(--bg-card);
+  color: var(--text-dim);
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.cameras-list td {
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.cameras-list tr:hover td {
+  background: rgba(11, 58, 110, 0.04);
+}
+
+.cam-id-cell {
+  font-weight: 700;
+  font-family: monospace;
+  color: var(--accent);
+}
+
+.cam-location {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-primary);
+}
+
+.cam-status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.cam-status-badge.online {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+}
+
+.cam-status-badge.offline {
+  background: rgba(227, 27, 35, 0.15);
+  color: var(--red);
+}
+
+.lastactive-cell {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+/* --- Added Video Modal & Player Styles --- */
+.modal-content.video-modal { max-width: 900px; width: 95vw; padding: 24px; } .video-player-container { position: relative; width: 100%; aspect-ratio: 16 / 9; background: black; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; } .live-video-feed { width: 100%; height: 100%; object-fit: contain; } .live-indicator { position: absolute; top: 10px; left: 10px; background: rgba(220, 38, 38, 0.9); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center; gap: 6px; z-index: 10; } .live-indicator .dot { width: 8px; height: 8px; background: white; border-radius: 50%; animation: blink 2s infinite; } @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } } /* Card Updates */ .cam-preview { height: 160px; background: #0f172a; position: relative; cursor: pointer; overflow: hidden; } .cam-thumb-placeholder { width: 100%; height: 100%; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); opacity: 0.8; } .play-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); color: white; opacity: 0.8; transition: opacity 0.2s; } .cam-preview:hover .play-overlay { opacity: 1; background: rgba(0,0,0,0.5); } .cam-card-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; } .cam-card-id { font-weight: 700; font-size: 0.95rem; color: var(--text-primary); } .btn-text { display: flex; align-items: center; gap: 6px; background: none; border: none; color: var(--navy); font-weight: 600; cursor: pointer; padding: 4px 8px; border-radius: 4px; } .btn-text:hover { background: rgba(0,0,0,0.05); }

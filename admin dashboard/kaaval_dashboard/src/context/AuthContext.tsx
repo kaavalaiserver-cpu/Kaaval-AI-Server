@@ -1,0 +1,106 @@
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import axios from 'axios';
+import { API_BASE } from '../config';
+
+export type Role =
+  | 'super_admin'
+  | 'traffic_admin'
+  | 'dev_admin'
+  | 'colachel_admin'
+  | 'marthandam_admin'
+  | 'nagercoil_admin'
+  | 'kanyakumari_admin'
+  | 'thuckalay_admin';
+
+export interface AuthUser {
+  id: string;
+  username: string;
+  name: string;
+  role: Role;
+  subdivision?: string | null;
+}
+
+interface AuthContextType {
+  user: AuthUser | null;
+  token: string | null;
+  loading: boolean;
+  login: (username: string, password: string) => Promise<void>;
+  logout: () => void;
+  hasRole: (...roles: Role[]) => boolean;
+}
+
+const AuthContext = createContext<AuthContextType>(null!);
+
+export const useAuth = () => useContext(AuthContext);
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Set auth header globally whenever token changes
+  useEffect(() => {
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      delete axios.defaults.headers.common['Authorization'];
+    }
+  }, [token]);
+
+
+  // Restore session from localStorage on mount
+  useEffect(() => {
+    const savedToken = localStorage.getItem('kaaval_token');
+    const savedUser = localStorage.getItem('kaaval_user');
+    if (savedToken && savedUser) {
+      setToken(savedToken);
+      setUser(JSON.parse(savedUser));
+    }
+    setLoading(false);
+  }, []);
+
+  const login = async (username: string, password: string) => {
+    const res = await axios.post(`${API_BASE}/auth/login`, { username, password });
+    const { access_token, user: userData } = res.data;
+    setToken(access_token);
+    setUser(userData);
+    localStorage.setItem('kaaval_token', access_token);
+    localStorage.setItem('kaaval_user', JSON.stringify(userData));
+  };
+
+  const logout = useCallback(() => {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('kaaval_token');
+    localStorage.removeItem('kaaval_user');
+  }, []);
+
+  // Handle 401 Unauthorized globally
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error.response?.status === 401) {
+          logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+    return () => {
+      axios.interceptors.response.eject(interceptor);
+    };
+  }, [logout]);
+
+
+
+  const hasRole = (...roles: Role[]) => {
+    if (!user) return false;
+    return roles.includes(user.role);
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, token, loading, login, logout, hasRole }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};

@@ -1,0 +1,96 @@
+
+/* ═══ RESPONSIVE ═══ */
+@media (max-width: 768px) {
+  .layout-container {
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Sidebar Overlay Behavior */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 260px !important; /* Force width */
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* When collapsed (hidden on mobile) */
+  .sidebar.collapsed {
+    transform: translateX(-100%);
+    width: 260px !important; /* Maintain width for transform */
+    border-right: none;
+  }
+
+  /* Main Content Layout */
+  .main-content {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+
+  /* Mobile Backdrop */
+  .mobile-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+    z-index: 90; /* Behind sidebar (z-index 100), above content */
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  /* Adjust Toolbar elements */
+  .top-bar {
+    padding: 0 1rem;
+    gap: 0.5rem;
+  }
+
+  .top-bar-left {
+    gap: 0.5rem;
+  }
+
+  .top-bar h3 {
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+  }
+
+  /* Hide detailed user info */
+  .user-info {
+    display: none;
+  }
+  
+  .user-badge {
+    padding: 6px;
+    border-radius: 50%;
+    justify-content: center;
+  }
+
+  /* Adjust Search */
+  .search-container.open input {
+    width: 140px;
+    position: absolute;
+    top: 50px;
+    right: 10px;
+    background: var(--bg-card);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    z-index: 50;
+  }
+  
+  /* Ensure toggle button inside sidebar is visible and acts as close */
+  .sidebar .toggle-sidebar-btn {
+    display: flex; /* Ensure it's visible */
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

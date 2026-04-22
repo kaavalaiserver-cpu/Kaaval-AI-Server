@@ -1,0 +1,157 @@
+.sysstatus-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sysstatus-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+  color: var(--text-dim);
+}
+
+.sysstatus-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sysstatus-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* Health Grid */
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.health-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 16px;
+  background: var(--bg-card);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.health-card.ok {
+  border-left: 3px solid #22c55e;
+}
+
+.health-card.err {
+  border-left: 3px solid var(--red);
+}
+
+.health-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 58, 110, 0.15);
+  color: var(--accent);
+}
+
+.health-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.health-label {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.health-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+}
+
+.health-card.ok .health-status { color: #22c55e; }
+.health-card.err .health-status { color: var(--red); }
+
+/* Camera Overview */
+.sys-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin: 0 0 12px;
+}
+
+.cam-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.cam-ov-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  gap: 6px;
+}
+
+.cam-ov-card .green { color: #22c55e; }
+.cam-ov-card .red { color: var(--red); }
+.cam-ov-card .blue { color: var(--accent); }
+
+.cam-ov-val {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cam-ov-lbl {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* System Info Table */
+.sys-info-table {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.info-row:last-child { border-bottom: none; }
+
+.info-label {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.info-value {
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+}

@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+.dart_tool/
+.packages
+
+# Build outputs
+build/
+dist/
+.next/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+*.egg-info/
+
+# Environment
+.env
+.env.local
+*.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Flutter
+.flutter-plugins
+.flutter-plugins-dependencies
+*.lock
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local properties
+local.properties
+
+# Credentials
+credentials.json
+*.key
+*.pem

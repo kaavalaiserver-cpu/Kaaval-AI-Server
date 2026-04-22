@@ -1,0 +1,32 @@
+{
+  "type": "FeatureCollection",
+  "name": "kanyakumari_district",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Kanyakumari District"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [77.12, 8.38],
+            [77.22, 8.40],
+            [77.34, 8.38],
+            [77.48, 8.34],
+            [77.60, 8.26],
+            [77.68, 8.14],
+            [77.67, 8.02],
+            [77.57, 7.95],
+            [77.44, 7.95],
+            [77.30, 8.00],
+            [77.18, 8.10],
+            [77.12, 8.22],
+            [77.12, 8.38]
+          ]
+        ]
+      }
+    }
+  ]
+}
