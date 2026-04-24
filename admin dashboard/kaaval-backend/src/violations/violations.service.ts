@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not, In, Between, ILike } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -58,7 +58,7 @@ export class ViolationsService {
   private mapStatusToDashboard(status: string): string {
     const map: Record<string, string> = {
       PENDING: 'Pending',
-      READY: 'Pending',
+      READY: 'Ready',
       MANUAL_REVIEW: 'Review',
       CHALLAN_ISSUED: 'Verified',
       VERIFIED: 'Verified',
@@ -100,10 +100,10 @@ export class ViolationsService {
       vehicle_number: v.vehicleNumber || 'UNREAD',
       location,
       camera_id: cameraId,
-      violation_confidence: Math.min(confidence + 0.1, 1.0),
-      plate_confidence: confidence,
+      violation_confidence: Math.min((confidence || 0) + 0.1, 1.0),
+      plate_confidence: confidence || 0,
       cam_clarity: 0.85,
-      confidence,
+      confidence: confidence || 0,
       status: this.mapStatusToDashboard(v.status),
       raw_status: v.status,
       image_url: v.imageUrl || '',
@@ -117,6 +117,51 @@ export class ViolationsService {
       review_notes: v.reviewNotes,
       metadata: v.metadata,
     };
+  }
+
+  private getViolationLocationText(v: Violation): string {
+    const meta = (v.metadata as Record<string, unknown> | null) ?? null;
+    return (
+      (meta?.location as string | undefined) ??
+      (meta?.location_name as string | undefined) ??
+      CAMERA_LOCATIONS[v.cameraId ?? ''] ??
+      ''
+    );
+  }
+
+  private getViolationSubdivisionText(v: Violation): string {
+    const meta = (v.metadata as Record<string, unknown> | null) ?? null;
+    return (
+      (meta?.subdivision as string | undefined) ??
+      (meta?.division as string | undefined) ??
+      (meta?.region as string | undefined) ??
+      ''
+    );
+  }
+
+  private canAccessViolation(user: ScopedUser | undefined, v: Violation): boolean {
+    return isInUserScope(
+      user,
+      v.locationLat,
+      v.locationLng,
+      this.getViolationLocationText(v),
+      this.getViolationSubdivisionText(v),
+    );
+  }
+
+  private assertViolationAccess(user: ScopedUser | undefined, v: Violation): void {
+    if (!this.canAccessViolation(user, v)) {
+      throw new ForbiddenException('You do not have access to this violation');
+    }
+  }
+
+  private async invalidateStatsCache() {
+    await this.cache.del('violation-stats');
+    await this.cache.del('violation-stats-colachel_admin');
+    await this.cache.del('violation-stats-marthandam_admin');
+    await this.cache.del('violation-stats-nagercoil_admin');
+    await this.cache.del('violation-stats-kanyakumari_admin');
+    await this.cache.del('violation-stats-thuckalay_admin');
   }
 
 
@@ -272,16 +317,7 @@ export class ViolationsService {
         order: { createdAt: 'DESC' },
       });
 
-      const scoped = violations.filter((v) =>
-        isInUserScope(
-          user,
-          v.locationLat,
-          v.locationLng,
-          ((v.metadata as Record<string, unknown> | null)?.location as string | undefined) ??
-            ((v.metadata as Record<string, unknown> | null)?.location_name as string | undefined) ??
-            CAMERA_LOCATIONS[v.cameraId ?? ''],
-        ),
-      );
+      const scoped = violations.filter((v) => this.canAccessViolation(user, v));
 
       const paged = scoped.slice(skip, skip + limit);
       return {
@@ -332,9 +368,10 @@ export class ViolationsService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, user?: ScopedUser) {
     const v = await this.violationRepo.findOneBy({ id });
     if (!v) throw new NotFoundException('Violation not found');
+    this.assertViolationAccess(user, v);
     return this.formatViolation(v);
   }
 
@@ -350,16 +387,7 @@ export class ViolationsService {
       select: ['id', 'status', 'violationType', 'createdAt', 'locationLat', 'locationLng', 'cameraId', 'metadata'],
     });
 
-    const scopedData = all.filter((v) =>
-      isInUserScope(
-        user,
-        v.locationLat,
-        v.locationLng,
-        ((v.metadata as Record<string, unknown> | null)?.location as string | undefined) ??
-          ((v.metadata as Record<string, unknown> | null)?.location_name as string | undefined) ??
-          CAMERA_LOCATIONS[v.cameraId ?? ''],
-      ),
-    );
+    const scopedData = all.filter((v) => this.canAccessViolation(user, v));
 
     const total = scopedData.length;
     const pending = scopedData.filter((v) =>
@@ -384,9 +412,10 @@ export class ViolationsService {
     return stats;
   }
 
-  async verify(id: string, dto: VerifyViolationDto) {
+  async verify(id: string, dto: VerifyViolationDto, user?: ScopedUser) {
     const v = await this.violationRepo.findOneBy({ id });
     if (!v) throw new NotFoundException('Violation not found');
+    this.assertViolationAccess(user, v);
 
     const newStatus = this.mapStatusFromAction(dto.action);
     v.status = newStatus;
@@ -401,7 +430,7 @@ export class ViolationsService {
     }
 
     await this.violationRepo.save(v);
-    await this.cache.del('violation-stats');
+    await this.invalidateStatsCache();
 
     return {
       status: 'success',
@@ -410,9 +439,10 @@ export class ViolationsService {
     };
   }
 
-  async update(id: string, dto: UpdateViolationDto) {
+  async update(id: string, dto: UpdateViolationDto, user?: ScopedUser) {
     const v = await this.violationRepo.findOneBy({ id });
     if (!v) throw new NotFoundException('Violation not found');
+    this.assertViolationAccess(user, v);
 
     if (dto.vehicleNumber !== undefined) v.vehicleNumber = dto.vehicleNumber;
     if (dto.violationType !== undefined) v.violationType = dto.violationType;
@@ -421,15 +451,16 @@ export class ViolationsService {
     if (dto.reviewNotes !== undefined) v.reviewNotes = dto.reviewNotes;
 
     await this.violationRepo.save(v);
-    await this.cache.del('violation-stats');
+    await this.invalidateStatsCache();
     return this.formatViolation(v);
   }
 
-  async remove(id: string) {
+  async remove(id: string, user?: ScopedUser) {
     const v = await this.violationRepo.findOneBy({ id });
     if (!v) throw new NotFoundException('Violation not found');
+    this.assertViolationAccess(user, v);
     await this.violationRepo.remove(v);
-    await this.cache.del('violation-stats');
+    await this.invalidateStatsCache();
     return { status: 'deleted', id };
   }
 

@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -18,6 +18,18 @@ export class SystemService {
     @Inject(CACHE_MANAGER)
     private readonly cache: Cache,
   ) {}
+
+  async getAiStatus() {
+    const aiUrl = process.env.AI_BACKEND_URL || 'http://127.0.0.1:8000';
+    try {
+      const res = await fetch(`${aiUrl}/status`);
+      if (!res.ok) throw new Error('AI Backend unreachable');
+      return await res.json();
+    } catch (err) {
+      Logger.error(`Failed to fetch AI status: ${err.message}`, 'SystemService');
+      return []; // Return empty array if unreachable
+    }
+  }
 
   async getLogs(limit = 50, page = 1, level?: string) {
     const where: Record<string, unknown> = {};

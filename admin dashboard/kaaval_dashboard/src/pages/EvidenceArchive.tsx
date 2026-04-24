@@ -52,7 +52,7 @@ const EvidenceArchive = () => {
       r.location,
       r.timestamp,
       r.status,
-      Math.round(r.confidence * 100) + '%',
+      Math.round((r.confidence || 0) * 100) + '%',
     ]);
     const csv = [headers, ...rows].map((r) => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -150,7 +150,7 @@ const EvidenceArchive = () => {
                       <br />
                       <span>{new Date(v.timestamp).toLocaleTimeString()}</span>
                     </td>
-                    <td>{Math.round(v.confidence * 100)}%</td>
+                    <td>{v.confidence != null ? `${Math.round(v.confidence * 100)}%` : 'N/A'}</td>
                     <td>
                       <span className={`status-badge ${v.status === 'Verified' ? 'green' : v.status === 'Rejected' ? 'red' : 'orange'}`}>
                         {v.status}

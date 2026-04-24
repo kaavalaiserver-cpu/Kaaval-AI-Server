@@ -33,4 +33,9 @@ export class SystemController {
   getHealth() {
     return this.systemService.getHealth();
   }
+
+  @Get('ai-status')
+  getAiStatus() {
+    return this.systemService.getAiStatus();
+  }
 }

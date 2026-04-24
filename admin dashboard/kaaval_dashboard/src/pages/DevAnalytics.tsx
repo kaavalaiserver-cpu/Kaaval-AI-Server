@@ -56,8 +56,8 @@ const DevAnalytics = () => {
     } 
 
     try {
-      // Fetch Plate Recognizer API usage directly from python service
-      const plateRes = await axios.get<PlateApiStatus[]>('http://localhost:8000/status');
+      // Fetch Plate Recognizer API usage via backend proxy
+      const plateRes = await axios.get<PlateApiStatus[]>(`${API_BASE}/system/ai-status`);
       setPlateStatus(plateRes.data);
     } catch (err) {
       console.error("Failed to fetch plate api status", err);
@@ -184,7 +184,7 @@ const DevAnalytics = () => {
                       <div className="usage-bar-container">
                         <div 
                           className="usage-bar" 
-                          style={{ width: `${Math.min((acct.calls_used / acct.total_limit) * 100, 100)}%` }}
+                          style={{ width: `${Math.min(((acct.calls_used || 0) / (acct.total_limit || 1)) * 100, 100)}%` }}
                         ></div>
                       </div>
                       

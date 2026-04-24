@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   User,
   LogOut,
+  Settings,
 } from 'lucide-react';
 import type { SystemStatus } from '../types';
 import NotificationPanel from './NotificationPanel';
@@ -162,6 +163,8 @@ const Layout = () => {
           <NavItem to="/system" icon={<Activity size={20} />} label="System Status" isOpen={isSidebarOpen}
             roles={['dev_admin']} />
           <NavItem to="/logs" icon={<FileTerminal size={20} />} label="System Logs" isOpen={isSidebarOpen}
+            roles={['dev_admin']} />
+          <NavItem to="/camera-config" icon={<Settings size={20} />} label="Camera Config" isOpen={isSidebarOpen}
             roles={['dev_admin']} />
         </nav>
 

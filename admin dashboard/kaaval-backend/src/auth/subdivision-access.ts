@@ -13,6 +13,13 @@ interface SubdivisionScope {
   polygon: LngLat[];
 }
 
+function normalizeText(value?: string | null): string {
+  return (value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
 export const SUBDIVISION_ROLES: Role[] = [
   Role.COLACHEL_ADMIN,
   Role.MARTHANDAM_ADMIN,
@@ -150,6 +157,7 @@ export function isInUserScope(
   lat?: number | null,
   lng?: number | null,
   locationText?: string | null,
+  subdivisionText?: string | null,
 ): boolean {
   if (!user || hasFullAccessRole(user.role)) {
     return true;
@@ -160,11 +168,20 @@ export function isInUserScope(
     return false;
   }
 
+  const expected = normalizeText(user.subdivision ?? subdivision.name);
+  const explicitSubdivision = normalizeText(subdivisionText);
+
+  // Prefer explicit subdivision labels (metadata/user profile) for strict isolation.
+  if (explicitSubdivision) {
+    if (explicitSubdivision === expected) return true;
+    return subdivision.keywords.some((k) => explicitSubdivision.includes(normalizeText(k)));
+  }
+
   if (typeof lat === 'number' && typeof lng === 'number') {
     return pointInPolygon([lng, lat], subdivision.polygon);
   }
 
-  const text = (locationText ?? '').toLowerCase();
+  const text = normalizeText(locationText);
   if (!text) return false;
-  return subdivision.keywords.some((k) => text.includes(k));
+  return subdivision.keywords.some((k) => text.includes(normalizeText(k)));
 }

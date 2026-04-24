@@ -336,7 +336,10 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    const fetchAll = async () => {
+    const fetchAll = async (background = false) => {
+      // Skip if page is hidden to save resources
+      if (background && document.visibilityState !== 'visible') return;
+
       const [statsRes, violationsRes, camerasRes, systemRes] = await Promise.allSettled([
         axios.get<ViolationStats>(`${API_BASE}/violations/stats`),
         axios.get<{ data: ViolationItem[] }>(`${API_BASE}/violations?limit=5`),
@@ -365,17 +368,9 @@ const Dashboard = () => {
           cameras: prev?.cameras ?? [],
         }));
       }
-
-      if (statsRes.status === 'rejected' || violationsRes.status === 'rejected' || camerasRes.status === 'rejected') {
-        console.error('Dashboard partial fetch error:', {
-          stats: statsRes.status,
-          violations: violationsRes.status,
-          cameras: camerasRes.status,
-        });
-      }
     };
     fetchAll();
-    const interval = setInterval(fetchAll, 5000);
+    const interval = setInterval(() => fetchAll(true), 3000);
     return () => clearInterval(interval);
   }, []);
 

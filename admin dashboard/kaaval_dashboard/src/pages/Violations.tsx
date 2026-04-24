@@ -47,22 +47,25 @@ const Violations = () => {
   // Selection State
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const fetchViolations = useCallback(async (background = false) => {
+  const fetchViolations = useCallback(async (background = false, signal?: AbortSignal) => {
     if (!background) {
       setLoading(true);
-      setSelectedIds([]); // Clear selection on manual fetch/filter change
+      setSelectedIds([]); 
     }
     
+    // Skip if page is hidden to save resources
+    if (background && document.visibilityState !== 'visible') return;
+
     try {
-      const params: Record<string, string | number> = { limit: 20, page };
+      const params: Record<string, string | number> = { limit: 50, page };
       if (filters.status) params.status = filters.status;
       if (filters.cameraId) params.cameraId = filters.cameraId;
       if (filters.vehicleNumber) params.vehicleNumber = filters.vehicleNumber;
       if (filters.violationType) params.violationType = filters.violationType;
 
       const [vRes, sRes] = await Promise.all([
-        axios.get<PaginatedViolations>(`${API_BASE}/violations`, { params }),
-        axios.get<ViolationStats>(`${API_BASE}/violations/stats`),
+        axios.get<PaginatedViolations>(`${API_BASE}/violations`, { params, signal }),
+        axios.get<ViolationStats>(`${API_BASE}/violations/stats`, { signal }),
       ]);
 
       const data = vRes.data.data ?? (vRes.data as unknown as ViolationItem[]);
@@ -70,6 +73,7 @@ const Violations = () => {
       setTotal(vRes.data.total ?? (Array.isArray(data) ? data.length : 0));
       setStats(sRes.data);
     } catch (err) {
+      if (axios.isCancel(err)) return;
       console.error(err);
     } finally {
       if (!background) setLoading(false);
@@ -77,13 +81,17 @@ const Violations = () => {
   }, [page, filters]);
 
   // Initial fetch when filters change
-  useEffect(() => { fetchViolations(); }, [fetchViolations]);
+  useEffect(() => { 
+    const controller = new AbortController();
+    fetchViolations(false, controller.signal); 
+    return () => controller.abort();
+  }, [fetchViolations]);
 
-  // Auto-refresh every 2 seconds
+  // Auto-refresh every 3 seconds (optimized for live feel)
   useEffect(() => {
     const interval = setInterval(() => {
       fetchViolations(true);
-    }, 2000);
+    }, 3000);
     return () => clearInterval(interval);
   }, [fetchViolations]);
 
@@ -309,8 +317,8 @@ const Violations = () => {
                      <div className="detail-row">
                         <span className="label">Confidence:</span>
                         <div className="conf-wrapper">
-                             <div className="conf-bar-fill" style={{width: `${selectedViolation.confidence * 100}%`, background: selectedViolation.confidence > 0.8 ? '#22c55e' : 'orange'}}></div>
-                             <span>{Math.round(selectedViolation.confidence * 100)}%</span>
+                         <div className="conf-bar-fill" style={{width: `${(selectedViolation.confidence || 0) * 100}%`, background: (selectedViolation.confidence || 0) > 0.8 ? '#22c55e' : 'orange'}}></div>
+                             <span>{Math.round((selectedViolation.confidence || 0) * 100)}%</span>
                         </div>
                     </div>
                     
@@ -478,7 +486,12 @@ const Violations = () => {
                         title="Click to Review"
                     >
                       {(v.proof_img_url || v.image_url) ? (
-                        <img src={v.proof_img_url || v.image_url} alt="Evidence" />
+                        <img 
+                          src={v.proof_img_url || v.image_url} 
+                          alt="Evidence" 
+                          loading="lazy" 
+                          style={{ objectFit: 'cover', width: '100%', height: '100%' }}
+                        />
                       ) : (
                         <div className="no-evidence">—</div>
                       )}
@@ -504,9 +517,9 @@ const Violations = () => {
                     <div className="confidence-bar">
                       <div
                         className="confidence-fill"
-                        style={{ width: `${Math.round(v.confidence * 100)}%` }}
+                        style={{ width: `${Math.round((v.confidence || 0) * 100)}%` }}
                       />
-                      <span>{Math.round(v.confidence * 100)}%</span>
+                      <span>{Math.round((v.confidence || 0) * 100)}%</span>
                     </div>
                   </td>
                   <td>
@@ -563,9 +576,9 @@ const Violations = () => {
           Prev
         </button>
         <span>
-          Page {page} &bull; {total} total
+          Page {page} of {Math.ceil(total / 50) || 1} &bull; {total} total
         </span>
-        <button disabled={violations.length < 20} onClick={() => setPage(page + 1)}>
+        <button disabled={violations.length < 50} onClick={() => setPage(page + 1)}>
           Next
         </button>
       </div>

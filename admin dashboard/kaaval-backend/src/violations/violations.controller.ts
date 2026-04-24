@@ -83,30 +83,35 @@ export class ViolationsController {
   }
 
   @Get(':id')
-  @Roles(Role.SUPER_ADMIN, Role.TRAFFIC_ADMIN, Role.DEV_ADMIN)
-  findOne(@Param('id') id: string) {
-    return this.violationsService.findOne(id);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.TRAFFIC_ADMIN, Role.DEV_ADMIN, ...SUBDIVISION_ROLES)
+  findOne(@Param('id') id: string, @Request() req: any) {
+    return this.violationsService.findOne(id, req.user);
   }
 
   @Post(':id/verify')
-  @Roles(Role.SUPER_ADMIN, Role.TRAFFIC_ADMIN, Role.DEV_ADMIN)
-  verify(@Param('id') id: string, @Body() dto: VerifyViolationDto) {
-    return this.violationsService.verify(id, dto);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.TRAFFIC_ADMIN, Role.DEV_ADMIN, ...SUBDIVISION_ROLES)
+  verify(@Param('id') id: string, @Body() dto: VerifyViolationDto, @Request() req: any) {
+    return this.violationsService.verify(id, dto, req.user);
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN, Role.TRAFFIC_ADMIN, Role.DEV_ADMIN)
-  update(@Param('id') id: string, @Body() dto: UpdateViolationDto) {
-    return this.violationsService.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateViolationDto, @Request() req: any) {
+    return this.violationsService.update(id, dto, req.user);
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN, Role.DEV_ADMIN)
-  remove(@Param('id') id: string) {
-    return this.violationsService.remove(id);
+  remove(@Param('id') id: string, @Request() req: any) {
+    return this.violationsService.remove(id, req.user);
   }
 
   @Post('batch-upload')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN, Role.DEV_ADMIN)
   @UseInterceptors(FilesInterceptor('files', 50))
   batchUpload(@UploadedFiles() files: Express.Multer.File[]) {

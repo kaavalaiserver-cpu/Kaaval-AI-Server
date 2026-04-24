@@ -12,6 +12,7 @@ import DevAnalytics from './pages/DevAnalytics';
 import EvidenceArchive from './pages/EvidenceArchive';
 import SystemStatus from './pages/SystemStatus';
 import SystemLogs from './pages/SystemLogs';
+import CameraConfig from './pages/CameraConfig';
 
 const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'traffic_admin', 'dev_admin'];
 
@@ -65,6 +66,11 @@ function AppRoutes() {
         <Route path="logs" element={
           <ProtectedRoute roles={['dev_admin']}>
             <SystemLogs />
+          </ProtectedRoute>
+        } />
+        <Route path="camera-config" element={
+          <ProtectedRoute roles={['dev_admin']}>
+            <CameraConfig />
           </ProtectedRoute>
         } />
       </Route>

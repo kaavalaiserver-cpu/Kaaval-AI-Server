@@ -75,6 +75,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('kaaval_user');
   }, []);
 
+  // Auto Logout Logic (5 minutes inactivity)
+  useEffect(() => {
+    if (!user) return;
+
+    let timeoutId: number;
+    const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 minutes
+
+    const resetTimer = () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => {
+        console.log("Session expired due to inactivity");
+        logout();
+      }, INACTIVITY_LIMIT);
+    };
+
+    // Events to track activity
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(event => document.addEventListener(event, resetTimer));
+
+    // Initial start
+    resetTimer();
+
+    return () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      events.forEach(event => document.removeEventListener(event, resetTimer));
+    };
+  }, [user, logout]);
+
   // Handle 401 Unauthorized globally
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
@@ -90,8 +118,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       axios.interceptors.response.eject(interceptor);
     };
   }, [logout]);
-
-
 
   const hasRole = (...roles: Role[]) => {
     if (!user) return false;
