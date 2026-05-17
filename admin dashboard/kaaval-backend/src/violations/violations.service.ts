@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Inject, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not, In, Between, ILike } from 'typeorm';
+import { Repository, Not, In, Between, ILike, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { WatchlistService } from '../watchlist/watchlist.service.js';
@@ -307,6 +307,16 @@ export class ViolationsService {
         new Date(query.dateFrom),
         new Date(query.dateTo),
       );
+    }
+
+    const minConf = query.minConfidence !== undefined ? parseFloat(query.minConfidence) : undefined;
+    const maxConf = query.maxConfidence !== undefined ? parseFloat(query.maxConfidence) : undefined;
+    if (minConf !== undefined && maxConf !== undefined) {
+      where['confidenceScore'] = Between(minConf, maxConf);
+    } else if (minConf !== undefined) {
+      where['confidenceScore'] = MoreThanOrEqual(minConf);
+    } else if (maxConf !== undefined) {
+      where['confidenceScore'] = LessThanOrEqual(maxConf);
     }
 
     const requiresScopeFilter = !!user && !['super_admin', 'traffic_admin', 'dev_admin'].includes(user.role);

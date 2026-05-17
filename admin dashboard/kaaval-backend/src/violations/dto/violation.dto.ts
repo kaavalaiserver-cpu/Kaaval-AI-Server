@@ -111,4 +111,12 @@ export class ViolationQueryDto {
   @IsOptional()
   @IsString()
   violationType?: string;
+
+  @IsOptional()
+  @IsString()
+  minConfidence?: string;
+
+  @IsOptional()
+  @IsString()
+  maxConfidence?: string;
 }

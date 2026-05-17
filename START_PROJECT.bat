@@ -54,11 +54,11 @@ echo    Username: devadmin
 echo    Password: devadmin@123
 echo.
 echo  SUBDIVISION ADMINS:
-echo    1. colacheladmin        | colachel@123
-echo    2. marthandamadmin      | marthandam@123
-echo    3. nagercoiladmin       | nagercoil@123
-echo    4. kanyakumariadmin     | kanyakumari@123
-echo    5. thuckalayadmin       | thuckalay@123
+echo    1. colacheladmin        ^| colachel@123
+echo    2. marthandamadmin      ^| marthandam@123
+echo    3. nagercoiladmin       ^| nagercoil@123
+echo    4. kanyakumariadmin     ^| kanyakumari@123
+echo    5. thuckalayadmin       ^| thuckalay@123
 echo.
 echo ===================================================
 echo         AWS S3 IMAGE STORAGE CONFIGURED

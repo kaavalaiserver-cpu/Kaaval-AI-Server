@@ -381,17 +381,75 @@
 /* Filters */
 .filters-bar {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
   padding: 12px 16px;
   background: var(--bg-card);
   border-radius: 10px;
   border: 1px solid var(--border);
+}
+
+.filter-row-primary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
+.filter-icon {
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.filter-row-advanced {
+  display: flex;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.filter-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.filter-group-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-sep {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
 .filters-bar select,
-.filters-bar input {
+.filters-bar input[type="text"],
+.filters-bar input[type="date"],
+.filters-bar input[type="time"],
+.filters-bar input[type="number"] {
   padding: 7px 12px;
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -401,7 +459,45 @@
 }
 
 .filters-bar select { min-width: 140px; }
-.filters-bar input { min-width: 180px; }
+.filter-row-primary input[type="text"] { min-width: 180px; }
+.filter-row-advanced input[type="date"] { min-width: 140px; }
+.filter-row-advanced input[type="time"] { min-width: 110px; }
+
+.btn-advanced-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.82rem;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.btn-advanced-toggle.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.btn-advanced-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.filter-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
 
 .btn-clear {
   padding: 7px 14px;
@@ -411,6 +507,7 @@
   color: var(--text-dim);
   cursor: pointer;
   font-size: 0.85rem;
+  margin-left: auto;
 }
 
 .btn-clear:hover { color: var(--red); }
@@ -547,6 +644,12 @@
   color: #fff;
 }
 
+.conf-na {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
 /* Status Badge */
 .status-badge {
   padding: 4px 10px;
@@ -591,31 +694,88 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 16px;
+  gap: 8px;
   padding: 12px 0;
+  flex-wrap: wrap;
 }
 
 .pagination button {
-  padding: 8px 18px;
+  padding: 7px 14px;
   border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--bg-card);
   color: var(--text-secondary);
   cursor: pointer;
   font-size: 0.85rem;
+  transition: all 0.2s;
 }
 
 .pagination button:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
 .pagination button:not(:disabled):hover {
   background: var(--navy);
   color: #fff;
+  border-color: var(--navy);
 }
 
-.pagination span {
+.pagination-info {
   color: var(--text-dim);
   font-size: 0.85rem;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
+.pagination-info strong {
+  color: var(--text-primary);
+}
+
+.pag-total {
+  margin-left: 4px;
+  color: var(--text-dim);
+}
+
+.page-jump {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+}
+
+.page-jump input {
+  width: 64px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.page-jump input::-webkit-outer-spin-button,
+.page-jump input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.page-jump button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.page-jump button:hover {
+  background: #2563eb;
+  border-color: #2563eb;
 }
