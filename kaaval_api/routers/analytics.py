@@ -28,22 +28,22 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
     """Get high-level summary KPIs for the dashboard."""
     
     # 1. Total violations
-    total = await db.scalar(select(func.count()).select_from(Violation))
+    total = await db.scalar(select(func.count()).select_from(Violation).where(Violation.is_deleted == False))
     
     # 2. Violations today
     today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     today_count = await db.scalar(
-        select(func.count()).select_from(Violation).where(Violation.created_at >= today_start)
+        select(func.count()).select_from(Violation).where(Violation.created_at >= today_start, Violation.is_deleted == False)
     )
     
     # 3. Pending review
     pending = await db.scalar(
-        select(func.count()).select_from(Violation).where(Violation.status.in_(["PENDING", "READY", "MANUAL_REVIEW"]))
+        select(func.count()).select_from(Violation).where(Violation.status.in_(["PENDING", "READY", "MANUAL_REVIEW"]), Violation.is_deleted == False)
     )
     
     # 4. Challans issued
     challans = await db.scalar(
-        select(func.count()).select_from(Violation).where(Violation.status.in_(["CHALLAN_ISSUED", "VERIFIED"]))
+        select(func.count()).select_from(Violation).where(Violation.status.in_(["CHALLAN_ISSUED", "VERIFIED"]), Violation.is_deleted == False)
     )
     
     # 5. Daily last 30 days
