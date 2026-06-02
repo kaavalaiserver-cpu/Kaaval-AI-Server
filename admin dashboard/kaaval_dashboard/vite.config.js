@@ -12,6 +12,10 @@ export default defineConfig({
     port: process.env.VITE_PORT ? parseInt(process.env.VITE_PORT) : 3000,
     allowedHosts: corsOrigins,
     proxy: {
+      '/api/analytics/dev': {
+        target: apiTarget, // NestJS
+        changeOrigin: true
+      },
       '/api/analytics': {
         target: 'http://127.0.0.1:8001',
         changeOrigin: true
