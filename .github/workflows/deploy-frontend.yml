@@ -1,0 +1,33 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'admin dashboard/kaaval_dashboard/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy Frontend to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ec2-user/Kaaval-AI
+            
+            git fetch --all
+            git reset --hard origin/main
+            
+            cd "admin dashboard/kaaval_dashboard"
+            npm ci
+            npm run build
+            
+            sudo rm -rf /usr/share/nginx/html/*
+            sudo cp -r dist/* /usr/share/nginx/html/

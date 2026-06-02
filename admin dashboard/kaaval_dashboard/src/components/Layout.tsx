@@ -68,10 +68,9 @@ const ROLE_LABELS: Record<Role, string> = {
   developer: 'Developer',
 };
 
-const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer'];
-const ALL_EXCEPT_VIEWERS: Role[] = ['super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'developer'];
 const TECH_ROLES: Role[] = ['super_admin', 'developer'];
-
+const MANAGEMENT_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin'];
+const CAMERA_HEALTH_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer'];
 const Layout = () => {
   const { user, logout, hasRole } = useAuth();
   const location = useLocation();
@@ -157,22 +156,21 @@ const Layout = () => {
           <div className="nav-section-label">{isOpen(isSidebarOpen, 'MAIN')}</div>
           <NavItem to="/" icon={<LayoutDashboard size={20} />} label="Dashboard" isOpen={isSidebarOpen} />
           
-          <NavItem to="/violations" icon={<AlertTriangle size={20} />} label="Violations" isOpen={isSidebarOpen}
-            roles={ALL_EXCEPT_VIEWERS} />
+          <NavItem to="/violations" icon={<AlertTriangle size={20} />} label="Violations" isOpen={isSidebarOpen} />
             
           <NavItem to="/evidence-archive" icon={<Archive size={20} />} label="Evidence Archive" isOpen={isSidebarOpen} 
-            roles={FULL_ACCESS_ROLES} />
+            roles={MANAGEMENT_ROLES} />
 
-          {hasRole(...FULL_ACCESS_ROLES) && <div className="nav-section-label">{isOpen(isSidebarOpen, 'INSIGHTS')}</div>}
+          {hasRole(...MANAGEMENT_ROLES) && <div className="nav-section-label">{isOpen(isSidebarOpen, 'INSIGHTS')}</div>}
           <NavItem to="/analytics" icon={<BarChart3 size={20} />} label="Analytics" isOpen={isSidebarOpen} 
-            roles={FULL_ACCESS_ROLES} />
+            roles={MANAGEMENT_ROLES} />
           
           <NavItem to="/dev-analytics" icon={<Code2 size={20} />} label="Dev Analytics" isOpen={isSidebarOpen}
             roles={TECH_ROLES} />
 
-          {hasRole(...FULL_ACCESS_ROLES) && <div className="nav-section-label">{isOpen(isSidebarOpen, 'SYSTEM')}</div>}
+          {hasRole(...CAMERA_HEALTH_ROLES) && <div className="nav-section-label">{isOpen(isSidebarOpen, 'SYSTEM')}</div>}
           <NavItem to="/cameras" icon={<Camera size={20} />} label="Camera Health" isOpen={isSidebarOpen}
-            roles={['super_admin', 'sp', 'dsp', 'developer']} />
+            roles={CAMERA_HEALTH_ROLES} />
             
           <NavItem to="/system" icon={<Activity size={20} />} label="System Metrics" isOpen={isSidebarOpen}
             roles={TECH_ROLES} />
@@ -194,6 +192,11 @@ const Layout = () => {
               <span>{status ? 'System Online' : 'Connecting...'}</span>
             )}
           </div>
+          {isSidebarOpen && (
+            <div style={{ fontSize: '0.7em', color: '#666', marginTop: '10px', textAlign: 'center' }}>
+              Version 1.0.1
+            </div>
+          )}
         </div>
       </aside>
 

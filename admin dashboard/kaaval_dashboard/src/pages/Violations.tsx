@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
 import type { ViolationItem, ViolationStats, PaginatedViolations } from '../types';
+import { useAuth } from '../context/AuthContext';
 import {
   AlertTriangle, CheckCircle, XCircle, Eye, Download, Filter, Upload,
   Trash2, RefreshCw, ZoomIn, ZoomOut, RotateCw, Maximize2, Shield,
@@ -31,6 +32,7 @@ const EMPTY_FILTERS: Filters = {
 };
 
 const Violations = () => {
+  const { hasRole } = useAuth();
   const [violations, setViolations] = useState<ViolationItem[]>([]);
   const [stats, setStats] = useState<ViolationStats | null>(null);
   const [total, setTotal] = useState(0);
@@ -263,10 +265,12 @@ const Violations = () => {
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <span className="value highlight">{selectedViolation.vehicle_number}</span>
-                      <button onClick={() => { setEditMode(true); setEditedPlate(selectedViolation.vehicle_number); }}
-                        style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8em' }}>
-                        <Edit2 size={14} /> Edit
-                      </button>
+                      {hasRole('super_admin', 'developer', 'sp', 'dsp', 'inspector', 'sub_inspector') && (
+                        <button onClick={() => { setEditMode(true); setEditedPlate(selectedViolation.vehicle_number); }}
+                          style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8em' }}>
+                          <Edit2 size={14} /> Edit
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -306,7 +310,7 @@ const Violations = () => {
                   )}
                 </div>
                 <div className="modal-actions">
-                  {(selectedViolation.status === 'Pending' || selectedViolation.status === 'Review') && (
+                  {(selectedViolation.status === 'Pending' || selectedViolation.status === 'Review') && hasRole('super_admin', 'developer', 'sp', 'dsp', 'inspector', 'sub_inspector') && (
                     <>
                       <button className="btn-approve" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'approve')}>
                         <CheckCircle size={16} /> Approve
@@ -316,9 +320,11 @@ const Violations = () => {
                       </button>
                     </>
                   )}
-                  <button className="btn-delete" disabled={processing} onClick={() => handleDelete(selectedViolation.id)}>
-                    <Trash2 size={16} /> Delete
-                  </button>
+                  {hasRole('super_admin', 'developer') && (
+                    <button className="btn-delete" disabled={processing} onClick={() => handleDelete(selectedViolation.id)}>
+                      <Trash2 size={16} /> Delete
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -341,15 +347,17 @@ const Violations = () => {
           <h2><AlertTriangle size={20} /> Violation Management</h2>
         </div>
         <div className="toolbar-right">
-          {selectedIds.length > 0 && (
+          {selectedIds.length > 0 && hasRole('super_admin', 'developer') && (
             <button className="btn-secondary" onClick={handleBulkDelete} disabled={processing}
               style={{ border: '1px solid #ef4444', color: '#ef4444', background: 'rgba(239,68,68,0.1)' }}>
               <Trash2 size={16} /> Delete Selected ({selectedIds.length})
             </button>
           )}
-          <button className="btn-secondary" onClick={() => setShowUpload(!showUpload)}>
-            <Upload size={16} /> Batch Upload
-          </button>
+          {hasRole('super_admin', 'developer', 'sp') && (
+            <button className="btn-secondary" onClick={() => setShowUpload(!showUpload)}>
+              <Upload size={16} /> Batch Upload
+            </button>
+          )}
           <button className="btn-secondary" onClick={() => fetchViolations()}>
             <RefreshCw size={16} /> Refresh
           </button>
@@ -523,7 +531,7 @@ const Violations = () => {
                 </td>
                 <td>
                   <div className="action-btns">
-                    {(v.status === 'Pending' || v.status === 'Review') && (
+                    {(v.status === 'Pending' || v.status === 'Review') && hasRole('super_admin', 'developer', 'sp', 'dsp', 'inspector', 'sub_inspector') && (
                       <>
                         <button className="act-btn approve" title="Approve Fine" onClick={() => handleVerify(v.id, 'approve')}>
                           <CheckCircle size={14} />
@@ -536,9 +544,11 @@ const Violations = () => {
                     <button className="act-btn view" title="View Evidence" onClick={() => openReviewModal(v)}>
                       <Maximize2 size={14} />
                     </button>
-                    <button className="act-btn delete" title="Delete" onClick={() => handleDelete(v.id)}>
-                      <Trash2 size={14} />
-                    </button>
+                    {hasRole('super_admin', 'developer') && (
+                      <button className="act-btn delete" title="Delete" onClick={() => handleDelete(v.id)}>
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

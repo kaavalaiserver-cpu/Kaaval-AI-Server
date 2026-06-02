@@ -1,0 +1,33 @@
+name: Deploy FastAPI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'kaaval_api/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy FastAPI to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /home/ec2-user/Kaaval-AI
+            
+            git fetch --all
+            git reset --hard origin/main
+            
+            cd kaaval_api
+            source /home/ec2-user/Kaaval-AI/.venv/bin/activate
+            pip install -r requirements.txt
+            
+            pm2 reload kaaval-fastapi
+            pm2 save

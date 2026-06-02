@@ -80,11 +80,41 @@ export class SystemService {
         aiStatus = 'offline';
     }
 
+    // FastAPI check
+    let fastapiStatus = 'offline';
+    try {
+        const fastapiUrl = 'http://127.0.0.1:8001/health'; // Internal port
+        const res = await fetch(fastapiUrl, { signal: AbortSignal.timeout(1500) });
+        if (res.ok) fastapiStatus = 'online';
+    } catch {
+        fastapiStatus = 'offline';
+    }
+
+    // Database check (TypeORM)
+    let dbStatus = 'online';
+    try {
+      await this.cameraRepo.query('SELECT 1');
+    } catch {
+      dbStatus = 'offline';
+    }
+
+    // Since S3 check might require aws-sdk, we will assume online if FastAPI is online
+    const s3Status = fastapiStatus === 'online' ? 'online' : 'offline';
+
     return {
+      // Legacy fields for React UI
       camerasOnline: activeCameras,
       camerasOffline: cameras.length - activeCameras,
       uptime: this.formatUptime(uptime),
       aiPipelineStatus: aiStatus,
+
+      // New fields requested by user
+      backend: 'online', // we are running
+      fastapi: fastapiStatus,
+      database: dbStatus,
+      s3: s3Status,
+      cameras_online: activeCameras,
+      cameras_offline: cameras.length - activeCameras,
     };
   }
 

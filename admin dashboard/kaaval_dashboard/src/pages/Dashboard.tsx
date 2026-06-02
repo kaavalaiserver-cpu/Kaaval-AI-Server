@@ -343,7 +343,7 @@ const Dashboard = () => {
       const [statsRes, violationsRes, camerasRes] = await Promise.allSettled([
         axios.get<FastAPIAnalyticsSummary>(`${API_BASE}/analytics/summary`),
         axios.get<{ data: ViolationItem[] }>(`${API_BASE}/violations?limit=5`),
-        axios.get<CameraStatus>(`${API_BASE}/cameras/status`),
+        axios.get<CameraStatus>(`${API_BASE}/analytics/camera-health`),
       ]);
 
       if (statsRes.status === 'fulfilled') {
