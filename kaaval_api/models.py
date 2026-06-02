@@ -5,7 +5,7 @@ Table: violations
 """
 from datetime import datetime
 from typing import Optional, Any
-from sqlalchemy import String, Float, Integer, Text, DateTime, func, Boolean, text
+from sqlalchemy import String, Float, Integer, Text, DateTime, func, Boolean, text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import JSONB
 from database import Base
@@ -18,7 +18,7 @@ class Violation(Base):
     """
     __tablename__ = "violations"
 
-    id:                  Mapped[str]            = mapped_column(String(36), primary_key=True)
+    id:                  Mapped[str]            = mapped_column(Uuid(as_uuid=False), primary_key=True)
     created_at:          Mapped[datetime]        = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at:          Mapped[datetime]        = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

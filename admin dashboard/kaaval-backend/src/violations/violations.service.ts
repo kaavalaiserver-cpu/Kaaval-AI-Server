@@ -160,7 +160,9 @@ export class ViolationsService {
   }
 
   private async invalidateStatsCache() {
+    // Clear all stats caches to ensure fresh data for all roles
     await this.cache.del('violation-stats');
+    await this.cache.del('violation-stats-developer');
     await this.cache.del('violation-stats-colachel_admin');
     await this.cache.del('violation-stats-marthandam_admin');
     await this.cache.del('violation-stats-nagercoil_admin');
