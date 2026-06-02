@@ -20,7 +20,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /home/ec2-user/Kaaval-AI
+            cd /home/ec2-user/kaaval-ai
             
             git fetch --all
             git reset --hard origin/main
