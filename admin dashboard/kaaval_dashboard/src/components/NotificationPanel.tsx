@@ -32,7 +32,7 @@ const NotificationPanel = () => {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 15000);
+    const interval = setInterval(fetchNotifications, 60000); // 60s
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 

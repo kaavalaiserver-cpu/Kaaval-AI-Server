@@ -40,8 +40,8 @@ function checkPort(host: string, port: number, timeout = 2000): Promise<boolean>
       useFactory: (config: ConfigService) => {
         const isProd = config.get('NODE_ENV') === 'production';
         return [
-          { name: 'general', ttl: 60000, limit: isProd ? 120 : 10000 },
-          { name: 'login',   ttl: 60000, limit: isProd ? 5 : 1000 },
+          { name: 'general', ttl: 60000, limit: isProd ? 600 : 10000 }, // 600/min for dashboard polling
+          { name: 'login',   ttl: 60000, limit: isProd ? 5 : 1000 },    // 5/min login (brute-force protection)
         ];
       },
     }),

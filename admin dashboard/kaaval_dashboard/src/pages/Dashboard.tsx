@@ -360,7 +360,7 @@ const Dashboard = () => {
       }
     };
     fetchAll();
-    const interval = setInterval(() => fetchAll(true), 3000);
+    const interval = setInterval(() => fetchAll(true), 30000); // 30s — avoids rate limiting
     return () => clearInterval(interval);
   }, []);
 

@@ -115,7 +115,7 @@ const Violations = () => {
   }, [fetchViolations]);
 
   useEffect(() => {
-    const interval = setInterval(() => fetchViolations(true), 5000);
+    const interval = setInterval(() => fetchViolations(true), 30000); // 30s
     return () => clearInterval(interval);
   }, [fetchViolations]);
 

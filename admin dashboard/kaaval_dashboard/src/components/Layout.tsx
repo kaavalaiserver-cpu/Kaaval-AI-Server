@@ -119,7 +119,7 @@ const Layout = () => {
       }
     };
     fetchStatus();
-    const interval = setInterval(fetchStatus, 10000);
+    const interval = setInterval(fetchStatus, 30000); // 30s
     return () => clearInterval(interval);
   }, [user?.role]);
 
