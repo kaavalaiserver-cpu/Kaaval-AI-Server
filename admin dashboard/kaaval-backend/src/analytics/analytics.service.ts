@@ -24,7 +24,7 @@ export class AnalyticsService {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     const violations = await this.violationRepo.find({
-      where: { createdAt: MoreThanOrEqual(sevenDaysAgo) },
+      where: { createdAt: MoreThanOrEqual(sevenDaysAgo), isDeleted: false },
     });
 
     const total = violations.length;
@@ -95,7 +95,7 @@ export class AnalyticsService {
     const cached = await this.cache.get<Record<string, unknown>>('dev-analytics');
     if (cached) return cached;
 
-    const all = await this.violationRepo.find();
+    const all = await this.violationRepo.find({ where: { isDeleted: false } });
 
     const twoWheelers = all.filter((v) => {
       const vt = (v.violationType || '').toLowerCase();
@@ -192,7 +192,7 @@ export class AnalyticsService {
     // SQLite: strftime('%H', created_at)
     // Note: Assuming stored as ISO string or compatible format by TypeORM
     const raw = await this.violationRepo.query(
-        `SELECT strftime('%H', created_at) as hour, COUNT(*) as count FROM violations WHERE created_at >= ? GROUP BY hour ORDER BY hour`,
+        `SELECT strftime('%H', created_at) as hour, COUNT(*) as count FROM violations WHERE created_at >= ? AND is_deleted = false GROUP BY hour ORDER BY hour`,
         [since.toISOString()]
     );
     
@@ -217,7 +217,7 @@ export class AnalyticsService {
             SUM(CASE WHEN status = 'CHALLAN_ISSUED' THEN 1 ELSE 0 END) as issued,
             SUM(CASE WHEN status IN ('REJECTED', 'DUPLICATE') THEN 1 ELSE 0 END) as rejected
         FROM violations
-        WHERE created_at >= ? AND camera_id IS NOT NULL AND camera_id != 'BATCH_UPLOAD'
+        WHERE created_at >= ? AND camera_id IS NOT NULL AND camera_id != 'BATCH_UPLOAD' AND is_deleted = false
         GROUP BY camera_id
       `, [since.toISOString()]);
 
@@ -237,7 +237,7 @@ export class AnalyticsService {
 
       const points = await this.violationRepo.find({
           select: ['locationLat', 'locationLng', 'violationType'],
-          where: { createdAt: MoreThanOrEqual(since) } 
+          where: { createdAt: MoreThanOrEqual(since), isDeleted: false } 
       });
       
       return points

@@ -168,6 +168,8 @@ export class ViolationsService {
     await this.cache.del('violation-stats-nagercoil_admin');
     await this.cache.del('violation-stats-kanyakumari_admin');
     await this.cache.del('violation-stats-thuckalay_admin');
+    await this.cache.del('dev-analytics');
+    await this.cache.del('analytics-summary');
   }
 
 
