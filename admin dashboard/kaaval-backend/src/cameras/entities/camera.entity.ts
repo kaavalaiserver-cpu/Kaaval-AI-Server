@@ -29,7 +29,7 @@ export class Camera {
   @Column({ type: 'varchar', length: 20, default: 'online' })
   status!: string;
 
-  @Column({ name: 'last_active', type: 'datetime', nullable: true })
+  @Column({ name: 'last_active', type: 'timestamptz', nullable: true })
   lastActive!: Date | null;
 
   @Column({ name: 'violation_count', type: 'int', default: 0 })
