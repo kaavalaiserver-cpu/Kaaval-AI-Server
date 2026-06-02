@@ -1,8 +1,10 @@
 import { Role } from './roles.enum.js';
 
 export interface ScopedUser {
+  id?: string;
   role: string;
   subdivision?: string | null;
+  username?: string;
 }
 
 type LngLat = [number, number];
@@ -30,15 +32,14 @@ export const SUBDIVISION_ROLES: Role[] = [
 
 const FULL_ACCESS_ROLES = new Set<Role>([
   Role.SUPER_ADMIN,
-  Role.TRAFFIC_ADMIN,
-  Role.DEV_ADMIN,
+  Role.SP,
+  Role.DSP,
+  Role.DEVELOPER,
 ]);
 
-const SUBDIVISION_SCOPE_BY_ROLE: Record<Role, SubdivisionScope | undefined> = {
-  [Role.SUPER_ADMIN]: undefined,
-  [Role.TRAFFIC_ADMIN]: undefined,
-  [Role.DEV_ADMIN]: undefined,
-  [Role.COLACHEL_ADMIN]: {
+// We map scope by name rather than role, since multiple roles can share a subdivision
+const SUBDIVISION_SCOPES: Record<string, SubdivisionScope> = {
+  colachel: {
     name: 'Colachel',
     keywords: ['colachel'],
     polygon: [
@@ -54,7 +55,7 @@ const SUBDIVISION_SCOPE_BY_ROLE: Record<Role, SubdivisionScope | undefined> = {
       [77.168, 8.192],
     ],
   },
-  [Role.MARTHANDAM_ADMIN]: {
+  marthandam: {
     name: 'Marthandam',
     keywords: ['marthandam'],
     polygon: [
@@ -70,7 +71,7 @@ const SUBDIVISION_SCOPE_BY_ROLE: Record<Role, SubdivisionScope | undefined> = {
       [77.128, 8.278],
     ],
   },
-  [Role.NAGERCOIL_ADMIN]: {
+  nagercoil: {
     name: 'Nagercoil',
     keywords: ['nagercoil', 'ramanputhoor'],
     polygon: [
@@ -86,7 +87,7 @@ const SUBDIVISION_SCOPE_BY_ROLE: Record<Role, SubdivisionScope | undefined> = {
       [77.31, 8.19],
     ],
   },
-  [Role.KANYAKUMARI_ADMIN]: {
+  kanyakumari: {
     name: 'Kanyakumari',
     keywords: ['kanyakumari', 'cape'],
     polygon: [
@@ -104,7 +105,7 @@ const SUBDIVISION_SCOPE_BY_ROLE: Record<Role, SubdivisionScope | undefined> = {
       [77.386, 8.056],
     ],
   },
-  [Role.THUCKALAY_ADMIN]: {
+  thuckalay: {
     name: 'Thuckalay',
     keywords: ['thuckalay'],
     polygon: [
@@ -127,9 +128,22 @@ export function hasFullAccessRole(role?: string | null): boolean {
   return FULL_ACCESS_ROLES.has(role as Role);
 }
 
+export function getSubdivisionScopeByName(name?: string | null): SubdivisionScope | null {
+  if (!name) return null;
+  const normalized = normalizeText(name).replace(/\s+/g, '');
+  return SUBDIVISION_SCOPES[normalized] ?? null;
+}
+
 export function getSubdivisionScopeByRole(role?: string | null): SubdivisionScope | null {
   if (!role) return null;
-  return SUBDIVISION_SCOPE_BY_ROLE[role as Role] ?? null;
+  
+  if (role === Role.COLACHEL_ADMIN) return SUBDIVISION_SCOPES['colachel'];
+  if (role === Role.MARTHANDAM_ADMIN) return SUBDIVISION_SCOPES['marthandam'];
+  if (role === Role.NAGERCOIL_ADMIN) return SUBDIVISION_SCOPES['nagercoil'];
+  if (role === Role.KANYAKUMARI_ADMIN) return SUBDIVISION_SCOPES['kanyakumari'];
+  if (role === Role.THUCKALAY_ADMIN) return SUBDIVISION_SCOPES['thuckalay'];
+  
+  return null;
 }
 
 function pointInPolygon(point: LngLat, polygon: LngLat[]): boolean {
@@ -163,12 +177,18 @@ export function isInUserScope(
     return true;
   }
 
-  const subdivision = getSubdivisionScopeByRole(user.role);
+  // 1. First try to get scope based on explicit role mapping (e.g. NAGERCOIL_ADMIN)
+  // 2. If not found, try to get scope based on their profile's subdivision string (e.g. INSPECTOR in 'Nagercoil')
+  let subdivision = getSubdivisionScopeByRole(user.role);
+  if (!subdivision && user.subdivision) {
+    subdivision = getSubdivisionScopeByName(user.subdivision);
+  }
+
   if (!subdivision) {
     return false;
   }
 
-  const expected = normalizeText(user.subdivision ?? subdivision.name);
+  const expected = normalizeText(subdivision.name);
   const explicitSubdivision = normalizeText(subdivisionText);
 
   // Prefer explicit subdivision labels (metadata/user profile) for strict isolation.

@@ -21,7 +21,7 @@ const EvidenceArchive = () => {
   const [loading, setLoading] = useState(false);
 
   const handleSearch = async () => {
-    if (!query && !dateFrom) return;
+    if (!query && !dateFrom && !dateTo) return;
     setLoading(true);
     setSearched(true);
     try {

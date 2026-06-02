@@ -4,11 +4,13 @@ import { SystemLog } from './entities/system-log.entity.js';
 import { Camera } from '../cameras/entities/camera.entity.js';
 import { SystemService } from './system.service.js';
 import { SystemController } from './system.controller.js';
+import { AuditLog } from './entities/audit-log.entity.js';
+import { AuditService } from './audit.service.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([SystemLog, Camera])],
+  imports: [TypeOrmModule.forFeature([SystemLog, Camera, AuditLog])],
   controllers: [SystemController],
-  providers: [SystemService],
-  exports: [SystemService],
+  providers: [SystemService, AuditService],
+  exports: [SystemService, AuditService],
 })
 export class SystemModule {}

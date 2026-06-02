@@ -36,7 +36,7 @@ const SystemLogs = () => {
 
   useEffect(() => {
     fetchLogs();
-    const interval = setInterval(() => fetchLogs(true), 1000);
+    const interval = setInterval(() => fetchLogs(true), 5000);
     return () => clearInterval(interval);
   }, [fetchLogs]);
 
@@ -75,7 +75,7 @@ const SystemLogs = () => {
               <option value="debug">Debug</option>
             </select>
           </div>
-          <button className="btn-secondary" onClick={fetchLogs}>
+          <button className="btn-secondary" onClick={() => fetchLogs()}>
             <RefreshCw size={16} /> Refresh
           </button>
         </div>

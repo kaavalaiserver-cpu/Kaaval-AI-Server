@@ -23,6 +23,9 @@ export class Camera {
   @Column({ name: 'gps_lng', type: 'float', nullable: true })
   gpsLng!: number | null;
 
+  @Column({ name: 'stream_url', type: 'varchar', length: 500, nullable: true })
+  streamUrl!: string | null;
+
   @Column({ type: 'varchar', length: 20, default: 'online' })
   status!: string;
 

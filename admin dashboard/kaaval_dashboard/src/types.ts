@@ -35,21 +35,22 @@ export interface ViolationStats {
   by_type: Record<string, number>;
 }
 
+export interface FastAPIAnalyticsSummary {
+  total_violations: number;
+  violations_today: number;
+  pending_review: number;
+  challans_issued: number;
+  daily_last_30: Array<{ date: string; count: number }>;
+  top_cameras: Array<{ camera_id: string; count: number }>;
+  top_vehicles: Array<{ vehicle_number: string; count: number }>;
+  by_type: Array<{ violation_type: string; count: number }>;
+}
+
 export interface PaginatedViolations {
   data: ViolationItem[];
   total: number;
   page: number;
   limit: number;
-}
-
-// ─── Analytics ───
-export interface AnalyticsSummary {
-  totalViolations: number;
-  camerasActive: number;
-  helmetComplianceRate: string;
-  violationsByDay: { date: string; count: number }[];
-  violationsByCamera: { camera_id: string; count: number }[];
-  peakHours: { hour: string; count: number }[]; // Existing peak hours field from backend summary
 }
 
 export interface PeakHoursData {
@@ -79,6 +80,7 @@ export interface CameraItem {
   camera_id?: string;
   location: string;
   status: string;
+  streamUrl?: string | null;
   lastActive?: string | null;
   last_active?: string | null;
   violationCount?: number;
@@ -93,6 +95,26 @@ export interface CameraStatus {
   online: number;
   offline: number;
   cameras: CameraItem[];
+}
+
+export interface UserAccount {
+  id: string;
+  username: string;
+  fullName: string;
+  designation: string | null;
+  role: string;
+  subdivision: string | null;
+  phoneNumber: string | null;
+  email: string | null;
+  isActive: boolean;
+  requiresPasswordChange: boolean;
+  lastLogin: string | null;
+  failedLoginAttempts: number;
+  lockedUntil: string | null;
+  createdBy: string | null;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ─── Analytics ───

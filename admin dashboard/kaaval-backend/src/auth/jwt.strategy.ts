@@ -8,10 +8,18 @@ const JwtPassportStrategy = PassportStrategy(Strategy);
 @Injectable()
 export class JwtStrategy extends JwtPassportStrategy {
   constructor(config: ConfigService) {
+    const secret = config.get<string>('JWT_SECRET');
+    if (!secret || secret.length < 32) {
+      throw new Error(
+        'JWT_SECRET is not set or is too short (minimum 32 characters). ' +
+        'Set a strong, random value in your .env file.',
+      );
+    }
+
     const opts: StrategyOptionsWithoutRequest = {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>('JWT_SECRET') || 'kaaval-ai-jwt-' + require('os').hostname(),
+      secretOrKey: secret,
     };
     super(opts);
   }

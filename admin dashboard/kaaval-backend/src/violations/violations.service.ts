@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, Inject, ForbiddenException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Not, In, Between, ILike, MoreThanOrEqual, LessThanOrEqual } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -13,6 +14,7 @@ import {
   CreateViolationDto,
 } from './dto/violation.dto.js';
 import { isInUserScope, type ScopedUser } from '../auth/subdivision-access.js';
+import { AuditService } from '../system/audit.service.js';
 
 const CAMERA_LOCATIONS: Record<string, string> = {
   'CAM-001': 'T. Nagar Junction',
@@ -47,6 +49,8 @@ export class ViolationsService {
     private readonly cache: Cache,
     private readonly watchlistService: WatchlistService,
     private readonly notificationsService: NotificationsService,
+    private readonly configService: ConfigService,
+    private readonly auditService: AuditService,
   ) {}
 
   private formatViolationType(raw: string): string {
@@ -186,7 +190,7 @@ export class ViolationsService {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'x-api-key': 'SECRET_KEY'
+                'x-api-key': this.configService.get<string>('AI_API_KEY', ''),
             },
             body: JSON.stringify({
                 image_urls: dto.image_urls,
@@ -295,6 +299,7 @@ export class ViolationsService {
 
     const where: Record<string, unknown> = {
       status: Not(In(['DUPLICATE'])),
+      isDeleted: false,
     };
 
     if (query.status) where['status'] = query.status;
@@ -394,6 +399,7 @@ export class ViolationsService {
     if (cached) return cached;
 
     const all = await this.violationRepo.find({
+      where: { isDeleted: false },
       select: ['id', 'status', 'violationType', 'createdAt', 'locationLat', 'locationLng', 'cameraId', 'metadata'],
     });
 
@@ -442,6 +448,15 @@ export class ViolationsService {
     await this.violationRepo.save(v);
     await this.invalidateStatsCache();
 
+    // Audit log
+    await this.auditService.logAction(
+      user?.id ?? null,
+      newStatus === 'VERIFIED' ? 'VERIFY_VIOLATION' : 'UPDATE_VIOLATION',
+      id,
+      undefined,
+      { newStatus, reviewNotes: dto.reviewNotes }
+    );
+
     return {
       status: 'success',
       new_status: this.mapStatusToDashboard(newStatus),
@@ -469,8 +484,22 @@ export class ViolationsService {
     const v = await this.violationRepo.findOneBy({ id });
     if (!v) throw new NotFoundException('Violation not found');
     this.assertViolationAccess(user, v);
-    await this.violationRepo.remove(v);
+    
+    // Soft delete implementation
+    v.isDeleted = true;
+    v.deletedAt = new Date();
+    v.deletedBy = user?.username ?? 'SYSTEM';
+    
+    await this.violationRepo.save(v);
     await this.invalidateStatsCache();
+
+    // Audit log
+    await this.auditService.logAction(
+      user?.id ?? null,
+      'SOFT_DELETE_VIOLATION',
+      id
+    );
+
     return { status: 'deleted', id };
   }
 

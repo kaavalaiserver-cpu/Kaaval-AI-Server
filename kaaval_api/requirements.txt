@@ -1,0 +1,9 @@
+fastapi>=0.111
+uvicorn[standard]
+sqlalchemy[asyncio]>=2.0
+asyncpg
+boto3
+python-multipart
+python-dotenv
+pydantic-settings
+PyJWT

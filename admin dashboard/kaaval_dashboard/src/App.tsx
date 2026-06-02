@@ -13,8 +13,11 @@ import EvidenceArchive from './pages/EvidenceArchive';
 import SystemStatus from './pages/SystemStatus';
 import SystemLogs from './pages/SystemLogs';
 import CameraConfig from './pages/CameraConfig';
+import UsersManagement from './pages/UsersManagement';
 
-const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'traffic_admin', 'dev_admin'];
+const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer'];
+const ALL_EXCEPT_VIEWERS: Role[] = ['super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'developer'];
+const TECH_ROLES: Role[] = ['super_admin', 'developer'];
 
 const ProtectedRoute = ({ children, roles }: { children: React.ReactNode; roles?: Role[] }) => {
   const { user, loading } = useAuth();
@@ -34,7 +37,7 @@ function AppRoutes() {
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<Dashboard />} />
         <Route path="violations" element={
-          <ProtectedRoute roles={FULL_ACCESS_ROLES}>
+          <ProtectedRoute roles={ALL_EXCEPT_VIEWERS}>
             <Violations />
           </ProtectedRoute>
         } />
@@ -49,7 +52,7 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
         <Route path="dev-analytics" element={
-          <ProtectedRoute roles={['dev_admin']}>
+          <ProtectedRoute roles={TECH_ROLES}>
             <DevAnalytics />
           </ProtectedRoute>
         } />
@@ -59,17 +62,22 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
         <Route path="system" element={
-          <ProtectedRoute roles={['dev_admin']}>
+          <ProtectedRoute roles={TECH_ROLES}>
             <SystemStatus />
           </ProtectedRoute>
         } />
         <Route path="logs" element={
-          <ProtectedRoute roles={['dev_admin']}>
+          <ProtectedRoute roles={TECH_ROLES}>
             <SystemLogs />
           </ProtectedRoute>
         } />
+        <Route path="users" element={
+          <ProtectedRoute roles={['super_admin']}>
+            <UsersManagement />
+          </ProtectedRoute>
+        } />
         <Route path="camera-config" element={
-          <ProtectedRoute roles={['dev_admin']}>
+          <ProtectedRoute roles={['super_admin']}>
             <CameraConfig />
           </ProtectedRoute>
         } />

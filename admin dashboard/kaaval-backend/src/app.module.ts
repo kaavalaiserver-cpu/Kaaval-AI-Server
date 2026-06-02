@@ -14,6 +14,7 @@ import { SearchModule } from './search/search.module.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { WatchlistModule } from './watchlist/watchlist.module.js';
 import { ChallanModule } from './challan/challan.module.js';
+import { UsersModule } from './users/users.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -32,8 +33,18 @@ function checkPort(host: string, port: number, timeout = 2000): Promise<boolean>
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
 
-    // Rate limiting: 60 requests per minute per IP
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 60 }]),
+    // Rate limiting: 120 req/min general, 5 req/min for login (brute-force protection)
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const isProd = config.get('NODE_ENV') === 'production';
+        return [
+          { name: 'general', ttl: 60000, limit: isProd ? 120 : 10000 },
+          { name: 'login',   ttl: 60000, limit: isProd ? 5 : 1000 },
+        ];
+      },
+    }),
 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -114,6 +125,7 @@ function checkPort(host: string, port: number, timeout = 2000): Promise<boolean>
     NotificationsModule,
     WatchlistModule,
     ChallanModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [
@@ -122,3 +134,6 @@ function checkPort(host: string, port: number, timeout = 2000): Promise<boolean>
   ],
 })
 export class AppModule {}
+// force reload
+ 
+ 

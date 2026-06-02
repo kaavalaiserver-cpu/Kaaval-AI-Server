@@ -18,7 +18,7 @@ import './SystemStatus.css';
 
 const SystemStatus = () => {
   const [status, setStatus] = useState<SystemStatusData | null>(null);
-  const [health, setHealth] = useState<Record<string, unknown> | null>(null);
+  const [health, setHealth] = useState<{ config?: Record<string, string>, database?: string, redis?: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetch = async () => {
@@ -113,12 +113,12 @@ const SystemStatus = () => {
       <div className="sys-section">
         <h3><HardDrive size={18} /> System Information</h3>
         <div className="sys-info-table">
-          <InfoRow label="API Port" value="8003" />
-          <InfoRow label="Database" value="PostgreSQL (Digital Ocean)" />
-          <InfoRow label="Cache Layer" value="Redis" />
-          <InfoRow label="AI Backend" value="Python CV Pipeline (Port 8000)" />
+          <InfoRow label="API Port" value={health?.config?.apiPort ?? 'Unknown'} />
+          <InfoRow label="Database" value={health?.config?.dbType ?? 'Unknown'} />
+          <InfoRow label="Cache Layer" value={health?.config?.cacheType ?? 'Unknown'} />
+          <InfoRow label="AI Backend" value={health?.config?.aiBackend ?? 'Unknown'} />
           <InfoRow label="Version" value="2.0.0" />
-          <InfoRow label="Environment" value={import.meta.env.MODE} />
+          <InfoRow label="Environment" value={health?.config?.environment ?? import.meta.env.MODE} />
         </div>
       </div>
     </div>

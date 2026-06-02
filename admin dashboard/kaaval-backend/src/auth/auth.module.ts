@@ -5,15 +5,19 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service.js';
 import { AuthController } from './auth.controller.js';
 import { JwtStrategy } from './jwt.strategy.js';
+import { UsersModule } from '../users/users.module.js';
+import { SystemModule } from '../system/system.module.js';
 
 @Module({
   imports: [
+    UsersModule,
+    SystemModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('JWT_SECRET') || 'kaaval-ai-jwt-' + require('os').hostname(),
+        secret: config.get<string>('JWT_SECRET'),
         signOptions: { expiresIn: config.get('JWT_EXPIRY', '8h') },
       }),
     }),

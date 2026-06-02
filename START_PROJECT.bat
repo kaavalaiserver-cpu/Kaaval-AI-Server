@@ -26,8 +26,11 @@ if "%BACKEND_READY%"=="1" (
 	echo WARNING: Backend not confirmed on port 8003 after 40 seconds. Continuing startup...
 )
 
-echo [2/2] Starting Admin Dashboard (Port 3000)...
+echo [2/3] Starting Admin Dashboard (Port 3000)...
 start "Kaaval Dashboard" cmd /k "cd /d "admin dashboard\kaaval_dashboard" && npm run dev"
+
+echo [3/3] Starting Evidence API (Port 8001)...
+start "Kaaval Evidence API" cmd /k "cd /d "kaaval_api" && uvicorn main:app --port 8001 --reload"
 
 echo.
 echo ===================================================
@@ -35,6 +38,7 @@ echo SYSTEM STARTUP INITIATED
 echo ===================================================
 echo.
 echo Backend API:     http://localhost:8003
+echo Evidence API:    http://localhost:8001
 echo Admin Dashboard: http://localhost:3000
 echo.
 echo ===================================================
@@ -45,20 +49,28 @@ echo  SUPERADMIN LOGIN:
 echo    Username: superadmin
 echo    Password: superadmin@123
 echo.
-echo  TRAFFIC ADMIN LOGIN:
-echo    Username: trafficadmin
-echo    Password: trafficadmin@123
+echo  SP / DSP LOGIN:
+echo    Username: sp_admin
+echo    Password: kaaval@123
 echo.
-echo  DEV ADMIN LOGIN:
-echo    Username: devadmin
-echo    Password: devadmin@123
+echo  SUBDIVISION ADMIN (Nagercoil):
+echo    Username: nagercoil_admin
+echo    Password: kaaval@123
 echo.
-echo  SUBDIVISION ADMINS:
-echo    1. colacheladmin        ^| colachel@123
-echo    2. marthandamadmin      ^| marthandam@123
-echo    3. nagercoiladmin       ^| nagercoil@123
-echo    4. kanyakumariadmin     ^| kanyakumari@123
-echo    5. thuckalayadmin       ^| thuckalay@123
+echo  INSPECTOR LOGIN (Nagercoil):
+echo    Username: inspector_demo
+echo    Password: kaaval@123
+echo.
+echo  OPERATOR / VIEWER LOGIN:
+echo    Username: operator_demo
+echo    Password: kaaval@123
+echo.
+echo  DEVELOPER LOGIN:
+echo    Username: developer
+echo    Password: kaaval@123
+echo.
+echo  * Note: First login requires immediate password change.
+echo.
 echo.
 echo ===================================================
 echo         AWS S3 IMAGE STORAGE CONFIGURED
@@ -76,6 +88,7 @@ echo ===================================================
 echo             ALL SERVICES RUNNING
 echo ===================================================
 echo Backend API:      http://localhost:8003
+echo Evidence API:     http://localhost:8001
 echo Admin Dashboard:  http://localhost:3000
 echo.
 echo Opening Dashboard in 5 seconds...

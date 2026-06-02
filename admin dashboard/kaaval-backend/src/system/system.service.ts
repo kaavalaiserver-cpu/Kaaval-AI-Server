@@ -1,4 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -17,6 +18,7 @@ export class SystemService {
     private readonly cameraRepo: Repository<Camera>,
     @Inject(CACHE_MANAGER)
     private readonly cache: Cache,
+    private readonly config: ConfigService,
   ) {}
 
   async getAiStatus() {
@@ -68,20 +70,43 @@ export class SystemService {
       (Date.now() - this.startTime.getTime()) / 1000,
     );
 
+    // Real-time AI status check
+    let aiStatus = 'offline';
+    try {
+        const aiUrl = this.config.get<string>('AI_BACKEND_URL', 'http://127.0.0.1:8000');
+        const res = await fetch(`${aiUrl}/status`, { signal: AbortSignal.timeout(1500) });
+        if (res.ok) aiStatus = 'healthy';
+    } catch {
+        aiStatus = 'offline';
+    }
+
     return {
       camerasOnline: activeCameras,
       camerasOffline: cameras.length - activeCameras,
       uptime: this.formatUptime(uptime),
-      aiPipelineStatus: 'healthy',
+      aiPipelineStatus: aiStatus,
     };
   }
 
   async getHealth() {
+    const dbType = this.config.get<string>('DB_TYPE', 'auto');
+    const port = this.config.get<string>('PORT', '8003');
+    const nodeEnv = this.config.get<string>('NODE_ENV', 'development');
+    const isRedis = !!this.config.get('REDIS_HOST');
+    const aiUrl = this.config.get<string>('AI_BACKEND_URL', 'http://127.0.0.1:8000');
+
     return {
       status: 'healthy',
       database: 'ok',
       redis: 'ok',
       timestamp: new Date().toISOString(),
+      config: {
+        dbType: dbType === 'sqlite' ? 'SQLite (Local)' : 'PostgreSQL',
+        cacheType: isRedis ? 'Redis' : 'In-Memory Cache',
+        aiBackend: `Python CV Pipeline (${aiUrl})`,
+        apiPort: port,
+        environment: nodeEnv,
+      }
     };
   }
 

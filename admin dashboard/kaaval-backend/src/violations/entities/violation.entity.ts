@@ -23,6 +23,12 @@ export class Violation {
   @Column({ name: 'proof_img_url', type: 'text', nullable: true })
   proofImgUrl!: string | null;
 
+  @Column({ name: 'full_preview_url', type: 'text', nullable: true })
+  fullPreviewUrl!: string | null;
+
+  @Column({ name: 'cropped_preview_url', type: 'text', nullable: true })
+  croppedPreviewUrl!: string | null;
+
   @Column({ type: 'simple-json', nullable: true })
   detections!: Record<string, unknown> | null;
 
@@ -70,4 +76,13 @@ export class Violation {
 
   @Column({ name: 'vehicle_detection_id', type: 'varchar', length: 100, nullable: true })
   vehicleDetectionId!: string | null;
+
+  @Column({ name: 'is_deleted', type: 'boolean', default: false })
+  isDeleted!: boolean;
+
+  @Column({ name: 'deleted_at', type: 'datetime', nullable: true })
+  deletedAt!: Date | null;
+
+  @Column({ name: 'deleted_by', type: 'varchar', length: 100, nullable: true })
+  deletedBy!: string | null;
 }

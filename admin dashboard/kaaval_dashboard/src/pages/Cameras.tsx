@@ -15,10 +15,6 @@ import {
 } from 'lucide-react';
 import './Cameras.css';
 
-// Using Plate API as proxy stream for configured RTSP camera
-const RTSP_URL = "rtsp://192.168.1.201:554/profile1";
-const STREAM_URL = `http://localhost:8000/video_feed?url=${encodeURIComponent(RTSP_URL)}`;
-
 const Cameras = () => {
   const [cameras, setCameras] = useState<CameraItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,15 +49,24 @@ const Cameras = () => {
               <button className="btn-close" onClick={() => setSelectedStream(null)}><XCircle size={24} /></button>
             </div>
             <div className="video-player-container">
-                {/* Direct MJPEG Stream from Python API */}
-                <img 
-                    src={STREAM_URL} 
-                    alt="Live Safety Feed" 
-                    className="live-video-feed"
-                    onError={(e) => {
-                        (e.target as HTMLImageElement).src = "https://via.placeholder.com/800x450?text=Stream+Offline";
-                    }}
-                />
+                {/* Dynamic Stream URL or Fallback */}
+                {selectedStream.streamUrl ? (
+                  <img 
+                      src={selectedStream.streamUrl} 
+                      alt="Live Safety Feed" 
+                      className="live-video-feed"
+                      onError={(e) => {
+                          const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='450'><rect width='800' height='450' fill='%23111'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='22' fill='%23666'>Stream Offline</text></svg>`;
+                          (e.target as HTMLImageElement).src = `data:image/svg+xml,${svg}`;
+                      }}
+                  />
+                ) : (
+                  <img 
+                      src={`data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='450'><rect width='800' height='450' fill='%23111'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='22' fill='%23666'>Camera Not Configured</text></svg>`}
+                      alt="Offline Feed" 
+                      className="live-video-feed"
+                  />
+                )}
                 <div className="live-indicator">
                     <span className="dot"></span> LIVE
                 </div>

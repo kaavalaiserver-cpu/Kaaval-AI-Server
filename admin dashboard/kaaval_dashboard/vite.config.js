@@ -12,16 +12,22 @@ export default defineConfig({
     port: process.env.VITE_PORT ? parseInt(process.env.VITE_PORT) : 3000,
     allowedHosts: corsOrigins,
     proxy: {
-      '/api': {
-        target: apiTarget,
-        changeOrigin: true,
-        secure: false,
+      '/api/analytics/summary': {
+        target: 'http://127.0.0.1:8001',
+        changeOrigin: true
       },
-    },
-  },
-  preview: {
-    port: process.env.VITE_PORT ? parseInt(process.env.VITE_PORT) : 3000,
-    proxy: {
+      '/api/evidence': {
+        target: 'http://127.0.0.1:8001',
+        changeOrigin: true
+      },
+      '/api/search': {
+        target: 'http://127.0.0.1:8001',
+        changeOrigin: true
+      },
+      '/api/camera-health': {
+        target: 'http://127.0.0.1:8001',
+        changeOrigin: true
+      },
       '/api': {
         target: apiTarget,
         changeOrigin: true,

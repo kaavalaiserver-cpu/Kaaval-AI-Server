@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Shield, Eye, EyeOff } from 'lucide-react';
+import { Shield, Eye, EyeOff, Lock } from 'lucide-react';
 import './Login.css';
+
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_SECONDS = 30;
 
 const Login = () => {
   const { login } = useAuth();
@@ -10,15 +13,44 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [attempts, setAttempts] = useState(0);
+  const [lockout, setLockout] = useState(0); // seconds remaining
+  const lockoutTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Countdown ticker
+  useEffect(() => {
+    if (lockout <= 0) return;
+    lockoutTimer.current = setInterval(() => {
+      setLockout(prev => {
+        if (prev <= 1) {
+          clearInterval(lockoutTimer.current!);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(lockoutTimer.current!);
+  }, [lockout > 0]);
+
+  const isLocked = lockout > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLocked) return;
     setError('');
     setLoading(true);
     try {
       await login(username, password);
+      setAttempts(0); // reset on success
     } catch {
-      setError('Invalid username or password');
+      const next = attempts + 1;
+      setAttempts(next);
+      if (next >= MAX_ATTEMPTS) {
+        setLockout(LOCKOUT_SECONDS);
+        setError(`Too many failed attempts. Try again in ${LOCKOUT_SECONDS} seconds.`);
+      } else {
+        setError(`Invalid username or password. ${MAX_ATTEMPTS - next} attempt${MAX_ATTEMPTS - next !== 1 ? 's' : ''} remaining.`);
+      }
     } finally {
       setLoading(false);
     }
@@ -74,9 +106,15 @@ const Login = () => {
 
           {error && <div className="login-error">{error}</div>}
 
-          <button type="submit" className="login-btn" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
+          {isLocked ? (
+            <button type="button" className="login-btn locked" disabled>
+              <Lock size={16} /> Locked — retry in {lockout}s
+            </button>
+          ) : (
+            <button type="submit" className="login-btn" disabled={loading}>
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+          )}
         </form>
 
         <div className="login-footer">

@@ -4,13 +4,18 @@ import { API_BASE } from '../config';
 
 export type Role =
   | 'super_admin'
-  | 'traffic_admin'
-  | 'dev_admin'
-  | 'colachel_admin'
-  | 'marthandam_admin'
+  | 'sp'
+  | 'dsp'
   | 'nagercoil_admin'
+  | 'thuckalay_admin'
+  | 'colachel_admin'
   | 'kanyakumari_admin'
-  | 'thuckalay_admin';
+  | 'marthandam_admin'
+  | 'inspector'
+  | 'sub_inspector'
+  | 'operator'
+  | 'viewer'
+  | 'developer';
 
 export interface AuthUser {
   id: string;
@@ -53,6 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const savedToken = localStorage.getItem('kaaval_token');
     const savedUser = localStorage.getItem('kaaval_user');
     if (savedToken && savedUser) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
       setToken(savedToken);
       setUser(JSON.parse(savedUser));
     }
@@ -62,6 +68,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (username: string, password: string) => {
     const res = await axios.post(`${API_BASE}/auth/login`, { username, password });
     const { access_token, user: userData } = res.data;
+    
+    // Set header synchronously to prevent race condition before children mount
+    axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+    
     setToken(access_token);
     setUser(userData);
     localStorage.setItem('kaaval_token', access_token);
@@ -69,6 +79,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = useCallback(() => {
+    delete axios.defaults.headers.common['Authorization'];
     setToken(null);
     setUser(null);
     localStorage.removeItem('kaaval_token');
@@ -80,7 +91,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
 
     let timeoutId: number;
-    const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 minutes
+    const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 minutes
 
     const resetTimer = () => {
       if (timeoutId) window.clearTimeout(timeoutId);

@@ -54,19 +54,26 @@ const NavItem = ({ to, icon, label, isOpen, badge, roles }: NavItemProps) => {
 
 const ROLE_LABELS: Record<Role, string> = {
   super_admin: 'Super Admin',
-  traffic_admin: 'Traffic Admin',
-  dev_admin: 'Dev Admin',
-  colachel_admin: 'Colachel Subdivision',
-  marthandam_admin: 'Marthandam Subdivision',
-  nagercoil_admin: 'Nagercoil Subdivision',
-  kanyakumari_admin: 'Kanyakumari Subdivision',
-  thuckalay_admin: 'Thuckalay Subdivision',
+  sp: 'Superintendent of Police',
+  dsp: 'Deputy Superintendent',
+  nagercoil_admin: 'Nagercoil Admin',
+  thuckalay_admin: 'Thuckalay Admin',
+  colachel_admin: 'Colachel Admin',
+  kanyakumari_admin: 'Kanyakumari Admin',
+  marthandam_admin: 'Marthandam Admin',
+  inspector: 'Inspector',
+  sub_inspector: 'Sub-Inspector',
+  operator: 'Operator',
+  viewer: 'Viewer',
+  developer: 'Developer',
 };
 
-const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'traffic_admin', 'dev_admin'];
+const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer'];
+const ALL_EXCEPT_VIEWERS: Role[] = ['super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'developer'];
+const TECH_ROLES: Role[] = ['super_admin', 'developer'];
 
 const Layout = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, hasRole } = useAuth();
   const location = useLocation();
   
   // Mobile check state
@@ -101,18 +108,21 @@ const Layout = () => {
   }, [location.pathname, isMobile]);
 
   useEffect(() => {
+    // Only developer and super_admin has access to /system/status endpoint
+    if (!user || !TECH_ROLES.includes(user.role)) return;
+
     const fetchStatus = async () => {
       try {
         const res = await axios.get<SystemStatus>(`${API_BASE}/system/status`);
         setStatus(res.data);
       } catch {
-        // Backend may not be running
+        // Backend may not be running or token expired
       }
     };
     fetchStatus();
     const interval = setInterval(fetchStatus, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user?.role]);
 
   return (
     <div className="layout-container">
@@ -146,26 +156,35 @@ const Layout = () => {
         <nav className="nav-menu">
           <div className="nav-section-label">{isOpen(isSidebarOpen, 'MAIN')}</div>
           <NavItem to="/" icon={<LayoutDashboard size={20} />} label="Dashboard" isOpen={isSidebarOpen} />
+          
           <NavItem to="/violations" icon={<AlertTriangle size={20} />} label="Violations" isOpen={isSidebarOpen}
-            roles={FULL_ACCESS_ROLES} />
-          <NavItem to="/cameras" icon={<Camera size={20} />} label="Cameras" isOpen={isSidebarOpen}
+            roles={ALL_EXCEPT_VIEWERS} />
+            
+          <NavItem to="/evidence-archive" icon={<Archive size={20} />} label="Evidence Archive" isOpen={isSidebarOpen} 
             roles={FULL_ACCESS_ROLES} />
 
-          <div className="nav-section-label">{isOpen(isSidebarOpen, 'INSIGHTS')}</div>
-          <NavItem to="/analytics" icon={<BarChart3 size={20} />} label="Analytics" isOpen={isSidebarOpen}
+          {hasRole(...FULL_ACCESS_ROLES) && <div className="nav-section-label">{isOpen(isSidebarOpen, 'INSIGHTS')}</div>}
+          <NavItem to="/analytics" icon={<BarChart3 size={20} />} label="Analytics" isOpen={isSidebarOpen} 
             roles={FULL_ACCESS_ROLES} />
+          
           <NavItem to="/dev-analytics" icon={<Code2 size={20} />} label="Dev Analytics" isOpen={isSidebarOpen}
-            roles={['dev_admin']} />
-          <NavItem to="/evidence-archive" icon={<Archive size={20} />} label="Evidence Archive" isOpen={isSidebarOpen}
-            roles={FULL_ACCESS_ROLES} />
+            roles={TECH_ROLES} />
 
-          <div className="nav-section-label">{isOpen(isSidebarOpen, 'SYSTEM')}</div>
-          <NavItem to="/system" icon={<Activity size={20} />} label="System Status" isOpen={isSidebarOpen}
-            roles={['dev_admin']} />
+          {hasRole(...FULL_ACCESS_ROLES) && <div className="nav-section-label">{isOpen(isSidebarOpen, 'SYSTEM')}</div>}
+          <NavItem to="/cameras" icon={<Camera size={20} />} label="Camera Health" isOpen={isSidebarOpen}
+            roles={['super_admin', 'sp', 'dsp', 'developer']} />
+            
+          <NavItem to="/system" icon={<Activity size={20} />} label="System Metrics" isOpen={isSidebarOpen}
+            roles={TECH_ROLES} />
+            
+          <NavItem to="/users" icon={<User size={20} />} label="User Management" isOpen={isSidebarOpen}
+            roles={['super_admin']} />
+            
           <NavItem to="/logs" icon={<FileTerminal size={20} />} label="System Logs" isOpen={isSidebarOpen}
-            roles={['dev_admin']} />
-          <NavItem to="/camera-config" icon={<Settings size={20} />} label="Camera Config" isOpen={isSidebarOpen}
-            roles={['dev_admin']} />
+            roles={TECH_ROLES} />
+            
+          <NavItem to="/camera-config" icon={<Settings size={20} />} label="Settings" isOpen={isSidebarOpen}
+            roles={['super_admin']} />
         </nav>
 
         <div className="sidebar-footer">

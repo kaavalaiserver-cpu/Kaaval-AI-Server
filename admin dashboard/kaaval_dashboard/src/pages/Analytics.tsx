@@ -166,7 +166,7 @@ const Analytics = () => {
     setLoading(true);
     try {
         const [sumRes, peakRes, effRes, heatRes] = await Promise.all([
-            axios.get<AnalyticsSummary>(`${API_BASE}/analytics/summary`),
+            axios.get<AnalyticsSummary>(`${API_BASE}/analytics/overview`),
             axios.get<PeakHoursData[]>(`${API_BASE}/analytics/peak-hours`),
             axios.get<CameraEfficiencyData[]>(`${API_BASE}/analytics/camera-efficiency`),
             axios.get<HeatmapData[]>(`${API_BASE}/analytics/heatmap`),
@@ -269,13 +269,14 @@ const Analytics = () => {
   };
 
   /* Helmet Compliance */
+  const helmetRate = Number(data.helmetComplianceRate) || 0;
   const helmetChart = {
     labels: ['Helmet Worn', 'No Helmet'],
     datasets: [
       {
         data: [
-            parseFloat(data.helmetComplianceRate + '' || '0'),
-            100 - parseFloat(data.helmetComplianceRate + '' || '0'),
+            helmetRate,
+            Math.max(0, 100 - helmetRate),
         ],
         backgroundColor: ['#22c55e', '#e31b23'],
         borderWidth: 0,

@@ -261,7 +261,7 @@ const DevAnalytics = () => {
           <DevCard
             icon={<Gauge size={22} />}
             label="Avg Confidence"
-            value={`${(data.avgConfidence * 100).toFixed(1)}%`}
+            value={`${((data.avgConfidence ?? 0) * 100).toFixed(1)}%`}
             color="blue"
           />
           <DevCard

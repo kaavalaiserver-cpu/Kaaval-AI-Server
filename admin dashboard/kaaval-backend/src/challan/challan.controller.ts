@@ -9,7 +9,7 @@ export class ChallanController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.SUPER_ADMIN, Role.TRAFFIC_ADMIN, Role.DEV_ADMIN)
+    @Roles(Role.SUPER_ADMIN, Role.SP, Role.DSP, Role.DEVELOPER)
   async generateChallan(@Param('id') id: string, @Res() res: Response) {
     const pdfBuffer = await this.challanService.generateChallan(id);
 

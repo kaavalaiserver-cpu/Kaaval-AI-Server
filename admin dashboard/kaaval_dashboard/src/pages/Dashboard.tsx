@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
-import type { ViolationStats, ViolationItem, CameraStatus } from '../types';
+import type { FastAPIAnalyticsSummary, ViolationItem, CameraStatus } from '../types';
 import {
   Camera,
   AlertTriangle,
@@ -26,7 +26,7 @@ const DISTRICT_BOUNDS = L.latLngBounds(
   L.latLng(8.4, 77.7),
 );
 
-const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'traffic_admin', 'dev_admin'];
+const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer'];
 
 type LngLat = [number, number];
 
@@ -69,7 +69,7 @@ const DISTRICT_SCOPE: MapScope = {
 };
 
 const SUBDIVISION_SCOPES: Record<
-  Exclude<Role, 'super_admin' | 'traffic_admin' | 'dev_admin'>,
+  Exclude<Role, 'super_admin' | 'sp' | 'dsp' | 'developer'>,
   MapScope
 > = {
   colachel_admin: {
@@ -310,7 +310,7 @@ const KanyakumariMapControl = ({
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const [stats, setStats] = useState<ViolationStats | null>(null);
+  const [stats, setStats] = useState<FastAPIAnalyticsSummary | null>(null);
   const [recentViolations, setRecentViolations] = useState<ViolationItem[]>([]);
   const [cameraStatus, setCameraStatus] = useState<CameraStatus | null>(null);
   const navigate = useNavigate();
@@ -319,7 +319,7 @@ const Dashboard = () => {
     if (!user || FULL_ACCESS_ROLES.includes(user.role)) {
       return DISTRICT_SCOPE;
     }
-    return SUBDIVISION_SCOPES[user.role as Exclude<Role, 'super_admin' | 'traffic_admin' | 'dev_admin'>] ?? DISTRICT_SCOPE;
+    return SUBDIVISION_SCOPES[user.role as Exclude<Role, 'super_admin' | 'sp' | 'dsp' | 'developer'>] ?? DISTRICT_SCOPE;
   }, [user]);
 
   const canUseDistrictFeatures = !!user && FULL_ACCESS_ROLES.includes(user.role);
@@ -340,11 +340,10 @@ const Dashboard = () => {
       // Skip if page is hidden to save resources
       if (background && document.visibilityState !== 'visible') return;
 
-      const [statsRes, violationsRes, camerasRes, systemRes] = await Promise.allSettled([
-        axios.get<ViolationStats>(`${API_BASE}/violations/stats`),
+      const [statsRes, violationsRes, camerasRes] = await Promise.allSettled([
+        axios.get<FastAPIAnalyticsSummary>(`${API_BASE}/analytics/summary`),
         axios.get<{ data: ViolationItem[] }>(`${API_BASE}/violations?limit=5`),
         axios.get<CameraStatus>(`${API_BASE}/cameras/status`),
-        axios.get<{ camerasOnline?: number; camerasOffline?: number }>(`${API_BASE}/system/status`),
       ]);
 
       if (statsRes.status === 'fulfilled') {
@@ -358,15 +357,6 @@ const Dashboard = () => {
 
       if (camerasRes.status === 'fulfilled') {
         setCameraStatus(camerasRes.value.data);
-      } else if (systemRes.status === 'fulfilled') {
-        const online = systemRes.value.data.camerasOnline ?? 0;
-        const offline = systemRes.value.data.camerasOffline ?? 0;
-        setCameraStatus((prev) => ({
-          total: online + offline,
-          online,
-          offline,
-          cameras: prev?.cameras ?? [],
-        }));
       }
     };
     fetchAll();
@@ -374,11 +364,15 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const todayCount = stats?.total ?? 0;
-  const pendingCount = stats?.pending ?? 0;
-  const finesCount = stats?.verified ?? 0;
+  const todayCount = stats?.total_violations ?? 0;
+  const pendingCount = stats?.pending_review ?? 0;
+  const finesCount = stats?.challans_issued ?? 0;
+  
+  const noHelmetObj = stats?.by_type?.find(t => t.violation_type === 'No Helmet');
+  const noHelmetCount = noHelmetObj ? noHelmetObj.count : 0;
+  
   const helmetRate = stats?.by_type
-    ? Math.round((1 - (stats.by_type['No Helmet'] ?? 0) / Math.max(todayCount, 1)) * 100)
+    ? Math.round((1 - noHelmetCount / Math.max(todayCount, 1)) * 100)
     : 95;
 
   const cameraIcon = useMemo(
@@ -538,7 +532,7 @@ const Dashboard = () => {
                   {canUseDistrictFeatures && (
                     <button
                       className="btn-review"
-                      onClick={() => navigate('/review')}
+                      onClick={() => navigate('/violations')}
                     >
                       <Eye size={14} /> Review
                     </button>
@@ -556,20 +550,20 @@ const Dashboard = () => {
           </div>
           <div className="type-breakdown">
             {stats?.by_type &&
-              Object.entries(stats.by_type)
-                .sort(([, a], [, b]) => b - a)
-                .map(([type, count]) => (
-                  <div key={type} className="type-row">
-                    <span className="type-label">{type}</span>
+              [...stats.by_type]
+                .sort((a, b) => b.count - a.count)
+                .map((item) => (
+                  <div key={item.violation_type} className="type-row">
+                    <span className="type-label">{item.violation_type}</span>
                     <div className="type-bar-container">
                       <div
                         className="type-bar"
                         style={{
-                          width: `${Math.min((count / Math.max(todayCount, 1)) * 100, 100)}%`,
+                          width: `${Math.min((item.count / Math.max(todayCount, 1)) * 100, 100)}%`,
                         }}
                       />
                     </div>
-                    <span className="type-count">{count}</span>
+                    <span className="type-count">{item.count}</span>
                   </div>
                 ))}
           </div>
