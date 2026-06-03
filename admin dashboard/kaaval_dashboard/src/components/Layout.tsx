@@ -119,7 +119,7 @@ const Layout = () => {
       }
     };
     fetchStatus();
-    const interval = setInterval(fetchStatus, 30000); // 30s
+    const interval = setInterval(fetchStatus, 2000); // 2s polling
     return () => clearInterval(interval);
   }, [user?.role]);
 

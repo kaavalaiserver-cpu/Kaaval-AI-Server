@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import './Violations.css';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 20;
 
 interface Filters {
   status: string;
@@ -53,6 +53,7 @@ const Violations = () => {
   const [editMode, setEditMode] = useState(false);
   const [editedPlate, setEditedPlate] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [hideNA, setHideNA] = useState(false);
 
   const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
 
@@ -88,7 +89,11 @@ const Violations = () => {
       }
 
       // Confidence as 0.0–1.0
-      if (filters.minConfidence) params.minConfidence = (parseFloat(filters.minConfidence) / 100).toFixed(4);
+      if (filters.minConfidence) {
+        params.minConfidence = (parseFloat(filters.minConfidence) / 100).toFixed(4);
+      } else if (hideNA) {
+        params.minConfidence = '0.0001';
+      }
       if (filters.maxConfidence) params.maxConfidence = (parseFloat(filters.maxConfidence) / 100).toFixed(4);
 
       const [vRes, sRes] = await Promise.all([
@@ -106,7 +111,7 @@ const Violations = () => {
     } finally {
       if (!background) setLoading(false);
     }
-  }, [page, filters]);
+  }, [page, filters, hideNA]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -115,7 +120,7 @@ const Violations = () => {
   }, [fetchViolations]);
 
   useEffect(() => {
-    const interval = setInterval(() => fetchViolations(true), 30000); // 30s
+    const interval = setInterval(() => fetchViolations(true), 2000); // 2s polling
     return () => clearInterval(interval);
   }, [fetchViolations]);
 
@@ -335,6 +340,7 @@ const Violations = () => {
       {/* Stats Bar */}
       <div className="stats-bar">
         <StatChip label="Total" value={stats?.total ?? 0} color="blue" />
+        <StatChip label="With Confidence" value={stats?.with_confidence ?? 0} color="cyan" />
         <StatChip label="Pending" value={stats?.pending ?? 0} color="orange" />
         <StatChip label="Verified" value={stats?.verified ?? 0} color="green" />
         <StatChip label="Rejected" value={stats?.rejected ?? 0} color="red" />
@@ -410,6 +416,11 @@ const Violations = () => {
             {showAdvanced ? 'Hide Advanced' : 'Advanced'}
             {hasActiveFilters && <span className="filter-dot" />}
           </button>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', marginLeft: 'auto' }}>
+            <input type="checkbox" checked={hideNA} onChange={(e) => setHideNA(e.target.checked)} />
+            Hide N/A Confidence
+          </label>
 
           <button className="btn-clear" onClick={clearFilters}>Clear</button>
         </div>

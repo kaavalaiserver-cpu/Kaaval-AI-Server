@@ -87,7 +87,7 @@ export class ViolationsService {
     return '2-Wheeler';
   }
 
-  private formatViolation(v: Violation) {
+  private async formatViolation(v: Violation) {
     const rawType = v.violationType || 'NO_HELMET';
     const violationType = this.formatViolationType(rawType);
     const cameraId = v.cameraId || 'CAM-001';
@@ -95,6 +95,27 @@ export class ViolationsService {
     const location =
       CAMERA_LOCATIONS[cameraId] ?? meta['location_name'] ?? cameraId;
     const confidence = v.confidenceScore || 0;
+
+    const formatImageUrl = async (url: string | null) => {
+      if (!url) return '';
+      if (url.startsWith('http')) return url;
+      try {
+        const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3');
+        const { getSignedUrl } = await import('@aws-sdk/s3-request-presigner');
+        const s3 = new S3Client({ region: 'ap-south-1' });
+        const command = new GetObjectCommand({
+          Bucket: 'kaaval-ai-images',
+          Key: url,
+        });
+        return await getSignedUrl(s3, command, { expiresIn: 3600 });
+      } catch (e) {
+        console.error('Failed to generate presigned URL', e);
+        return '';
+      }
+    };
+
+    const imageUrl = await formatImageUrl(v.imageUrl);
+    const proofUrl = await formatImageUrl(v.proofImgUrl);
 
     return {
       id: v.id,
@@ -110,8 +131,8 @@ export class ViolationsService {
       confidence: confidence || 0,
       status: this.mapStatusToDashboard(v.status),
       raw_status: v.status,
-      image_url: v.imageUrl || '',
-      proof_img_url: v.proofImgUrl || v.imageUrl || '',
+      image_url: imageUrl,
+      proof_img_url: proofUrl || imageUrl,
       gps_lat: v.locationLat,
       gps_lng: v.locationLng,
       challan_amount: v.challanAmount,
@@ -340,7 +361,7 @@ export class ViolationsService {
 
       const paged = scoped.slice(skip, skip + limit);
       return {
-        data: paged.map((v) => this.formatViolation(v)),
+        data: await Promise.all(paged.map(async (v) => await this.formatViolation(v))),
         total: scoped.length,
         page,
         limit,
@@ -355,7 +376,7 @@ export class ViolationsService {
     });
 
     return {
-      data: violations.map((v) => this.formatViolation(v)),
+      data: await Promise.all(violations.map(async (v) => await this.formatViolation(v))),
       total,
       page,
       limit,
@@ -391,7 +412,7 @@ export class ViolationsService {
     const v = await this.violationRepo.findOneBy({ id });
     if (!v) throw new NotFoundException('Violation not found');
     this.assertViolationAccess(user, v);
-    return this.formatViolation(v);
+    return await this.formatViolation(v);
   }
 
   async getStats(user?: ScopedUser) {
@@ -404,7 +425,7 @@ export class ViolationsService {
 
     const all = await this.violationRepo.find({
       where: { isDeleted: false },
-      select: ['id', 'status', 'violationType', 'createdAt', 'locationLat', 'locationLng', 'cameraId', 'metadata'],
+      select: ['id', 'status', 'violationType', 'createdAt', 'locationLat', 'locationLng', 'cameraId', 'metadata', 'confidenceScore'],
     });
 
     const scopedData = all.filter((v) => this.canAccessViolation(user, v));
@@ -427,7 +448,9 @@ export class ViolationsService {
       byType[t] = (byType[t] || 0) + 1;
     }
 
-    const stats = { total, pending, verified, rejected, manual_review: review, by_type: byType };
+    const withConfidence = scopedData.filter((v) => (v.confidenceScore ?? 0) > 0).length;
+
+    const stats = { total, pending, verified, rejected, manual_review: review, by_type: byType, with_confidence: withConfidence };
     await this.cache.set(cacheKey, stats, 30000); // Cache 30s
     return stats;
   }
@@ -481,7 +504,7 @@ export class ViolationsService {
 
     await this.violationRepo.save(v);
     await this.invalidateStatsCache();
-    return this.formatViolation(v);
+    return await this.formatViolation(v);
   }
 
   async remove(id: string, user?: ScopedUser) {

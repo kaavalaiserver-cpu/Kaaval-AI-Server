@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
-import type { FastAPIAnalyticsSummary, ViolationItem, CameraStatus } from '../types';
+import type { FastAPIAnalyticsSummary, ViolationItem, CameraStatus, ViolationStats } from '../types';
 import {
   Camera,
   AlertTriangle,
@@ -311,6 +311,7 @@ const KanyakumariMapControl = ({
 const Dashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState<FastAPIAnalyticsSummary | null>(null);
+  const [violationStats, setViolationStats] = useState<ViolationStats | null>(null);
   const [recentViolations, setRecentViolations] = useState<ViolationItem[]>([]);
   const [cameraStatus, setCameraStatus] = useState<CameraStatus | null>(null);
   const navigate = useNavigate();
@@ -340,14 +341,19 @@ const Dashboard = () => {
       // Skip if page is hidden to save resources
       if (background && document.visibilityState !== 'visible') return;
 
-      const [statsRes, violationsRes, camerasRes] = await Promise.allSettled([
+      const [statsRes, violationsRes, camerasRes, violationStatsRes] = await Promise.allSettled([
         axios.get<FastAPIAnalyticsSummary>(`${API_BASE}/analytics/summary`),
         axios.get<{ data: ViolationItem[] }>(`${API_BASE}/violations?limit=5`),
         axios.get<CameraStatus>(`${API_BASE}/analytics/camera-health`),
+        axios.get<ViolationStats>(`${API_BASE}/violations/stats`),
       ]);
 
       if (statsRes.status === 'fulfilled') {
         setStats(statsRes.value.data);
+      }
+
+      if (violationStatsRes.status === 'fulfilled') {
+        setViolationStats(violationStatsRes.value.data);
       }
 
       if (violationsRes.status === 'fulfilled') {
@@ -360,13 +366,14 @@ const Dashboard = () => {
       }
     };
     fetchAll();
-    const interval = setInterval(() => fetchAll(true), 30000); // 30s — avoids rate limiting
+    const interval = setInterval(() => fetchAll(true), 2000); // 2s polling
     return () => clearInterval(interval);
   }, []);
 
   const todayCount = stats?.total_violations ?? 0;
   const pendingCount = stats?.pending_review ?? 0;
   const finesCount = stats?.challans_issued ?? 0;
+  const withConfidenceCount = violationStats?.with_confidence ?? 0;
   
   const noHelmetObj = stats?.by_type?.find(t => t.violation_type === 'No Helmet');
   const noHelmetCount = noHelmetObj ? noHelmetObj.count : 0;
@@ -444,6 +451,13 @@ const Dashboard = () => {
           value={`${helmetRate}%`}
           sub="Detection rate"
           color="purple"
+        />
+        <WidgetCard
+          icon={<CheckCircle size={22} />}
+          label="Plate Identified"
+          value={String(withConfidenceCount)}
+          sub="With confidence score"
+          color="cyan"
         />
       </div>
 

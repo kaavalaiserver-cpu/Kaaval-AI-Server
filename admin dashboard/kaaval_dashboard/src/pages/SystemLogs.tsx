@@ -36,7 +36,7 @@ const SystemLogs = () => {
 
   useEffect(() => {
     fetchLogs();
-    const interval = setInterval(() => fetchLogs(true), 30000); // 30s
+    const interval = setInterval(() => fetchLogs(true), 2000); // 2s polling
     return () => clearInterval(interval);
   }, [fetchLogs]);
 

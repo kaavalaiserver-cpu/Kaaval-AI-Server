@@ -33,15 +33,14 @@ function checkPort(host: string, port: number, timeout = 2000): Promise<boolean>
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
 
-    // Rate limiting: 120 req/min general, 5 req/min for login (brute-force protection)
+    // Rate limiting: Set high enough to prevent 429s behind Nginx
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
-        const isProd = config.get('NODE_ENV') === 'production';
         return [
-          { name: 'general', ttl: 60000, limit: isProd ? 600 : 10000 }, // 600/min for dashboard polling
-          { name: 'login',   ttl: 60000, limit: isProd ? 5 : 1000 },    // 5/min login (brute-force protection)
+          { name: 'general', ttl: 60000, limit: 10000 },
+          { name: 'login',   ttl: 60000, limit: 1000 },
         ];
       },
     }),

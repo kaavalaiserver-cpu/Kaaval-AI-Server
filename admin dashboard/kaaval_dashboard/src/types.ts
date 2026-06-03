@@ -32,6 +32,7 @@ export interface ViolationStats {
   verified: number;
   rejected: number;
   manual_review: number;
+  with_confidence?: number;
   by_type: Record<string, number>;
 }
 
