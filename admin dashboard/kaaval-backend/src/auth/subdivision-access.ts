@@ -35,6 +35,8 @@ const FULL_ACCESS_ROLES = new Set<Role>([
   Role.SP,
   Role.DSP,
   Role.DEVELOPER,
+  Role.INSPECTOR,
+  Role.SUB_INSPECTOR,
 ]);
 
 // We map scope by name rather than role, since multiple roles can share a subdivision
@@ -73,7 +75,7 @@ const SUBDIVISION_SCOPES: Record<string, SubdivisionScope> = {
   },
   nagercoil: {
     name: 'Nagercoil',
-    keywords: ['nagercoil', 'ramanputhoor'],
+    keywords: ['nagercoil', 'ramanputhoor', 'ramanputhur'],
     polygon: [
       [77.328, 8.132],
       [77.366, 8.116],

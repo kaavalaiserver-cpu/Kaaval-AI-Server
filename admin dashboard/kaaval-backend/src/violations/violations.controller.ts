@@ -91,7 +91,7 @@ export class ViolationsController {
 
   @Post(':id/verify')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.SP, Role.DSP, Role.DEVELOPER, ...SUBDIVISION_ROLES)
+  @Roles(Role.SUPER_ADMIN, Role.SP, Role.DSP, Role.DEVELOPER, Role.INSPECTOR, Role.SUB_INSPECTOR, ...SUBDIVISION_ROLES)
   verify(@Param('id') id: string, @Body() dto: VerifyViolationDto, @Request() req: any) {
     return this.violationsService.verify(id, dto, req.user);
   }

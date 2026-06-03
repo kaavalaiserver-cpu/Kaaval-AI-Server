@@ -270,7 +270,7 @@ const Violations = () => {
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <span className="value highlight">{selectedViolation.vehicle_number}</span>
-                      {hasRole('super_admin', 'developer', 'sp', 'dsp', 'inspector', 'sub_inspector') && (
+                      {hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
                         <button onClick={() => { setEditMode(true); setEditedPlate(selectedViolation.vehicle_number); }}
                           style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8em' }}>
                           <Edit2 size={14} /> Edit
@@ -315,7 +315,7 @@ const Violations = () => {
                   )}
                 </div>
                 <div className="modal-actions">
-                  {(selectedViolation.status === 'Pending' || selectedViolation.status === 'Review') && hasRole('super_admin', 'developer', 'sp', 'dsp', 'inspector', 'sub_inspector') && (
+                  {(selectedViolation.status === 'Pending' || selectedViolation.status === 'Review') && hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
                     <>
                       <button className="btn-approve" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'approve')}>
                         <CheckCircle size={16} /> Approve
@@ -542,7 +542,7 @@ const Violations = () => {
                 </td>
                 <td>
                   <div className="action-btns">
-                    {(v.status === 'Pending' || v.status === 'Review') && hasRole('super_admin', 'developer', 'sp', 'dsp', 'inspector', 'sub_inspector') && (
+                    {(v.status === 'Pending' || v.status === 'Review') && hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
                       <>
                         <button className="act-btn approve" title="Approve Fine" onClick={() => handleVerify(v.id, 'approve')}>
                           <CheckCircle size={14} />

@@ -13,7 +13,7 @@ import {
   UpdateViolationDto,
   CreateViolationDto,
 } from './dto/violation.dto.js';
-import { isInUserScope, type ScopedUser } from '../auth/subdivision-access.js';
+import { isInUserScope, hasFullAccessRole, type ScopedUser } from '../auth/subdivision-access.js';
 import { AuditService } from '../system/audit.service.js';
 
 const CAMERA_LOCATIONS: Record<string, string> = {
@@ -23,7 +23,8 @@ const CAMERA_LOCATIONS: Record<string, string> = {
   'CAM-004': 'Mylapore Market',
   'CAM-005': 'Guindy Circle',
   'CAM_001': 'T. Nagar Junction',
-  'CAM-EDGE-01': 'Kaaval AI - Ramanputhoor',
+  'CAM-EDGE-01': 'Ramanputhur, Nagercoil',
+  'CAM_EDGE_01': 'Ramanputhur, Nagercoil',
   BATCH_UPLOAD: 'Batch Upload',
 };
 
@@ -349,7 +350,7 @@ export class ViolationsService {
       where['confidenceScore'] = LessThanOrEqual(maxConf);
     }
 
-    const requiresScopeFilter = !!user && !['super_admin', 'traffic_admin', 'dev_admin'].includes(user.role);
+    const requiresScopeFilter = !!user && !hasFullAccessRole(user.role);
 
     if (requiresScopeFilter) {
       const violations = await this.violationRepo.find({
@@ -416,7 +417,7 @@ export class ViolationsService {
   }
 
   async getStats(user?: ScopedUser) {
-    const cacheKey = user?.role && !['super_admin', 'traffic_admin', 'dev_admin'].includes(user.role)
+    const cacheKey = user?.role && !hasFullAccessRole(user.role)
       ? `violation-stats-${user.role}`
       : 'violation-stats';
 
