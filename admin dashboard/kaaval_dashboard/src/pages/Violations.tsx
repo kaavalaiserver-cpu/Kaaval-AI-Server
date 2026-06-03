@@ -315,7 +315,7 @@ const Violations = () => {
                   )}
                 </div>
                 <div className="modal-actions">
-                  {(selectedViolation.status === 'Pending' || selectedViolation.status === 'Review') && hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
+                  {(['Pending', 'Ready', 'Review'].includes(selectedViolation.status)) && hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
                     <>
                       <button className="btn-approve" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'approve')}>
                         <CheckCircle size={16} /> Approve
@@ -542,7 +542,7 @@ const Violations = () => {
                 </td>
                 <td>
                   <div className="action-btns">
-                    {(v.status === 'Pending' || v.status === 'Review') && hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
+                    {(['Pending', 'Ready', 'Review'].includes(v.status)) && hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
                       <>
                         <button className="act-btn approve" title="Approve Fine" onClick={() => handleVerify(v.id, 'approve')}>
                           <CheckCircle size={14} />
