@@ -55,7 +55,7 @@ echo    Password: kaaval@123
 echo.
 echo  SUBDIVISION ADMIN (Nagercoil):
 echo    Username: nagercoil_admin
-echo    Password: 96007
+echo    Password: 720059
 echo.
 echo  INSPECTOR LOGIN (Nagercoil):
 echo    Username: inspector_demo

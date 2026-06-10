@@ -50,7 +50,7 @@ export class UsersService implements OnModuleInit {
         },
         {
           username: 'nagercoil_admin',
-          passwordHash: await bcrypt.hash('96007', 10),
+          passwordHash: await bcrypt.hash('720059', 10),
           fullName: 'Nagercoil Sub-Admin',
           role: Role.NAGERCOIL_ADMIN,
           requiresPasswordChange: true,
