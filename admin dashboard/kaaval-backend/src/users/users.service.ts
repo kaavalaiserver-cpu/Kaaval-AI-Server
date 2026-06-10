@@ -34,7 +34,7 @@ export class UsersService implements OnModuleInit {
       const seedUsers = [
         {
           username: 'superadmin',
-          passwordHash: await bcrypt.hash('superadmin@123', 10),
+          passwordHash: await bcrypt.hash('Kk@7200599700', 10),
           fullName: 'System Super Admin',
           role: Role.SUPER_ADMIN,
           requiresPasswordChange: true,

@@ -47,7 +47,7 @@ echo ===================================================
 echo.
 echo  SUPERADMIN LOGIN:
 echo    Username: superadmin
-echo    Password: superadmin@123
+echo    Password: Kk@7200599700
 echo.
 echo  SP / DSP LOGIN:
 echo    Username: sp_admin
