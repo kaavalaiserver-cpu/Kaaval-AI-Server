@@ -22,22 +22,24 @@
   margin-bottom: 2rem;
 }
 
-.login-shield {
-  width: 64px;
-  height: 64px;
-  background: linear-gradient(135deg, #0B3A6E 0%, #E31B23 100%);
-  border-radius: 16px;
+.login-logo-container {
+  width: 160px;
+  height: 100px;
+  margin: 0 auto 0.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  margin: 0 auto 1rem;
+}
+
+.login-logo {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .login-header h1 {
   font-size: 1.5rem;
   font-weight: 800;
-  color: #0B3A6E;
   letter-spacing: 0.05em;
   margin-bottom: 0.25rem;
 }

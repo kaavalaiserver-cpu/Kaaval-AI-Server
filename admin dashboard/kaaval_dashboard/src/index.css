@@ -68,3 +68,11 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+.text-navy {
+  color: var(--navy) !important;
+}
+
+.text-red {
+  color: var(--red) !important;
+}

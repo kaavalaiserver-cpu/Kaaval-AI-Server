@@ -137,9 +137,11 @@ const Layout = () => {
         <div className="logo-section">
           {isSidebarOpen && (
             <div className="logo-content">
-              <div className="logo-shield">K</div>
+              <img src="/Kaaval AI Logo.png" alt="Logo" className="sidebar-logo" />
               <div>
-                <h2>KAAVAL AI</h2>
+                <h2>
+                  <span className="text-navy">KAAVAL</span> <span className="text-red">AI</span>
+                </h2>
                 <span className="badge">ADMIN</span>
               </div>
             </div>

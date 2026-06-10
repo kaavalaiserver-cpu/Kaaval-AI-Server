@@ -60,10 +60,12 @@ const Login = () => {
     <div className="login-page">
       <div className="login-card">
         <div className="login-header">
-          <div className="login-shield">
-            <Shield size={32} />
+          <div className="login-logo-container">
+            <img src="/Kaaval AI Logo.png" alt="Kaaval AI Logo" className="login-logo" />
           </div>
-          <h1>KAAVAL AI</h1>
+          <h1>
+            <span className="text-navy">KAAVAL</span> <span className="text-red">AI</span>
+          </h1>
           <p className="login-subtitle">Admin Dashboard</p>
         </div>
 

@@ -38,17 +38,10 @@
   min-width: 0;
 }
 
-.logo-shield {
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, var(--navy) 0%, var(--red) 100%);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 1rem;
-  color: white;
+.sidebar-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
   flex-shrink: 0;
 }
 
