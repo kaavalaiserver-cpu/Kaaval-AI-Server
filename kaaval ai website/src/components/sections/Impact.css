@@ -1,0 +1,55 @@
+.impact {
+  padding: 12rem 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--deep-midnight);
+}
+
+.impact-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100vw;
+  height: 800px;
+  background: radial-gradient(ellipse at center, rgba(10, 47, 107, 0.2) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.impact-inner {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6rem 4rem;
+  position: relative;
+  z-index: 1;
+}
+
+.impact-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.impact-num {
+  font-family: var(--font-heading);
+  font-size: clamp(4.5rem, 10vw, 8rem);
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  background: linear-gradient(180deg, #fff 0%, rgba(255, 255, 255, 0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.impact-label {
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+  color: var(--text-muted);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 768px) {
+  .impact-inner { grid-template-columns: 1fr; gap: 4rem; }
+}
