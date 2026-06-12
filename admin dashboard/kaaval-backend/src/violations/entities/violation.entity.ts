@@ -47,7 +47,7 @@ export class Violation {
   @Column({ name: 'challan_amount', type: 'int', nullable: true })
   challanAmount!: number | null;
 
-  @Column({ name: 'challan_issued_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'challan_issued_at', type: 'timestamp', nullable: true })
   challanIssuedAt!: Date | null;
 
   @Column({ type: 'varchar', length: 50, default: 'PENDING' })
@@ -65,7 +65,7 @@ export class Violation {
   @Column({ name: 'reviewed_by', type: 'varchar', length: 100, nullable: true })
   reviewedBy!: string | null;
 
-  @Column({ name: 'reviewed_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'reviewed_at', type: 'timestamp', nullable: true })
   reviewedAt!: Date | null;
 
   @Column({ name: 'review_notes', type: 'text', nullable: true })
@@ -80,7 +80,7 @@ export class Violation {
   @Column({ name: 'is_deleted', type: 'boolean', default: false })
   isDeleted!: boolean;
 
-  @Column({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'deleted_at', type: 'timestamp', nullable: true })
   deletedAt!: Date | null;
 
   @Column({ name: 'deleted_by', type: 'varchar', length: 100, nullable: true })
