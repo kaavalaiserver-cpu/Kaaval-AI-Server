@@ -1,5 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Role } from '../../auth/roles.enum.js';
+import { getTimestampColumnType } from '../../common/database.utils.js';
 
 @Entity('users')
 export class User {
@@ -36,7 +37,7 @@ export class User {
   @Column({ name: 'failed_login_attempts', default: 0 })
   failedLoginAttempts!: number;
 
-  @Column({ name: 'locked_until', nullable: true })
+  @Column({ name: 'locked_until', type: getTimestampColumnType(), nullable: true })
   lockedUntil!: Date | null;
 
   @Column({

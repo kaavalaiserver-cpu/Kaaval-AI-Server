@@ -6,6 +6,8 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+import { getTimestampColumnType } from '../../common/database.utils.js';
+
 @Entity('cameras')
 export class Camera {
   @PrimaryGeneratedColumn('uuid')
@@ -29,7 +31,7 @@ export class Camera {
   @Column({ type: 'varchar', length: 20, default: 'online' })
   status!: string;
 
-  @Column({ name: 'last_active', nullable: true })
+  @Column({ name: 'last_active', type: getTimestampColumnType(), nullable: true })
   lastActive!: Date | null;
 
   @Column({ name: 'violation_count', type: 'int', default: 0 })
