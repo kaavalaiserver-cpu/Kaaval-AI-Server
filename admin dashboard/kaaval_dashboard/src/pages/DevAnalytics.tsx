@@ -1,338 +1,383 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
 import type { DevAnalytics as DevAnalyticsData } from '../types';
 import {
-  Code2,
-  RefreshCw,
-  Cpu,
-  Gauge,
-  Bike,
-  Car,
-  ScanLine,
-  CheckCircle2,
-  XCircle,
-  Activity,
-  Key,
-  Server,
-  Zap
+  Code2, RefreshCw, Cpu, Gauge, Bike,
+  ScanLine, CheckCircle2, XCircle, Activity,
+  Key, Zap, AlertCircle, CheckCircle, Clock,
+  BarChart3, Terminal, Wifi, WifiOff, TrendingUp,
+  Shield, Database,
 } from 'lucide-react';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  ArcElement,
-  Tooltip,
-  Legend,
+  Chart as ChartJS, CategoryScale, LinearScale,
+  BarElement, LineElement, PointElement, ArcElement,
+  Tooltip, Legend, Filler,
 } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import './DevAnalytics.css';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale, LinearScale, BarElement,
+  LineElement, PointElement, ArcElement,
+  Tooltip, Legend, Filler,
+);
 
-interface PlateApiStatus {
-  account_name: string;
-  key_prefix: string;
+const PLATE_API_KEY = '478212749124746424275c833ba665b3a168a13e';
+
+interface PlateApiInfo {
   calls_used: number;
   total_limit: number;
   remaining: number;
-  status: string;
+  status: 'ok' | 'error';
+  month?: string;
+  error?: string;
 }
 
-const DevAnalytics = () => {
-  const [data, setData] = useState<DevAnalyticsData | null>(null);
-  const [plateStatus, setPlateStatus] = useState<PlateApiStatus[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedAccount, setSelectedAccount] = useState<string>('all');
+const tooltipStyle = {
+  backgroundColor: '#0f172a',
+  borderColor: '#1e293b',
+  borderWidth: 1,
+  titleColor: '#e2e8f0',
+  bodyColor: '#94a3b8',
+  cornerRadius: 8,
+  padding: 10,
+};
 
-  const fetchData = async () => {
-    setLoading(true);
+const DevAnalytics = () => {
+  const [data, setData]                 = useState<DevAnalyticsData | null>(null);
+  const [loading, setLoading]           = useState(true);
+  const [refreshing, setRefreshing]     = useState(false);
+  const [plateInfo, setPlateInfo]       = useState<PlateApiInfo | null>(null);
+  const [plateLoading, setPlateLoading] = useState(false);
+  const [plateFetched, setPlateFetched] = useState(false);
+  const [uptime, setUptime]             = useState(0); // seconds
+
+  // Live uptime counter
+  useEffect(() => {
+    const t = setInterval(() => setUptime(s => s + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const fetchData = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
     try {
       const res = await axios.get<DevAnalyticsData>(`${API_BASE}/analytics/dev`);
       setData(res.data);
-    } catch (err) {
-      console.error(err);
-    } 
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); setRefreshing(false); }
+  };
 
+  const fetchPlateApiUsage = async () => {
+    setPlateLoading(true); setPlateFetched(false);
     try {
-      // Fetch Plate Recognizer API usage via backend proxy
-      const plateRes = await axios.get<PlateApiStatus[]>(`${API_BASE}/system/ai-status`);
-      setPlateStatus(plateRes.data);
-    } catch (err) {
-      console.error("Failed to fetch plate api status", err);
-    } finally {
-      setLoading(false);
-    }
+      const res = await axios.get(`${API_BASE}/system/plate-api-usage`);
+      const d = res.data;
+      if (d.status === 'error') {
+        setPlateInfo({ status: 'error', calls_used: 0, total_limit: 0, remaining: 0, error: d.error });
+      } else {
+        setPlateInfo({
+          status: 'ok',
+          calls_used: d.calls_used ?? 0,
+          total_limit: d.total_limit ?? 0,
+          remaining: d.remaining ?? 0,
+          month: d.month,
+        });
+      }
+    } catch (err: any) {
+      setPlateInfo({
+        status: 'error', calls_used: 0, total_limit: 0, remaining: 0,
+        error: err?.response?.data?.message || 'Failed to reach backend.',
+      });
+    } finally { setPlateLoading(false); setPlateFetched(true); }
   };
 
   useEffect(() => { fetchData(); }, []);
 
-  if (loading || !data) {
-    return (
-      <div className="dev-analytics-page">
-        <div className="dev-loading">Loading dev analytics...</div>
-      </div>
-    );
-  }
+  // ─── Derived Values ───────────────────────────────────────────────
+  const ocrTotal        = (data?.ocrSuccessCount ?? 0) + (data?.ocrFailCount ?? 0);
+  const ocrSuccessRate  = ocrTotal > 0 ? Math.round(((data?.ocrSuccessCount ?? 0) / ocrTotal) * 100) : 0;
+  const confPct         = Math.round((data?.avgConfidence ?? 0) * 100);
+  const extractPct      = parseFloat((data?.plateExtractionRate ?? 0).toFixed(1));
+  const usedPct         = plateInfo ? Math.min(((plateInfo.calls_used / (plateInfo.total_limit || 1)) * 100), 100) : 0;
+  const isHealthy       = data?.pipelineStatus === 'healthy';
 
-  const confBuckets = data.confidenceDistribution ?? [];
+  const fmtUptime = (s: number) => {
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  };
+
+  // ─── Confidence Distribution Chart ───────────────────────────────
+  const confBuckets = data?.confidenceDistribution ?? [];
   const confChart = {
-    labels: confBuckets.map((b: { bucket: string }) => b.bucket),
+    labels: confBuckets.map(b => b.bucket),
     datasets: [{
       label: 'Count',
-      data: confBuckets.map((b: { count: number }) => b.count),
-      backgroundColor: confBuckets.map((_: unknown, i: number) => {
-        const colors = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e'];
-        return colors[i % colors.length];
-      }),
-      borderRadius: 4,
+      data: confBuckets.map(b => b.count),
+      backgroundColor: ['#ef4444','#f97316','#f59e0b','#84cc16','#22c55e'],
+      borderColor: '#0f172a',
+      borderWidth: 2,
+      borderRadius: 6,
+      borderSkipped: false,
     }],
   };
 
+  // ─── Source Doughnut ─────────────────────────────────────────────
   const sourceChart = {
     labels: ['Camera Feed', 'Batch Upload'],
     datasets: [{
-      data: [data.cameraFeedCount ?? 0, data.batchUploadCount ?? 0],
-      backgroundColor: ['#1e6fd9', '#f59e0b'],
-      borderWidth: 0,
+      data: [data?.cameraFeedCount ?? 0, data?.batchUploadCount ?? 0],
+      backgroundColor: ['#3b82f6', '#f59e0b'],
+      borderColor: '#0f172a',
+      borderWidth: 3,
+      hoverOffset: 8,
     }],
   };
 
-  const totalCalls = plateStatus.reduce((acc, curr) => acc + curr.calls_used, 0);
-  const totalLimit = plateStatus.reduce((acc, curr) => acc + curr.total_limit, 0);
-
-  const getStatusType = (acct: PlateApiStatus) => {
-    const s = acct.status.toLowerCase();
-    if (s.includes('invalid') || s.includes('error')) return 'invalid'; 
-    if (acct.remaining <= 0 || s.includes('quota_exceeded')) return 'exceeded';
-    if (acct.remaining < 200) return 'warning';
-    return 'active';
+  const barOpts: any = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: tooltipStyle },
+    scales: {
+      x: { ticks: { color: '#475569', font: { size: 11 } }, grid: { color: 'rgba(148,163,184,0.07)' }, border: { color: 'transparent' } },
+      y: { ticks: { color: '#475569', font: { size: 11 } }, grid: { color: 'rgba(148,163,184,0.07)' }, border: { color: 'transparent' }, beginAtZero: true },
+    },
   };
 
-  const getStatusIcon = (type: string) => {
-    switch(type) {
-      case 'invalid': return '🔴';
-      case 'exceeded': return '🔴';
-      case 'warning': return '🟠';
-      default: return '🟢';
-    }
+  const doughnutOpts: any = {
+    responsive: true, maintainAspectRatio: false, cutout: '65%',
+    plugins: {
+      legend: { position: 'bottom' as const, labels: { color: '#94a3b8', font: { size: 11 }, padding: 14, boxWidth: 10 } },
+      tooltip: tooltipStyle,
+    },
   };
+
+  // ─── Loading ──────────────────────────────────────────────────────
+  if (loading) return (
+    <div className="da-page">
+      <div className="da-skeleton-header"><div className="da-sk-line w50" /><div className="da-sk-btn" /></div>
+      <div className="da-metrics-grid">{[...Array(6)].map((_, i) => <div key={i} className="da-sk-card" />)}</div>
+      <div className="da-sk-chart-full" />
+    </div>
+  );
 
   return (
-    <div className="dev-analytics-page">
-      <div className="dev-header">
-        <h2><Code2 size={22} /> Developer Analytics</h2>
-        <button className="btn-secondary" onClick={fetchData}>
-          <RefreshCw size={16} /> Refresh
-        </button>
-      </div>
-
-       {/* Plate API Usage Section */}
-       <div className="dev-section">
-        <div className="plate-section-header">
-          <h3><Key size={18} /> Plate Recognizer API Usage</h3>
-          
-          <div className="plate-controls">
-            <div className="plate-summary-text">
-               <span className="p-sum-item">Used: <b>{totalCalls.toLocaleString()}</b></span>
-               <span className="p-sum-div">/</span>
-               <span className="p-sum-item">Limit: <b>{totalLimit.toLocaleString()}</b></span>
-            </div>
-            
-            <select 
-              className="plate-account-select"
-              value={selectedAccount}
-              onChange={(e) => setSelectedAccount(e.target.value)}
-            >
-              <option value="all">View All Accounts</option>
-              {plateStatus.map(acct => {
-                const type = getStatusType(acct);
-                const icon = getStatusIcon(type);
-                return (
-                  <option key={acct.account_name} value={acct.account_name}>
-                    {icon} {acct.account_name} ({acct.remaining} left)
-                  </option>
-                );
-              })}
-            </select>
+    <div className="da-page">
+      {/* ── Header ────────────────────────────────────────────────── */}
+      <div className="da-header">
+        <div className="da-header-left">
+          <div className="da-header-icon"><Code2 size={20} /></div>
+          <div>
+            <h2>Developer Analytics</h2>
+            <p className="da-subtitle">AI Pipeline · OCR Engine · System Diagnostics</p>
           </div>
         </div>
+        <div className="da-header-right">
+          <div className="da-uptime-chip">
+            <Terminal size={12} />
+            <span className="da-uptime-label">Session</span>
+            <code className="da-uptime-val">{fmtUptime(uptime)}</code>
+          </div>
+          <div className={`da-pipeline-pill ${isHealthy ? 'healthy' : 'error'}`}>
+            {isHealthy ? <Wifi size={13} /> : <WifiOff size={13} />}
+            {data?.pipelineStatus ?? 'Unknown'}
+          </div>
+          <button className="da-btn-refresh" onClick={() => fetchData(true)} disabled={refreshing}>
+            <RefreshCw size={15} className={refreshing ? 'da-spin' : ''} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
+      </div>
 
-        <div className="plate-api-grid">
-          {plateStatus.length === 0 ? (
-            <div className="no-data">No Plate API data available (Is service running on port 8000?)</div>
+      {/* ── Plate Recognizer API ─────────────────────────────────── */}
+      <div className="da-card da-api-card">
+        <div className="da-card-header">
+          <div className="da-card-title">
+            <Key size={16} />
+            <span>Plate Recognizer API</span>
+            <code className="da-api-key-badge">{PLATE_API_KEY.slice(0, 8)}••••{PLATE_API_KEY.slice(-4)}</code>
+          </div>
+          <button className={`da-btn-fetch ${plateLoading ? 'loading' : ''}`} onClick={fetchPlateApiUsage} disabled={plateLoading}>
+            {plateLoading
+              ? <><RefreshCw size={14} className="da-spin" /> Fetching...</>
+              : <><Zap size={14} /> Fetch API Analysis</>
+            }
+          </button>
+        </div>
+
+        {!plateFetched && !plateLoading && (
+          <div className="da-api-idle">
+            <Clock size={15} />
+            <span>Click <strong>Fetch API Analysis</strong> to view live quota stats</span>
+          </div>
+        )}
+
+        {plateFetched && plateInfo && (
+          plateInfo.status === 'error' ? (
+            <div className="da-api-error"><AlertCircle size={17} />{plateInfo.error}</div>
           ) : (
-            plateStatus
-              .filter(acct => selectedAccount === 'all' || acct.account_name === selectedAccount)
-              .map((acct) => {
-                const type = getStatusType(acct);
-                return (
-                  <div key={acct.account_name} className={`plate-card ${type}`}>
-                    <div className="plate-card-header">
-                      <span className="acct-name">{acct.account_name}</span>
-                      <span className={`status-badge ${acct.status.toLowerCase().replace(' ', '-')}`}>
-                        {acct.status}
-                      </span>
-                    </div>
-                    <div className="plate-card-body">
-                      <div className="metric-row">
-                        <span className="label">Key Prefix:</span>
-                        <span className="value mono">{acct.key_prefix}</span>
-                      </div>
-                      
-                      <div className="usage-bar-container">
-                        <div 
-                          className="usage-bar" 
-                          style={{ width: `${Math.min(((acct.calls_used || 0) / (acct.total_limit || 1)) * 100, 100)}%` }}
-                        ></div>
-                      </div>
-                      
-                      <div className="metric-stats">
-                        <div className="stat">
-                          <span className="val">{acct.calls_used}</span>
-                          <span className="lbl">Used</span>
-                        </div>
-                        <div className="stat divider">/</div>
-                        <div className="stat">
-                          <span className="val">{acct.total_limit}</span>
-                          <span className="lbl">Limit</span>
-                        </div>
-                        <div className="stat right">
-                          <span className="val highlight">{acct.remaining}</span>
-                          <span className="lbl">Left</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-          )}
-        </div>
+            <div className="da-api-result">
+              {/* Stats Row */}
+              <div className="da-api-stats">
+                <ApiStatChip label="Calls Used" value={plateInfo.calls_used.toLocaleString()} color="orange" />
+                <ApiStatChip label="Remaining" value={plateInfo.remaining.toLocaleString()} color="green" />
+                <ApiStatChip label="Monthly Limit" value={plateInfo.total_limit.toLocaleString()} color="blue" />
+                <div className="da-api-status-chip">
+                  <CheckCircle size={20} color="#4ade80" />
+                  <span>Active</span>
+                </div>
+              </div>
+
+              {/* Usage Bar */}
+              <div className="da-usage-bar-card">
+                <div className="da-usage-bar-row">
+                  <span className="da-usage-label">Monthly Usage</span>
+                  <span className="da-usage-pct" style={{ color: usedPct > 80 ? '#f87171' : '#4ade80' }}>
+                    {usedPct.toFixed(1)}% used
+                  </span>
+                </div>
+                <div className="da-usage-track">
+                  <div className="da-usage-fill" style={{
+                    width: `${usedPct}%`,
+                    background: usedPct > 80
+                      ? 'linear-gradient(90deg,#ef4444,#f87171)'
+                      : usedPct > 50
+                      ? 'linear-gradient(90deg,#f59e0b,#fbbf24)'
+                      : 'linear-gradient(90deg,#22c55e,#4ade80)',
+                  }} />
+                </div>
+                <div className="da-usage-sub-row">
+                  {plateInfo.month && <span>Period: {plateInfo.month}</span>}
+                  <span>{(100 - usedPct).toFixed(1)}% remaining</span>
+                </div>
+              </div>
+            </div>
+          )
+        )}
       </div>
 
-      {/* Detection Stats */}
-      <div className="dev-section">
-        <h3><Cpu size={18} /> Detection Statistics</h3>
-        <div className="dev-cards">
-          <DevCard
-            icon={<Bike size={22} />}
-            label="Two-Wheelers Detected"
-            value={data.twoWheelerCount}
-            color="blue"
-          />
-          <DevCard
-            icon={<Car size={22} />}
-            label="Four-Wheelers Detected"
-            value={data.fourWheelerCount}
-            color="navy"
-          />
-          <DevCard
-            icon={<ScanLine size={22} />}
-            label="Plates Extracted"
-            value={data.plateExtractionCount}
-            color="green"
-          />
-          <DevCard
-            icon={<Gauge size={22} />}
-            label="Extraction Rate"
-            value={`${data.plateExtractionRate?.toFixed(1) ?? 0}%`}
-            color="orange"
-          />
-        </div>
+      {/* ── Detection Statistics ─────────────────────────────────── */}
+      <div className="da-section-label"><Cpu size={14} /> Detection Statistics</div>
+      <div className="da-metrics-grid">
+        <MetricCard icon={<Bike size={20} />}   label="Two-Wheelers" value={data?.twoWheelerCount ?? 0}  color="blue" />
+        <MetricCard icon={<ScanLine size={20}/>} label="Plates Extracted" value={data?.plateExtractionCount ?? 0} color="green" />
+        <MetricCard icon={<Gauge size={20} />}   label="Extraction Rate" value={`${extractPct}%`} color="purple"
+          bar={{ value: extractPct, color: '#8b5cf6' }} />
       </div>
 
-      {/* OCR Pipeline */}
-      <div className="dev-section">
-        <h3><Activity size={18} /> OCR & AI Pipeline</h3>
-        <div className="dev-cards">
-          <DevCard
-            icon={<CheckCircle2 size={22} />}
-            label="Successful OCR"
-            value={data.ocrSuccessCount ?? 0}
-            color="green"
-          />
-          <DevCard
-            icon={<XCircle size={22} />}
-            label="Failed OCR"
-            value={data.ocrFailCount ?? 0}
-            color="red"
-          />
-          <DevCard
-            icon={<Gauge size={22} />}
-            label="Avg Confidence"
-            value={`${((data.avgConfidence ?? 0) * 100).toFixed(1)}%`}
-            color="blue"
-          />
-          <DevCard
-            icon={<Activity size={22} />}
-            label="Pipeline Status"
-            value={data.pipelineStatus ?? 'Unknown'}
-            color={data.pipelineStatus === 'healthy' ? 'green' : 'red'}
-          />
-        </div>
+      {/* ── OCR & AI Pipeline ────────────────────────────────────── */}
+      <div className="da-section-label"><Activity size={14} /> OCR &amp; AI Pipeline</div>
+      <div className="da-metrics-grid">
+        <MetricCard icon={<CheckCircle2 size={20}/>} label="Successful OCR" value={data?.ocrSuccessCount ?? 0} color="green" />
+        <MetricCard icon={<XCircle size={20} />}     label="Failed OCR"     value={data?.ocrFailCount ?? 0}    color="red" />
+        <MetricCard icon={<TrendingUp size={20}/>}   label="OCR Success Rate" value={`${ocrSuccessRate}%`}    color="teal"
+          bar={{ value: ocrSuccessRate, color: '#14b8a6' }} />
+        <MetricCard icon={<Gauge size={20} />}       label="Avg Confidence" value={`${confPct}%`}              color="orange"
+          bar={{ value: confPct, color: '#f59e0b' }} />
       </div>
 
-      {/* Charts */}
-      <div className="dev-charts">
-        <div className="dev-chart-card">
-          <h3>AI Confidence Distribution</h3>
-          <div className="dev-chart-wrap">
-            <Bar
-              data={confChart}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                  x: { ticks: { color: '#4a5568' }, grid: { color: 'rgba(0,0,0,0.06)' } },
-                  y: { ticks: { color: '#4a5568' }, grid: { color: 'rgba(0,0,0,0.06)' } },
-                },
-              }}
-            />
+      {/* ── Charts Row ───────────────────────────────────────────── */}
+      <div className="da-charts-row">
+        {/* Confidence Distribution */}
+        <div className="da-card da-chart-card">
+          <div className="da-card-header">
+            <div className="da-card-title"><BarChart3 size={15} /><span>AI Confidence Distribution</span></div>
+          </div>
+          <div className="da-chart-area">
+            {confBuckets.length > 0
+              ? <Bar data={confChart} options={barOpts} />
+              : <div className="da-no-data">No confidence data available</div>
+            }
+          </div>
+          {/* Bucket legend */}
+          <div className="da-conf-legend">
+            {['Very Low', 'Low', 'Medium', 'Good', 'High'].map((l, i) => (
+              <div className="da-conf-item" key={l}>
+                <span className="da-conf-dot" style={{ background: ['#ef4444','#f97316','#f59e0b','#84cc16','#22c55e'][i] }} />
+                <span>{l}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="dev-chart-card small">
-          <h3>Source Breakdown</h3>
-          <div className="dev-chart-wrap doughnut">
-            <Doughnut
-              data={sourceChart}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '60%',
-                plugins: { legend: { position: 'bottom', labels: { color: '#4a5568' } } },
-              }}
-            />
+        {/* Source Breakdown Doughnut */}
+        <div className="da-card da-chart-card narrow">
+          <div className="da-card-header">
+            <div className="da-card-title"><Database size={15} /><span>Source Breakdown</span></div>
           </div>
-          <div className="source-breakdown-legend">
-            <span><span className="dot blue" /> Camera: {data.cameraFeedCount ?? 0}</span>
-            <span><span className="dot orange" /> Batch: {data.batchUploadCount ?? 0}</span>
+          <div className="da-chart-area doughnut">
+            <Doughnut data={sourceChart} options={doughnutOpts} />
           </div>
+          <div className="da-source-stats">
+            <div className="da-source-row">
+              <span className="da-source-dot blue" />
+              <span>Camera Feed</span>
+              <strong>{data?.cameraFeedCount ?? 0}</strong>
+            </div>
+            <div className="da-source-row">
+              <span className="da-source-dot orange" />
+              <span>Batch Upload</span>
+              <strong>{data?.batchUploadCount ?? 0}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── System Status Footer ─────────────────────────────────── */}
+      <div className="da-status-footer">
+        <div className="da-status-item">
+          <Shield size={13} />
+          <span>Pipeline</span>
+          <span className={`da-status-val ${isHealthy ? 'green' : 'red'}`}>{data?.pipelineStatus ?? '—'}</span>
+        </div>
+        <div className="da-status-divider" />
+        <div className="da-status-item">
+          <Database size={13} />
+          <span>Total Detections</span>
+          <span className="da-status-val blue">{((data?.twoWheelerCount ?? 0))}</span>
+        </div>
+        <div className="da-status-divider" />
+        <div className="da-status-item">
+          <Activity size={13} />
+          <span>OCR Jobs</span>
+          <span className="da-status-val orange">{ocrTotal}</span>
+        </div>
+        <div className="da-status-divider" />
+        <div className="da-status-item">
+          <TrendingUp size={13} />
+          <span>Avg Confidence</span>
+          <span className="da-status-val purple">{confPct}%</span>
         </div>
       </div>
     </div>
   );
 };
 
-const DevCard = ({
-  icon,
-  label,
-  value,
-  color,
+// ─── Sub-Components ────────────────────────────────────────────────────────
+
+const MetricCard = ({
+  icon, label, value, color, bar,
 }: {
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-  color: string;
+  icon: React.ReactNode; label: string; value: string | number;
+  color: string; bar?: { value: number; color: string };
 }) => (
-  <div className={`dev-card ${color}`}>
-    <div className="dev-card-icon">{icon}</div>
-    <div className="dev-card-info">
-      <span className="dev-card-value">{value}</span>
-      <span className="dev-card-label">{label}</span>
+  <div className={`da-metric-card da-${color}`}>
+    <div className="da-metric-icon">{icon}</div>
+    <div className="da-metric-body">
+      <div className="da-metric-value">{value}</div>
+      <div className="da-metric-label">{label}</div>
     </div>
+    {bar && (
+      <div className="da-metric-bar-wrap">
+        <div className="da-metric-bar" style={{ width: `${Math.min(bar.value, 100)}%`, background: bar.color }} />
+      </div>
+    )}
+  </div>
+);
+
+const ApiStatChip = ({ label, value, color }: { label: string; value: string; color: string }) => (
+  <div className={`da-api-chip da-${color}`}>
+    <div className="da-api-chip-val">{value}</div>
+    <div className="da-api-chip-label">{label}</div>
   </div>
 );
 

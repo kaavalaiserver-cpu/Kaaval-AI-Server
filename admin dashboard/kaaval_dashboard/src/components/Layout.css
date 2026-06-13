@@ -78,7 +78,7 @@
 }
 
 .toggle-sidebar-btn:hover {
-  background: var(--navy);
+  background: var(--navy-light);
   color: white;
 }
 
@@ -123,10 +123,10 @@
 }
 
 .nav-item.active {
-  background: rgba(11, 58, 110, 0.08);
-  color: var(--navy);
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--accent);
   font-weight: 600;
-  border-left: 3px solid var(--navy);
+  border-left: 3px solid var(--accent);
 }
 
 .nav-icon {
@@ -240,7 +240,7 @@
 }
 
 .search-container.open input:focus {
-  border-color: var(--navy);
+  border-color: var(--accent);
 }
 
 .icon-btn {
@@ -256,7 +256,7 @@
 }
 
 .icon-btn:hover {
-  background: var(--navy);
+  background: var(--navy-light);
   color: white;
 }
 

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, Body, Request, UseGuards, BadRequestException } from '@nestjs/common';
 import { NotificationsService } from './notifications.service.js';
 import { JwtAuthGuard, RolesGuard, Roles, Role } from '../auth/index.js';
 
@@ -25,5 +25,22 @@ export class NotificationsController {
   @Post('read-all')
   markAllRead() {
     return this.notificationsService.markAllRead();
+  }
+
+  /** Manual broadcast — available to super_admin, developer, sp, dsp */
+  @Post('broadcast')
+  @Roles(Role.SUPER_ADMIN, Role.DEVELOPER, Role.SP, Role.DSP)
+  async broadcast(@Body() body: any, @Request() req: any) {
+    const { title, message, priority } = body;
+    if (!title || !message) {
+      throw new BadRequestException('title and message are required');
+    }
+    const sentBy = req.user?.username ?? req.user?.role ?? 'Admin';
+    return this.notificationsService.broadcast(
+      title,
+      message,
+      priority ?? 'normal',
+      sentBy,
+    );
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Query, UseGuards } from '@nestjs/common';
 import { SystemService } from './system.service.js';
 import { JwtAuthGuard, RolesGuard, Roles, Role } from '../auth/index.js';
 
@@ -13,8 +13,16 @@ export class SystemController {
     @Query('limit') limit?: number,
     @Query('page') page?: number,
     @Query('level') level?: string,
+    @Query('search') search?: string,
   ) {
-    return this.systemService.getLogs(limit ?? 50, page ?? 1, level);
+    return this.systemService.getLogs(limit ?? 50, page ?? 1, level, search);
+  }
+
+  @Delete('logs')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.DEVELOPER)
+  clearLogs() {
+    return this.systemService.clearLogs();
   }
 
   /**
@@ -46,5 +54,12 @@ export class SystemController {
   @Roles(Role.SUPER_ADMIN, Role.DEVELOPER)
   getAiStatus() {
     return this.systemService.getAiStatus();
+  }
+
+  @Get('plate-api-usage')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.SUPER_ADMIN, Role.DEVELOPER)
+  getPlateApiUsage() {
+    return this.systemService.getPlateApiUsage();
   }
 }

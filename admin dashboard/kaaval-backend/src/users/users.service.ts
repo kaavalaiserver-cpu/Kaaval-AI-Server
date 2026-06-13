@@ -158,12 +158,12 @@ export class UsersService implements OnModuleInit {
     return user ? this.stripPassword(user) : null;
   }
 
-  async resetPassword(id: string, adminId: string, reason: string, ip?: string): Promise<string | null> {
+  async resetPassword(id: string, adminId: string, reason: string, ip?: string, customPassword?: string): Promise<string | null> {
     const user = await this.usersRepository.findOneBy({ id });
     if (!user) return null;
 
-    const tempPassword = randomBytes(4).toString('hex') + '#R2';
-    const hash = await bcrypt.hash(tempPassword, 10);
+    const passwordToUse = customPassword || (randomBytes(4).toString('hex') + '#R2');
+    const hash = await bcrypt.hash(passwordToUse, 10);
 
     await this.usersRepository.update(id, { 
       passwordHash: hash, 
@@ -171,9 +171,13 @@ export class UsersService implements OnModuleInit {
       updatedBy: adminId 
     });
 
-    await this.auditService.logAction(adminId, 'RESET_PASSWORD', undefined, ip, { targetUsername: user.username, reason });
+    await this.auditService.logAction(adminId, 'RESET_PASSWORD', undefined, ip, { 
+      targetUsername: user.username, 
+      reason,
+      customSet: !!customPassword
+    });
 
-    return tempPassword;
+    return passwordToUse;
   }
 
   async findById(id: string): Promise<User | null> {

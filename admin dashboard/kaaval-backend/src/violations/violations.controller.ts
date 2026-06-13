@@ -37,8 +37,8 @@ export class ViolationsController {
 
   @Post('pipeline')
   @UseGuards(JwtAuthGuard)
-  async createFromPipeline(@Body() createDto: CreateViolationDto) {
-    return this.violationsService.create(createDto);
+  async createFromPipeline(@Body() createDto: CreateViolationDto, @Request() req: any) {
+    return this.violationsService.create(createDto, req.user);
   }
 
   @Post('detect')
@@ -105,7 +105,7 @@ export class ViolationsController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.DEVELOPER)
+  @Roles(Role.SUPER_ADMIN, Role.DEVELOPER, Role.SP, Role.DSP, Role.INSPECTOR, Role.SUB_INSPECTOR, ...SUBDIVISION_ROLES)
   remove(@Param('id') id: string, @Request() req: any) {
     return this.violationsService.remove(id, req.user);
   }
@@ -126,7 +126,7 @@ export class ViolationsController {
       },
     }),
   )
-  batchUpload(@UploadedFiles() files: Express.Multer.File[]) {
+  batchUpload(@UploadedFiles() files: Express.Multer.File[], @Request() req: any) {
     if (!files || files.length === 0) {
       throw new BadRequestException('No valid image files were uploaded');
     }
@@ -134,6 +134,6 @@ export class ViolationsController {
       'AI_BACKEND_URL',
       'http://127.0.0.1:8000',
     );
-    return this.violationsService.batchUpload(files, aiUrl);
+    return this.violationsService.batchUpload(files, aiUrl, req.user);
   }
 }

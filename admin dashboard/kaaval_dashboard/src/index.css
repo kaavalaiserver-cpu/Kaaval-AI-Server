@@ -1,36 +1,58 @@
 :root {
-  /* Kaaval AI Theme — Light Mode */
-  --navy: #0B3A6E;
-  --navy-dark: #072a52;
-  --navy-light: #0e4a8a;
-  --red: #E31B23;
-  --red-dark: #b8151c;
-  --red-light: #ff2d36;
-  --white: #FFFFFF;
-  --bg-primary: #f5f7fa;
-  --bg-secondary: #ffffff;
-  --bg-card: #ffffff;
-  --bg-card-hover: #f0f2f5;
-  --bg-input: #f0f2f5;
-  --border: #e2e8f0;
-  --border-light: #cbd5e1;
-  --text-primary: #1a202c;
-  --text-secondary: #4a5568;
-  --text-muted: #94a3b8;
+  /* Kaaval AI Theme — Premium Sleek Dark Mode */
+  --navy: #0e243a;
+  --navy-dark: #071424;
+  --navy-light: #163654;
+  --red: #ff3b30;
+  --red-dark: #c92a2a;
+  --red-light: #ff6b6b;
+  --white: #ffffff;
+  --bg-primary: #070c14;
+  --bg-secondary: #0d1520;
+  --bg-card: #0d1520;
+  --bg-card-hover: #141f2e;
+  --bg-input: #141f2e;
+  --border: #1a2638;
+  --border-light: #24354f;
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #64748b;
   --success: #10b981;
   --success-bg: rgba(16, 185, 129, 0.1);
   --warning: #f59e0b;
   --warning-bg: rgba(245, 158, 11, 0.1);
   --danger: #ef4444;
   --danger-bg: rgba(239, 68, 68, 0.1);
-  --info: #3b82f6;
-  --info-bg: rgba(59, 130, 246, 0.1);
+  --info: #0ea5e9;
+  --info-bg: rgba(14, 165, 233, 0.1);
   --text-dim: #94a3b8;
-  --accent: #1e6fd9;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  --accent: #3b82f6;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="light"] {
+  --navy: #0B3A6E;
+  --navy-dark: #072a52;
+  --navy-light: #164a85;
+  --red: #E31B23;
+  --red-dark: #b91c1c;
+  --red-light: #f87171;
+  --white: #ffffff;
+  --bg-primary: #f1f5f9;
+  --bg-secondary: #e2e8f0;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --bg-input: #ffffff;
+  --border: #e2e8f0;
+  --border-light: #cbd5e1;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --text-dim: #94a3b8;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 * {
@@ -57,16 +79,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f0f2f5;
+  background: var(--bg-primary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: var(--border-light);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--accent);
 }
 
 .text-navy {

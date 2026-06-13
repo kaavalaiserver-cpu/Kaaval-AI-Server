@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   AlertTriangle, CheckCircle, XCircle, Eye, Download, Filter, Upload,
   Trash2, RefreshCw, ZoomIn, ZoomOut, RotateCw, Maximize2, Shield,
-  ChevronLeft, ChevronRight, Edit2, Save, X, Calendar, Clock, Target
+  ChevronLeft, ChevronRight, Edit2, Save, X, Calendar, Clock, Target, ExternalLink
 } from 'lucide-react';
 import './Violations.css';
 
@@ -25,9 +25,17 @@ interface Filters {
   maxConfidence: string;
 }
 
+const getTodayString = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const EMPTY_FILTERS: Filters = {
-  status: '', cameraId: '', vehicleNumber: '', violationType: '',
-  dateFrom: '', dateTo: '', timeFrom: '', timeTo: '',
+  status: 'PENDING', cameraId: '', vehicleNumber: '', violationType: '',
+  dateFrom: getTodayString(), dateTo: getTodayString(), timeFrom: '', timeTo: '',
   minConfidence: '', maxConfidence: '',
 };
 
@@ -96,18 +104,21 @@ const Violations = () => {
       }
       if (filters.maxConfidence) params.maxConfidence = (parseFloat(filters.maxConfidence) / 100).toFixed(4);
 
+      console.log('fetchViolations API request:', `${API_BASE}/violations`, 'params:', params);
+
       const [vRes, sRes] = await Promise.all([
         axios.get<PaginatedViolations>(`${API_BASE}/violations`, { params, signal }),
         axios.get<ViolationStats>(`${API_BASE}/violations/stats`, { signal }),
       ]);
 
       const data = vRes.data.data ?? (vRes.data as unknown as ViolationItem[]);
+
       setViolations(Array.isArray(data) ? data : []);
       setTotal(vRes.data.total ?? (Array.isArray(data) ? data.length : 0));
       setStats(sRes.data);
-    } catch (err) {
+    } catch (err: any) {
       if (axios.isCancel(err)) return;
-      console.error(err);
+      console.error('fetchViolations failed:', err.response ? { status: err.response.status, data: err.response.data } : err.message);
     } finally {
       if (!background) setLoading(false);
     }
@@ -120,9 +131,10 @@ const Violations = () => {
   }, [fetchViolations]);
 
   useEffect(() => {
+    if (selectedViolation) return; // Pause polling when reviewing
     const interval = setInterval(() => fetchViolations(true), 2000); // 2s polling
     return () => clearInterval(interval);
-  }, [fetchViolations]);
+  }, [fetchViolations, selectedViolation]);
 
   const handlePageJump = () => {
     const p = parseInt(pageInput, 10);
@@ -136,8 +148,13 @@ const Violations = () => {
     setProcessing(true);
     try {
       await axios.post(`${API_BASE}/violations/${id}/verify`, { action });
-      if (selectedViolation?.id === id) setSelectedViolation(null);
-      fetchViolations();
+      const newStatus = action === 'approve' ? 'Verified' : 'Rejected';
+      
+      setViolations(prev => prev.map(v => v.id === id ? { ...v, status: newStatus } : v));
+      
+      if (selectedViolation?.id === id) {
+        setSelectedViolation(prev => prev ? { ...prev, status: newStatus } : null);
+      }
     } catch (err) { console.error(err); }
     finally { setProcessing(false); }
   };
@@ -238,17 +255,32 @@ const Violations = () => {
                   <ChevronRight size={32} />
                 </button>
                 <div className="viewer-toolbar-modal">
-                  <button onClick={() => setReviewZoom(Math.min(reviewZoom + 0.25, 3))}><ZoomIn size={16} /></button>
-                  <button onClick={() => setReviewZoom(Math.max(reviewZoom - 0.25, 0.5))}><ZoomOut size={16} /></button>
-                  <button onClick={() => setReviewZoom(1)}><RotateCw size={16} /></button>
+                  <button onClick={() => setReviewZoom(Math.min(reviewZoom + 0.25, 3))} title="Zoom In"><ZoomIn size={16} /></button>
+                  <button onClick={() => setReviewZoom(Math.max(reviewZoom - 0.25, 0.5))} title="Zoom Out"><ZoomOut size={16} /></button>
+                  <button onClick={() => setReviewZoom(1)} title="Reset"><RotateCw size={16} /></button>
                   <button onClick={() => setViewMode(viewMode === 'proof' ? 'plate' : 'proof')} style={{ minWidth: 80, fontSize: 13 }}>
                     {viewMode === 'proof' ? 'Show Plate' : 'Show Scene'}
+                  </button>
+                  <button onClick={() => {
+                    const url = viewMode === 'plate' ? (selectedViolation.proof_img_url || selectedViolation.image_url) : selectedViolation.image_url;
+                    window.open(url, '_blank');
+                  }} title="Open in New Tab"><ExternalLink size={16} /></button>
+                  <button onClick={() => {
+                    const url = viewMode === 'plate' ? (selectedViolation.proof_img_url || selectedViolation.image_url) : selectedViolation.image_url;
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `violation-${selectedViolation?.vehicle_number || 'unknown'}.jpg`;
+                    a.target = '_blank';
+                    a.click();
+                  }} title="Download"><Download size={16} /></button>
+                  <button onClick={() => violations.length > 0 && openReviewModal(violations[0])} style={{ minWidth: 120, fontSize: 13, background: 'rgba(59, 130, 246, 0.4)' }}>
+                    Recent Violation
                   </button>
                 </div>
                 <div className="evidence-canvas-modal">
                   {selectedViolation.image_url ? (
                     <img
-                      src={viewMode === 'plate' ? selectedViolation.image_url : (selectedViolation.proof_img_url || selectedViolation.image_url)}
+                      src={viewMode === 'plate' ? (selectedViolation.proof_img_url || selectedViolation.image_url) : selectedViolation.image_url}
                       style={{ transform: `scale(${reviewZoom})` }} alt="Evidence"
                     />
                   ) : <div className="no-image">No Image</div>}
@@ -256,6 +288,41 @@ const Violations = () => {
               </div>
 
               <div className="details-panel-modal">
+                <div className="modal-actions" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none', borderBottom: '1px solid var(--border)', paddingBottom: '20px', marginBottom: '10px' }}>
+                  {/* Issue Fine (Approve) — all except developer and viewer */}
+                  {hasRole('super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'operator') && (
+                    <>
+                      {['Pending', 'Ready', 'Review'].includes(selectedViolation.status) ? (
+                        <>
+                          <button className="btn-approve" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'approve')}>
+                            <CheckCircle size={16} /> Issue Fine
+                          </button>
+                          {/* Reject — all except viewer */}
+                          {hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'operator') && (
+                            <button className="btn-reject" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'reject')}>
+                              <XCircle size={16} /> Reject
+                            </button>
+                          )}
+                        </>
+                      ) : selectedViolation.status === 'Verified' ? (
+                        <div style={{ padding: '12px', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', borderRadius: '8px', border: '1px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600 }}>
+                          <CheckCircle size={18} /> Fine Issued (Approved)
+                        </div>
+                      ) : selectedViolation.status === 'Rejected' ? (
+                        <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', borderRadius: '8px', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600 }}>
+                          <XCircle size={18} /> Violation Rejected
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+                  {/* Delete — all except operator and viewer */}
+                  {hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
+                    <button className="btn-delete" disabled={processing} onClick={() => handleDelete(selectedViolation.id)}>
+                      <Trash2 size={16} /> Delete
+                    </button>
+                  )}
+                </div>
+
                 <div className="detail-row">
                   <span className="label">Vehicle:</span>
                   {editMode ? (
@@ -294,43 +361,6 @@ const Violations = () => {
                   <span className="label">Camera:</span>
                   <span className="value" style={{ fontSize: '0.95rem' }}>{selectedViolation.location} <span style={{ color: 'var(--text-dim)', fontSize: '0.8em' }}>({selectedViolation.camera_id})</span></span>
                 </div>
-                <div className="detail-row">
-                  <span className="label">Detection Confidence:</span>
-                  <div className="conf-wrapper">
-                    <div className="conf-bar-fill" style={{ width: `${(selectedViolation.violation_confidence || 0) * 100}%`, background: (selectedViolation.violation_confidence || 0) > 0.8 ? '#22c55e' : 'orange' }} />
-                    <span>{Math.round((selectedViolation.violation_confidence || 0) * 100)}%</span>
-                  </div>
-                </div>
-                <div className="detail-row">
-                  <span className="label">Plate OCR Confidence:</span>
-                  {selectedViolation.plate_confidence > 0 ? (
-                    <div className="conf-wrapper">
-                      <div className="conf-bar-fill" style={{ width: `${selectedViolation.plate_confidence * 100}%`, background: selectedViolation.plate_confidence > 0.8 ? '#22c55e' : '#f59e0b' }} />
-                      <span>{Math.round(selectedViolation.plate_confidence * 100)}%</span>
-                    </div>
-                  ) : (
-                    <span style={{ color: 'var(--text-dim)', fontSize: '0.82rem' }}>
-                      Not available — plate was unreadable or not extracted by OCR
-                    </span>
-                  )}
-                </div>
-                <div className="modal-actions">
-                  {(['Pending', 'Ready', 'Review'].includes(selectedViolation.status)) && hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
-                    <>
-                      <button className="btn-approve" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'approve')}>
-                        <CheckCircle size={16} /> Approve
-                      </button>
-                      <button className="btn-reject" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'reject')}>
-                        <XCircle size={16} /> Reject
-                      </button>
-                    </>
-                  )}
-                  {hasRole('super_admin', 'developer') && (
-                    <button className="btn-delete" disabled={processing} onClick={() => handleDelete(selectedViolation.id)}>
-                      <Trash2 size={16} /> Delete
-                    </button>
-                  )}
-                </div>
               </div>
             </div>
           </div>
@@ -344,13 +374,25 @@ const Violations = () => {
         <StatChip label="Pending" value={stats?.pending ?? 0} color="orange" />
         <StatChip label="Verified" value={stats?.verified ?? 0} color="green" />
         <StatChip label="Rejected" value={stats?.rejected ?? 0} color="red" />
-        <StatChip label="Manual Review" value={stats?.manual_review ?? 0} color="purple" />
       </div>
 
       {/* Toolbar */}
       <div className="toolbar">
         <div className="toolbar-left">
-          <h2><AlertTriangle size={20} /> Violation Management</h2>
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <AlertTriangle size={20} /> Violation Management for
+            <input type="date" 
+              value={filters.dateFrom === filters.dateTo ? filters.dateFrom : ''} 
+              onChange={e => {
+                const d = e.target.value;
+                if (!d) return;
+                setFilters(prev => ({ ...prev, dateFrom: d, dateTo: d }));
+                setPage(1);
+              }} 
+              style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', padding: '4px 10px', borderRadius: '6px', fontSize: '1.05rem', cursor: 'pointer', outline: 'none' }}
+              title="Select a specific date to view its violations"
+            />
+          </h2>
         </div>
         <div className="toolbar-right">
           {selectedIds.length > 0 && hasRole('super_admin', 'developer') && (
@@ -381,19 +423,23 @@ const Violations = () => {
         </div>
       )}
 
+      {/* Category Tabs */}
+      <div className="category-tabs">
+        {['PENDING', 'CHALLAN_ISSUED', 'REJECTED'].map((status) => (
+          <button
+            key={status}
+            className={`tab-btn ${filters.status === status ? 'active' : ''}`}
+            onClick={() => setFilter('status', status)}
+          >
+            {status === 'CHALLAN_ISSUED' ? 'ISSUED' : status}
+          </button>
+        ))}
+      </div>
+
       {/* Filters */}
       <div className={`filters-bar ${showAdvanced ? 'expanded' : ''}`}>
         <div className="filter-row-primary">
           <Filter size={16} className="filter-icon" />
-
-          <select value={filters.status} onChange={e => setFilter('status', e.target.value)}>
-            <option value="">All Status</option>
-            <option value="PENDING">Pending</option>
-            <option value="READY">Ready</option>
-            <option value="MANUAL_REVIEW">Manual Review</option>
-            <option value="CHALLAN_ISSUED">Challan Issued</option>
-            <option value="REJECTED">Rejected</option>
-          </select>
 
           <select value={filters.violationType} onChange={e => setFilter('violationType', e.target.value)}>
             <option value="">All Types</option>
@@ -491,6 +537,7 @@ const Violations = () => {
               <th>Time</th>
               <th>Confidence</th>
               <th>Status</th>
+              <th>Action Done By</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -506,10 +553,12 @@ const Violations = () => {
                 </td>
                 <td>
                   <div className="evidence-thumb" onClick={e => { e.stopPropagation(); openReviewModal(v); }}
-                    style={{ cursor: 'pointer', border: '1px solid #e5e7eb' }} title="Click to Review">
+                    style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--bg-card-hover)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px' }} title="Click to Review">
                     {(v.proof_img_url || v.image_url) ? (
-                      <img src={v.proof_img_url || v.image_url} alt="Evidence" loading="lazy"
-                        style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+                      <>
+                        <Eye size={16} color="var(--text-dim)" />
+                        <span style={{ fontSize: '0.6rem', fontWeight: 600, color: 'var(--text-dim)', letterSpacing: '0.5px' }}>VIEW</span>
+                      </>
                     ) : <div className="no-evidence">—</div>}
                   </div>
                 </td>
@@ -530,7 +579,14 @@ const Violations = () => {
                 <td>
                   {v.confidence > 0 ? (
                     <div className="confidence-bar">
-                      <div className="confidence-fill" style={{ width: `${Math.round(v.confidence * 100)}%` }} />
+                      <div className="confidence-fill" style={{
+                        width: `${Math.round(v.confidence * 100)}%`,
+                        background: v.confidence >= 0.8
+                          ? 'linear-gradient(90deg, #22c55e, #4ade80)'
+                          : v.confidence >= 0.5
+                          ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
+                          : 'linear-gradient(90deg, #ef4444, #f87171)'
+                      }} />
                       <span>{Math.round(v.confidence * 100)}%</span>
                     </div>
                   ) : (
@@ -539,6 +595,17 @@ const Violations = () => {
                 </td>
                 <td>
                   <span className={`status-badge ${statusColor(v.status)}`}>{v.status}</span>
+                </td>
+                <td>
+                  {v.reviewed_by ? (
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      {v.status === 'Verified' ? 'Fine Issued by ' : v.status === 'Rejected' ? 'Violation rejected by ' : 'Reviewed by '}
+                      <strong>{v.reviewed_by}</strong><br/>
+                      at {new Date(v.reviewed_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  ) : (
+                    <span style={{ color: 'var(--text-muted)' }}>—</span>
+                  )}
                 </td>
                 <td>
                   <div className="action-btns">

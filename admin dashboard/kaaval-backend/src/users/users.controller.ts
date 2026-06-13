@@ -53,7 +53,7 @@ export class UsersController {
     }
     const adminId = req.user.id;
     const ip = req.ip;
-    const temporaryPassword = await this.usersService.resetPassword(id, adminId, data.reason, ip);
+    const temporaryPassword = await this.usersService.resetPassword(id, adminId, data.reason, ip, data.customPassword);
     if (!temporaryPassword) {
       throw new BadRequestException('User not found');
     }

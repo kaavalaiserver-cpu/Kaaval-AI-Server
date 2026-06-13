@@ -124,7 +124,7 @@ const SUBDIVISION_SCOPES: Record<
       [77.31, 8.19],
     ],
     bounds: L.latLngBounds(L.latLng(8.11, 77.31), L.latLng(8.29, 77.48)),
-    keywords: ['nagercoil', 'ramanputhoor'],
+    keywords: ['nagercoil', 'ramanputhoor', 'collectorate', 'roundana'],
   },
   kanyakumari_admin: {
     name: 'Kanyakumari',
@@ -344,7 +344,7 @@ const Dashboard = () => {
       const [statsRes, violationsRes, camerasRes, violationStatsRes] = await Promise.allSettled([
         axios.get<FastAPIAnalyticsSummary>(`${API_BASE}/analytics/summary`),
         axios.get<{ data: ViolationItem[] }>(`${API_BASE}/violations?limit=5`),
-        axios.get<CameraStatus>(`${API_BASE}/analytics/camera-health`),
+        axios.get<CameraStatus>(`${API_BASE}/cameras/status`),
         axios.get<ViolationStats>(`${API_BASE}/violations/stats`),
       ]);
 
@@ -375,12 +375,14 @@ const Dashboard = () => {
   const finesCount = stats?.challans_issued ?? 0;
   const withConfidenceCount = violationStats?.with_confidence ?? 0;
   
-  const noHelmetObj = stats?.by_type?.find(t => t.violation_type === 'No Helmet');
-  const noHelmetCount = noHelmetObj ? noHelmetObj.count : 0;
-  
-  const helmetRate = stats?.by_type
-    ? Math.round((1 - noHelmetCount / Math.max(todayCount, 1)) * 100)
-    : 95;
+  const noHelmetCount = useMemo(() => {
+    if (!stats?.by_type) return 0;
+    const match = stats.by_type.find(t => {
+      const norm = t.violation_type.toLowerCase();
+      return norm.includes('helmet') || norm.includes('no_helmet') || norm === 'nohelmet';
+    });
+    return match ? match.count : 0;
+  }, [stats]);
 
   const cameraIcon = useMemo(
     () =>
@@ -418,17 +420,10 @@ const Dashboard = () => {
       {/* Overview Widgets */}
       <div className="widget-grid">
         <WidgetCard
-          icon={<Camera size={22} />}
-          label="Cameras Active"
-          value={String(canUseDistrictFeatures ? (cameraStatus?.online ?? 0) : visibleOnline)}
-          sub={`of ${canUseDistrictFeatures ? (cameraStatus?.total ?? 0) : visibleCameras.length} total`}
-          color="blue"
-        />
-        <WidgetCard
           icon={<AlertTriangle size={22} />}
-          label="Violations Detected"
+          label="TOTAL Violations Detected"
           value={String(todayCount)}
-          sub="Total"
+          sub="All-time"
           color="red"
         />
         <WidgetCard
@@ -440,24 +435,10 @@ const Dashboard = () => {
         />
         <WidgetCard
           icon={<CheckCircle size={22} />}
-          label="Fines Issued"
+          label="TOTAL Fines Issued"
           value={String(finesCount)}
-          sub="Challans issued"
+          sub="All-time"
           color="green"
-        />
-        <WidgetCard
-          icon={<Shield size={22} />}
-          label="Helmet Compliance"
-          value={`${helmetRate}%`}
-          sub="Detection rate"
-          color="purple"
-        />
-        <WidgetCard
-          icon={<CheckCircle size={22} />}
-          label="Plate Identified"
-          value={String(withConfidenceCount)}
-          sub="With confidence score"
-          color="cyan"
         />
       </div>
 
@@ -531,7 +512,20 @@ const Dashboard = () => {
                 <div key={v.id} className="alert-item">
                   <div className="alert-thumb">
                     {v.image_url ? (
-                      <img src={v.image_url} alt="Evidence" />
+                      <>
+                        <img 
+                          src={v.image_url} 
+                          alt="Evidence" 
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const fb = e.currentTarget.parentElement?.querySelector('.no-img-fallback');
+                            if (fb) (fb as HTMLElement).style.display = 'flex';
+                          }}
+                        />
+                        <div className="no-img no-img-fallback" style={{ display: 'none' }}>
+                          <Camera size={20} />
+                        </div>
+                      </>
                     ) : (
                       <div className="no-img"><Camera size={20} /></div>
                     )}
@@ -563,23 +557,38 @@ const Dashboard = () => {
             <h3><TrendingUp size={18} /> Violation Breakdown</h3>
           </div>
           <div className="type-breakdown">
-            {stats?.by_type &&
-              [...stats.by_type]
-                .sort((a, b) => b.count - a.count)
-                .map((item) => (
-                  <div key={item.violation_type} className="type-row">
-                    <span className="type-label">{item.violation_type}</span>
-                    <div className="type-bar-container">
-                      <div
-                        className="type-bar"
-                        style={{
-                          width: `${Math.min((item.count / Math.max(todayCount, 1)) * 100, 100)}%`,
-                        }}
-                      />
-                    </div>
-                    <span className="type-count">{item.count}</span>
-                  </div>
-                ))}
+            <div className="type-row active-row">
+              <span className="type-label">No Helmet</span>
+              <div className="type-bar-container">
+                <div
+                  className="type-bar"
+                  style={{
+                    width: `${Math.min((noHelmetCount / Math.max(todayCount, 1)) * 100, 100)}%`,
+                  }}
+                />
+              </div>
+              <span className="type-count">{noHelmetCount}</span>
+            </div>
+
+            <div className="type-row coming-soon-row">
+              <span className="type-label disabled-label">Triple Riding</span>
+              <span className="coming-soon-badge">Coming Soon</span>
+            </div>
+
+            <div className="type-row coming-soon-row">
+              <span className="type-label disabled-label">Red Light Jump</span>
+              <span className="coming-soon-badge">Coming Soon</span>
+            </div>
+
+            <div className="type-row coming-soon-row">
+              <span className="type-label disabled-label">Over Speeding</span>
+              <span className="coming-soon-badge">Coming Soon</span>
+            </div>
+
+            <div className="type-row coming-soon-row">
+              <span className="type-label disabled-label">No Seatbelt</span>
+              <span className="coming-soon-badge">Coming Soon</span>
+            </div>
           </div>
         </div>
 
@@ -594,21 +603,26 @@ const Dashboard = () => {
             )}
           </div>
           <div className="camera-summary">
-            <div className="cam-stat online">
-              <span className="cam-num">{canUseDistrictFeatures ? (cameraStatus?.online ?? 0) : visibleOnline}</span>
-              <span>Online</span>
+            <div className="cam-stat online-premium">
+              <span className="cam-num-premium">{canUseDistrictFeatures ? (cameraStatus?.online ?? 0) : visibleOnline}</span>
+              <span className="cam-label-premium">Online</span>
             </div>
-            <div className="cam-stat offline">
-              <span className="cam-num">{canUseDistrictFeatures ? (cameraStatus?.offline ?? 0) : visibleOffline}</span>
-              <span>Offline</span>
+            <div className="cam-stat offline-premium">
+              <span className="cam-num-premium">{canUseDistrictFeatures ? (cameraStatus?.offline ?? 0) : visibleOffline}</span>
+              <span className="cam-label-premium">Offline</span>
             </div>
           </div>
-          <div className="camera-list-mini">
+          <div className="camera-list-premium">
             {visibleCameras.slice(0, 5).map((cam) => (
-              <div key={cam.id} className="cam-row">
-                <span className={`cam-dot ${cam.status}`}></span>
-                <span className="cam-name">{cam.location}</span>
-                <span className="cam-id">{cam.camera_id}</span>
+              <div key={cam.id} className="cam-row-premium">
+                <div className="cam-status-indicator">
+                  <span className={`cam-pulse-dot ${cam.status}`}></span>
+                </div>
+                <div className="cam-details-premium">
+                  <span className="cam-name-premium">{cam.location}</span>
+                  <span className="cam-id-premium">{cam.camera_id}</span>
+                </div>
+                <span className={`cam-badge-premium ${cam.status}`}>{cam.status.toUpperCase()}</span>
               </div>
             ))}
           </div>
@@ -628,10 +642,12 @@ interface WidgetProps {
 
 const WidgetCard = ({ icon, label, value, sub, color }: WidgetProps) => (
   <div className={`widget-card ${color}`}>
-    <div className="widget-icon">{icon}</div>
-    <div className="widget-info">
-      <span className="widget-value">{value}</span>
+    <div className="widget-header">
       <span className="widget-label">{label}</span>
+      <div className="widget-icon">{icon}</div>
+    </div>
+    <div className="widget-body">
+      <span className="widget-value">{value}</span>
       <span className="widget-sub">{sub}</span>
     </div>
   </div>

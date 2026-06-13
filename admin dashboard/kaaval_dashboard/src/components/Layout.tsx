@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   Camera,
   BarChart3,
-  Archive,
   Activity,
   FileTerminal,
   Menu,
@@ -20,6 +19,8 @@ import {
   User,
   LogOut,
   Settings,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import type { SystemStatus } from '../types';
 import NotificationPanel from './NotificationPanel';
@@ -82,6 +83,13 @@ const Layout = () => {
   const [status, setStatus] = useState<SystemStatus | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [theme, setTheme] = useState(document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+  };
 
   // Handle Resize
   useEffect(() => {
@@ -140,7 +148,7 @@ const Layout = () => {
               <img src="/Kaaval AI Logo.png" alt="Logo" className="sidebar-logo" />
               <div>
                 <h2>
-                  <span className="text-navy">KAAVAL</span> <span className="text-red">AI</span>
+                  <span style={{ color: 'var(--white)' }}>KAAVAL</span> <span className="text-red">AI</span>
                 </h2>
                 <span className="badge">ADMIN</span>
               </div>
@@ -160,8 +168,7 @@ const Layout = () => {
           
           <NavItem to="/violations" icon={<AlertTriangle size={20} />} label="Violations" isOpen={isSidebarOpen} />
             
-          <NavItem to="/evidence-archive" icon={<Archive size={20} />} label="Evidence Archive" isOpen={isSidebarOpen} 
-            roles={MANAGEMENT_ROLES} />
+
 
           {hasRole(...MANAGEMENT_ROLES) && <div className="nav-section-label">{isOpen(isSidebarOpen, 'INSIGHTS')}</div>}
           <NavItem to="/analytics" icon={<BarChart3 size={20} />} label="Analytics" isOpen={isSidebarOpen} 
@@ -173,18 +180,20 @@ const Layout = () => {
           {hasRole(...CAMERA_HEALTH_ROLES) && <div className="nav-section-label">{isOpen(isSidebarOpen, 'SYSTEM')}</div>}
           <NavItem to="/cameras" icon={<Camera size={20} />} label="Camera Health" isOpen={isSidebarOpen}
             roles={CAMERA_HEALTH_ROLES} />
-            
+
           <NavItem to="/system" icon={<Activity size={20} />} label="System Metrics" isOpen={isSidebarOpen}
             roles={TECH_ROLES} />
-            
+
           <NavItem to="/users" icon={<User size={20} />} label="User Management" isOpen={isSidebarOpen}
             roles={['super_admin']} />
-            
+
           <NavItem to="/logs" icon={<FileTerminal size={20} />} label="System Logs" isOpen={isSidebarOpen}
             roles={TECH_ROLES} />
-            
-          <NavItem to="/camera-config" icon={<Settings size={20} />} label="Settings" isOpen={isSidebarOpen}
-            roles={['super_admin']} />
+
+          <NavItem to="/reports" icon={<BarChart3 size={20} />} label="Reports" isOpen={isSidebarOpen}
+            roles={['super_admin', 'developer', 'sp', 'dsp']} />
+
+          <NavItem to="/settings" icon={<Settings size={20} />} label="Settings" isOpen={isSidebarOpen} />
         </nav>
 
         <div className="sidebar-footer">
@@ -238,6 +247,11 @@ const Layout = () => {
                 <Search size={18} />
               </button>
             </div>
+
+            {/* Theme Switcher */}
+            <button className="icon-btn" onClick={toggleTheme} title="Toggle Theme">
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
 
             {/* Notifications */}
             <NotificationPanel />

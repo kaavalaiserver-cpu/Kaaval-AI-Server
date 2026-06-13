@@ -15,6 +15,8 @@ import { NotificationsModule } from './notifications/notifications.module.js';
 import { WatchlistModule } from './watchlist/watchlist.module.js';
 import { ChallanModule } from './challan/challan.module.js';
 import { UsersModule } from './users/users.module.js';
+import { ReportsModule } from './reports/reports.module.js';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
@@ -125,6 +127,8 @@ function checkPort(host: string, port: number, timeout = 2000): Promise<boolean>
     WatchlistModule,
     ChallanModule,
     UsersModule,
+    ReportsModule,
+    ScheduleModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [

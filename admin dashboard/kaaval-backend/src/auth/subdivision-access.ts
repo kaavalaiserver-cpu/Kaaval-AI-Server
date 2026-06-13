@@ -75,7 +75,7 @@ const SUBDIVISION_SCOPES: Record<string, SubdivisionScope> = {
   },
   nagercoil: {
     name: 'Nagercoil',
-    keywords: ['nagercoil', 'ramanputhoor', 'ramanputhur'],
+    keywords: ['nagercoil', 'ramanputhoor', 'ramanputhur', 'collectorate', 'roundana'],
     polygon: [
       [77.328, 8.132],
       [77.366, 8.116],

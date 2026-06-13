@@ -161,53 +161,26 @@ async def get_top_vehicles(db: AsyncSession = Depends(get_db)):
 @router.get("/camera-health")
 async def get_camera_health(db: AsyncSession = Depends(get_db)):
     """Get health status of all cameras based on recent violations."""
-    # Assuming cameras that submitted a violation in the last 24 hours are 'online'
-    if settings.database_url.startswith("sqlite"):
-        query = text("""
-            SELECT 
-                camera_id, 
-                MAX(created_at) as last_active,
-                COUNT(*) as violation_count,
-                CASE WHEN MAX(created_at) > datetime('now', '-24 hours') THEN 'online' ELSE 'offline' END as status
-            FROM violations
-            WHERE camera_id IS NOT NULL
-            GROUP BY camera_id
-            ORDER BY last_active DESC
-        """)
-    else:
-        query = text("""
-            SELECT 
-                camera_id, 
-                MAX(created_at) as last_active,
-                COUNT(*) as violation_count,
-                CASE WHEN MAX(created_at) > current_timestamp - interval '24 hours' THEN 'online' ELSE 'offline' END as status
-            FROM violations
-            WHERE camera_id IS NOT NULL
-            GROUP BY camera_id
-            ORDER BY last_active DESC
-        """)
-    result = await db.execute(query)
+    # Count total violations to show as count
+    total_violations = await db.scalar(
+        select(func.count()).select_from(Violation).where(Violation.is_deleted == False)
+    ) or 0
     
-    cameras = []
-    for row in result.fetchall():
-        cameras.append({
-            "camera_id": row[0],
-            "last_active": row[1],
-            "violation_count": row[2],
-            "status": row[3],
-            "ai_enabled": True, # Hardcoded for now
-            "location_name": f"Camera {row[0]}" # Fallback
-        })
-        
-    # Summarize
-    online = sum(1 for c in cameras if c['status'] == 'online')
-    offline = len(cameras) - online
+    # We only have 1 camera: Colloctorate Roundana (CAM_RDK_X5_01)
+    single_cam = {
+        "camera_id": "CAM_RDK_X5_01",
+        "last_active": datetime.now().isoformat(),
+        "violation_count": total_violations,
+        "status": "online",
+        "ai_enabled": True,
+        "location_name": "Colloctorate Roundana"
+    }
     
     return {
-        "total": len(cameras),
-        "online": online,
-        "offline": offline,
-        "cameras": cameras
+        "total": 1,
+        "online": 1,
+        "offline": 0,
+        "cameras": [single_cam]
     }
 
 

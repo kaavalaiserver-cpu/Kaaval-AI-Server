@@ -33,16 +33,86 @@ export class SystemService {
     }
   }
 
-  async getLogs(limit = 50, page = 1, level?: string) {
-    const where: Record<string, unknown> = {};
-    if (level) where['level'] = level;
+  async getPlateApiUsage() {
+    const apiKey = process.env.PLATE_RECOGNIZER_API_KEY || '478212749124746424275c833ba665b3a168a13e';
+    try {
+      const res = await fetch('https://api.platerecognizer.com/v1/statistics/', {
+        headers: { Authorization: `Token ${apiKey}` },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        Logger.error(`Plate API error ${res.status}: ${text}`, 'SystemService');
+        return { status: 'error', error: `API returned ${res.status}: ${text}` };
+      }
+      const d = await res.json();
+      // Log raw response so we can see all field names
+      Logger.log(`Plate API raw response: ${JSON.stringify(d)}`, 'SystemService');
 
-    const [logs, total] = await this.logRepo.findAndCount({
-      where,
-      order: { createdAt: 'DESC' },
-      take: limit,
-      skip: (page - 1) * limit,
-    });
+      // Plate Recognizer returns: { calls: N, total_calls: N, month: "YYYY-MM" }
+      // where 'calls' = used this period, 'total_calls' = monthly limit
+      const calls_used = d.calls ?? d.usage?.calls ?? d.calls_used ?? 0;
+      const total_limit = d.total_calls ?? d.usage?.total_calls ?? d.calls_limit ?? d.total_limit ?? 0;
+      const remaining = d.available ?? d.remaining_calls ?? d.calls_remaining ?? (total_limit - calls_used);
+
+      Logger.log(`Plate API mapped → used:${calls_used} limit:${total_limit} remaining:${remaining}`, 'SystemService');
+      return {
+        status: 'ok',
+        calls_used,
+        total_limit,
+        remaining,
+        month: d.month ?? d.period ?? null,
+        _raw: d, // temporary — helps verify mapping is correct
+      };
+    } catch (err) {
+      Logger.error(`Plate API fetch failed: ${err.message}`, 'SystemService');
+      return { status: 'error', error: `Network error: ${err.message}` };
+    }
+  }
+
+  async getLogs(limit = 50, page = 1, level?: string, search?: string) {
+    const query = this.logRepo.createQueryBuilder('log');
+
+    if (level) {
+      query.andWhere('log.level = :level', { level });
+    }
+
+    if (search) {
+      query.andWhere('(log.message LIKE :search OR log.module LIKE :search)', { search: `%${search}%` });
+    }
+
+    query.orderBy('log.createdAt', 'DESC')
+         .take(limit)
+         .skip((page - 1) * limit);
+
+    const [logs, total] = await query.getManyAndCount();
+
+    // Fetch stats for all levels
+    const statsQuery = this.logRepo.createQueryBuilder('log')
+      .select('log.level, COUNT(log.id) as count')
+      .groupBy('log.level');
+    
+    let statsResult = [];
+    try {
+      statsResult = await statsQuery.getRawMany();
+    } catch (err) {
+      Logger.error(`Failed to aggregate log stats: ${err.message}`, 'SystemService');
+    }
+
+    const stats = { total: 0, error: 0, warn: 0, info: 0, debug: 0 };
+    try {
+      stats.total = await this.logRepo.count();
+      statsResult.forEach(r => {
+        const lvl = String(r.level || '').toLowerCase();
+        const countVal = parseInt(r.count || '0', 10);
+        if (lvl === 'error') stats.error = countVal;
+        else if (lvl === 'warn' || lvl === 'warning') stats.warn += countVal;
+        else if (lvl === 'info') stats.info = countVal;
+        else if (lvl === 'debug') stats.debug = countVal;
+      });
+    } catch (err) {
+      Logger.error(`Failed to map stats: ${err.message}`, 'SystemService');
+    }
 
     return {
       data: logs.map((l) => ({
@@ -55,10 +125,17 @@ export class SystemService {
       total,
       page,
       limit,
+      stats,
     };
   }
 
+  async clearLogs() {
+    await this.logRepo.clear();
+    return { message: 'Logs cleared successfully' };
+  }
+
   async addLog(level: string, module: string, message: string) {
+    console.log(`[CLIENT LOG] [${level}] [${module}] ${message}`);
     const log = this.logRepo.create({ level, module, message });
     return this.logRepo.save(log);
   }

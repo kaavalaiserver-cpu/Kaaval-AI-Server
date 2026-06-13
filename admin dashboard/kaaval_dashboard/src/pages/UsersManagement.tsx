@@ -58,6 +58,8 @@ const UsersManagement = () => {
   const [formData, setFormData] = useState<Partial<UserAccount>>({});
   const [reason, setReason] = useState('');
   const [tempPassword, setTempPassword] = useState('');
+  const [customPassword, setCustomPassword] = useState('');
+  const [autoGenerate, setAutoGenerate] = useState(true);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -80,6 +82,8 @@ const UsersManagement = () => {
     setSelectedUser(user || null);
     setReason('');
     setTempPassword('');
+    setCustomPassword('');
+    setAutoGenerate(true);
     if (mode === 'create') {
       setFormData({
         username: '',
@@ -136,7 +140,14 @@ const UsersManagement = () => {
             alert('Reason is required to reset password');
             return;
         }
-        const res = await axios.post(`${API_BASE}/users/${selectedUser.id}/reset-password`, { reason });
+        if (!autoGenerate && !customPassword.trim()) {
+            alert('Password is required for manual entry');
+            return;
+        }
+        const res = await axios.post(`${API_BASE}/users/${selectedUser.id}/reset-password`, {
+          reason,
+          customPassword: autoGenerate ? undefined : customPassword.trim()
+        });
         setTempPassword(res.data.temporaryPassword);
         fetchUsers();
       }
@@ -155,44 +166,65 @@ const UsersManagement = () => {
     return matchesSearch && matchesRole && matchesSub && matchesStatus;
   });
 
+  const totalActive   = users.filter(u => u.isActive).length;
+  const totalInactive = users.filter(u => !u.isActive).length;
+  const totalLocked   = users.filter(u => u.lockedUntil && new Date(u.lockedUntil) > new Date()).length;
+
   return (
     <div className="users-page">
       <div className="users-header">
         <h2><Users size={22} /> User Management</h2>
-        <button className="btn-primary" onClick={() => handleOpenModal('create')}>
-          <UserPlus size={16} /> Create User
-        </button>
+        <div className="users-header-right">
+          <button className="btn-secondary" onClick={fetchUsers}><RefreshCw size={15} /> Refresh</button>
+          <button className="btn-primary" onClick={() => handleOpenModal('create')}><UserPlus size={15} /> Create User</button>
+        </div>
+      </div>
+
+      {/* Summary chips */}
+      <div className="users-summary">
+        <div className="summary-chip total">
+          <span className="summary-num">{users.length}</span>
+          <span className="summary-label">Total Accounts</span>
+        </div>
+        <div className="summary-chip active">
+          <span className="summary-num">{totalActive}</span>
+          <span className="summary-label">Active</span>
+        </div>
+        <div className="summary-chip inactive">
+          <span className="summary-num">{totalInactive}</span>
+          <span className="summary-label">Inactive</span>
+        </div>
+        <div className="summary-chip locked">
+          <span className="summary-num">{totalLocked}</span>
+          <span className="summary-label">Locked</span>
+        </div>
       </div>
 
       <div className="users-filters">
         <div className="search-box">
-          <Search size={16} />
-          <input 
-            type="text" 
-            placeholder="Search username or name..." 
+          <Search size={16} color="var(--text-dim)" />
+          <input
+            type="text"
+            placeholder="Search username or name..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="filter-group">
-          <Filter size={16} />
-          <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+        <div className="filter-selects">
+          <select className="filter-select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
             <option value="">All Roles</option>
-            {ROLES.map(r => <option key={r} value={r}>{r.toUpperCase()}</option>)}
+            {ROLES.map(r => <option key={r} value={r}>{r.replace(/_/g, ' ').toUpperCase()}</option>)}
           </select>
-          <select value={subFilter} onChange={(e) => setSubFilter(e.target.value)}>
+          <select className="filter-select" value={subFilter} onChange={(e) => setSubFilter(e.target.value)}>
             <option value="">All Subdivisions</option>
             {SUBDIVISIONS.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <select className="filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All Statuses</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </select>
         </div>
-        <button className="btn-secondary" onClick={fetchUsers}>
-          <RefreshCw size={16} /> Refresh
-        </button>
       </div>
 
       <div className="users-table-container">
@@ -213,49 +245,69 @@ const UsersManagement = () => {
             <tbody>
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center">No users found.</td>
+                  <td colSpan={6}>
+                    <div className="empty-state">
+                      <Users size={40} />
+                      <p>No users match your filters</p>
+                    </div>
+                  </td>
                 </tr>
               ) : (
                 filteredUsers.map((user) => {
                   const isLocked = user.lockedUntil && new Date(user.lockedUntil) > new Date();
+                  const initials = (user.fullName || user.username || '?')[0].toUpperCase();
                   return (
                     <tr key={user.id} className={!user.isActive ? 'inactive-row' : ''}>
                       <td>
-                        <strong>{user.username}</strong>
-                        {user.requiresPasswordChange && <span className="badge-warning" title="Requires Password Change"><ShieldAlert size={12}/></span>}
-                      </td>
-                      <td>
-                        <div className="td-stack">
-                          <span>{user.fullName}</span>
-                          <span className="text-muted">{user.designation || '—'}</span>
+                        <div className="user-cell">
+                          <div className={`user-avatar ${!user.isActive ? 'inactive' : ''}`}>{initials}</div>
+                          <div>
+                            <div className="user-username">
+                              {user.username}
+                              {user.requiresPasswordChange && <span className="badge-warning" title="Password change required"><ShieldAlert size={11}/></span>}
+                            </div>
+                            <div className="user-id">#{user.id?.toString().slice(0, 8)}</div>
+                          </div>
                         </div>
                       </td>
                       <td>
                         <div className="td-stack">
-                          <span className="role-badge">{user.role.toUpperCase()}</span>
-                          <span className="text-muted">{user.subdivision || '—'}</span>
+                          <span className="td-main">{user.fullName || '—'}</span>
+                          <span className="td-sub">{user.designation || 'No designation'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="td-stack">
+                          <span className={`role-badge ${user.role}`}>{user.role.replace(/_/g, ' ').toUpperCase()}</span>
+                          <span className="td-sub">{user.subdivision || 'No subdivision'}</span>
                         </div>
                       </td>
                       <td>
                         {isLocked ? (
-                            <span className="status-badge error"><Lock size={12}/> Locked</span>
+                          <span className="status-badge warn"><Lock size={11}/> Locked</span>
                         ) : user.isActive ? (
-                            <span className="status-badge ok"><CheckCircle size={12}/> Active</span>
+                          <span className="status-badge ok"><CheckCircle size={11}/> Active</span>
                         ) : (
-                            <span className="status-badge error"><XCircle size={12}/> Inactive</span>
+                          <span className="status-badge error"><XCircle size={11}/> Inactive</span>
                         )}
                       </td>
-                      <td className="text-muted text-sm">
-                        {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}
+                      <td>
+                        <div className="td-stack">
+                          <span className="td-main" style={{ fontSize: '0.82rem' }}>
+                            {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+                          </span>
+                          <span className="td-sub">
+                            {user.lastLogin ? new Date(user.lastLogin).toLocaleTimeString() : ''}
+                          </span>
+                        </div>
                       </td>
                       <td>
                         <div className="action-buttons">
-                          <button onClick={() => handleOpenModal('edit', user)} title="Edit Details">Edit</button>
-                          <button onClick={() => handleOpenModal('reset', user)} title="Reset Password">Reset</button>
-                          <button 
-                            className={user.isActive ? 'btn-danger' : 'btn-success'} 
+                          <button onClick={() => handleOpenModal('edit', user)}>Edit</button>
+                          <button onClick={() => handleOpenModal('reset', user)}>Reset</button>
+                          <button
+                            className={user.isActive ? 'btn-danger' : 'btn-success'}
                             onClick={() => handleOpenModal('status', user)}
-                            title={user.isActive ? 'Deactivate Account' : 'Activate Account'}
                           >
                             {user.isActive ? 'Disable' : 'Enable'}
                           </button>
@@ -340,10 +392,40 @@ const UsersManagement = () => {
                   </>
                 )}
 
+                {modalMode === 'reset' && (
+                  <>
+                    <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', cursor: 'pointer', margin: '4px 0' }}>
+                      <input 
+                        type="checkbox" 
+                        id="autoGenerate" 
+                        checked={autoGenerate} 
+                        onChange={e => setAutoGenerate(e.target.checked)} 
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <label htmlFor="autoGenerate" style={{ cursor: 'pointer', margin: 0, textTransform: 'none', letterSpacing: 'normal' }}>
+                        Auto-generate temporary password
+                      </label>
+                    </div>
+
+                    {!autoGenerate && (
+                      <div className="form-group">
+                        <label>Enter New Password</label>
+                        <input 
+                          type="text" 
+                          required 
+                          placeholder="Enter new custom password" 
+                          value={customPassword} 
+                          onChange={e => setCustomPassword(e.target.value)} 
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+
                 {(modalMode === 'status' || modalMode === 'reset') && (
                   <div className="form-group">
                     <label>Reason for Action (Mandatory)</label>
-                    <input type="text" required value={reason} onChange={e => setReason(e.target.value)} placeholder={`e.g. ${modalMode === 'status' ? 'Transferred out of district' : 'User forgot password'}`} />
+                    <input type="text" required value={reason} onChange={e => setReason(e.target.value)} placeholder={`e.g. ${modalMode === 'status' ? 'Transferred out of district' : 'User request / forgot password'}`} />
                   </div>
                 )}
 
@@ -352,7 +434,7 @@ const UsersManagement = () => {
                   <button type="submit" className={modalMode === 'status' && selectedUser?.isActive ? 'btn-danger' : 'btn-primary'}>
                     {modalMode === 'create' ? 'Create Account' : 
                      modalMode === 'edit' ? 'Save Changes' : 
-                     modalMode === 'reset' ? 'Generate Password' : 
+                     modalMode === 'reset' ? (autoGenerate ? 'Generate Password' : 'Set Password') : 
                      selectedUser?.isActive ? 'Deactivate Account' : 'Activate Account'}
                   </button>
                 </div>

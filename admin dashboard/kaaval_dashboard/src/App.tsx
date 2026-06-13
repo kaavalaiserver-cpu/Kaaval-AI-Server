@@ -9,15 +9,18 @@ import ReviewEvidence from './pages/ReviewEvidence';
 import Cameras from './pages/Cameras';
 import Analytics from './pages/Analytics';
 import DevAnalytics from './pages/DevAnalytics';
-import EvidenceArchive from './pages/EvidenceArchive';
 import SystemStatus from './pages/SystemStatus';
 import SystemLogs from './pages/SystemLogs';
 import CameraConfig from './pages/CameraConfig';
 import UsersManagement from './pages/UsersManagement';
+import SettingsPage from './pages/Settings';
+import WeeklyReports from './pages/WeeklyReports';
 
 const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer'];
-const ALL_EXCEPT_VIEWERS: Role[] = ['super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'developer'];
+const ALL_EXCEPT_VIEWERS: Role[] = ['super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'developer', 'operator'];
 const TECH_ROLES: Role[] = ['super_admin', 'developer'];
+const REPORTS_ROLES: Role[] = ['super_admin', 'developer', 'sp', 'dsp'];
+const CAMERA_HEALTH_ROLES: Role[] = ['super_admin', 'developer', 'sp', 'dsp', 'inspector', 'sub_inspector', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin'];
 
 const ProtectedRoute = ({ children, roles }: { children: React.ReactNode; roles?: Role[] }) => {
   const { user, loading } = useAuth();
@@ -56,11 +59,7 @@ function AppRoutes() {
             <DevAnalytics />
           </ProtectedRoute>
         } />
-        <Route path="evidence-archive" element={
-          <ProtectedRoute roles={FULL_ACCESS_ROLES}>
-            <EvidenceArchive />
-          </ProtectedRoute>
-        } />
+
         <Route path="system" element={
           <ProtectedRoute roles={TECH_ROLES}>
             <SystemStatus />
@@ -79,6 +78,12 @@ function AppRoutes() {
         <Route path="camera-config" element={
           <ProtectedRoute roles={['super_admin']}>
             <CameraConfig />
+          </ProtectedRoute>
+        } />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="reports" element={
+          <ProtectedRoute roles={REPORTS_ROLES}>
+            <WeeklyReports />
           </ProtectedRoute>
         } />
       </Route>

@@ -246,7 +246,7 @@ export class ViolationsService {
     }
   }
 
-  async create(dto: CreateViolationDto) {
+  async create(dto: CreateViolationDto, user?: ScopedUser) {
     const rawStatus = dto.status || 'PENDING';
     const type = dto.violationType ?? 'NO_HELMET';
     const cameraId = dto.cameraId ?? 'CAM-001';
@@ -311,7 +311,15 @@ export class ViolationsService {
     });
 
     try {
-      return await this.violationRepo.save(v);
+      const saved = await this.violationRepo.save(v);
+      await this.auditService.logAction(
+        user?.id ?? null,
+        'CREATE_VIOLATION',
+        saved.id,
+        undefined,
+        { vehicleNumber: saved.vehicleNumber, violationType: saved.violationType }
+      );
+      return saved;
     } catch (err) {
       console.error('Failed to save pipeline violation', err);
       return null;
@@ -327,6 +335,7 @@ export class ViolationsService {
       status: Not(In(['DUPLICATE'])),
       isDeleted: false,
     };
+    console.log('VIOLATIONS FINDALL QUERY:', query);
 
     if (query.status) where['status'] = query.status;
     if (query.cameraId) where['cameraId'] = query.cameraId;
@@ -351,6 +360,7 @@ export class ViolationsService {
     }
 
     const requiresScopeFilter = !!user && !hasFullAccessRole(user.role);
+    console.log('FINDALL requiresScopeFilter:', requiresScopeFilter, 'userRole:', user?.role, 'userSubdivision:', user?.subdivision);
 
     if (requiresScopeFilter) {
       const violations = await this.violationRepo.find({
@@ -359,6 +369,7 @@ export class ViolationsService {
       });
 
       const scoped = violations.filter((v) => this.canAccessViolation(user, v));
+      console.log('FINDALL scoped count:', scoped.length, 'total before scope:', violations.length);
 
       const paged = scoped.slice(skip, skip + limit);
       return {
@@ -375,6 +386,7 @@ export class ViolationsService {
       take: limit,
       skip,
     });
+    console.log('FINDALL unscoped count:', violations.length, 'total:', total);
 
     return {
       data: await Promise.all(violations.map(async (v) => await this.formatViolation(v))),
@@ -417,12 +429,16 @@ export class ViolationsService {
   }
 
   async getStats(user?: ScopedUser) {
+    console.log('GETSTATS CALLED for userRole:', user?.role, 'userSubdivision:', user?.subdivision);
     const cacheKey = user?.role && !hasFullAccessRole(user.role)
       ? `violation-stats-${user.role}`
       : 'violation-stats';
 
     const cached = await this.cache.get<Record<string, unknown>>(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      console.log('GETSTATS returning CACHED stats:', cached);
+      return cached;
+    }
 
     const all = await this.violationRepo.find({
       where: { isDeleted: false },
@@ -463,8 +479,17 @@ export class ViolationsService {
 
     const newStatus = this.mapStatusFromAction(dto.action);
     v.status = newStatus;
-    v.reviewedBy = dto.reviewedBy ?? 'OFFICER';
-    v.reviewedAt = new Date();
+
+    if (user?.role === 'super_admin') {
+      v.reviewedBy = null;
+      v.reviewedAt = null;
+    } else {
+      const roleStr = user?.role ? user.role.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Officer';
+      const nameStr = user?.username ? ` (${user.username})` : '';
+      v.reviewedBy = dto.reviewedBy ?? `${roleStr}${nameStr}`;
+      v.reviewedAt = new Date();
+    }
+
     if (dto.reviewNotes) v.reviewNotes = dto.reviewNotes;
 
     if (newStatus === 'CHALLAN_ISSUED') {
@@ -505,6 +530,15 @@ export class ViolationsService {
 
     await this.violationRepo.save(v);
     await this.invalidateStatsCache();
+
+    await this.auditService.logAction(
+      user?.id ?? null,
+      'UPDATE_VIOLATION',
+      id,
+      undefined,
+      { changes: dto }
+    );
+
     return await this.formatViolation(v);
   }
 
@@ -534,10 +568,19 @@ export class ViolationsService {
   async batchUpload(
     files: Express.Multer.File[],
     aiBackendUrl: string,
+    user?: ScopedUser,
   ) {
     const uploaded: Array<Record<string, unknown>> = [];
     const errors: Array<Record<string, string>> = [];
     console.log(`📡 BATCH UPLOAD: ${files.length} files`);
+
+    await this.auditService.logAction(
+      user?.id ?? null,
+      'BATCH_UPLOAD_VIOLATIONS',
+      undefined,
+      undefined,
+      { fileCount: files.length }
+    );
 
 
     // Forward to AI backend for OCR if available

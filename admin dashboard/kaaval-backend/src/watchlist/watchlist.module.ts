@@ -3,9 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Watchlist } from './entities/watchlist.entity.js';
 import { WatchlistService } from './watchlist.service.js';
 import { WatchlistController } from './watchlist.controller.js';
+import { SystemModule } from '../system/system.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Watchlist])],
+  imports: [TypeOrmModule.forFeature([Watchlist]), SystemModule],
   controllers: [WatchlistController],
   providers: [WatchlistService],
   exports: [WatchlistService],

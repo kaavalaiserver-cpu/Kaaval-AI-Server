@@ -30,7 +30,7 @@ export class CamerasService {
       id: primary?.id ?? 'CAM-EDGE-01',
       cameraId: 'CAM-EDGE-01',
       camera_id: 'CAM-EDGE-01',
-      location: 'Kaaval AI - Ramanputhoor',
+      location: 'Collectorate Roundana',
       status: primary?.status ?? 'online',
       lastActive: primary?.lastActive ?? now,
       last_active: primary?.lastActive ?? now,
@@ -74,7 +74,7 @@ export class CamerasService {
 
     const cam = this.cameraRepo.create({
       cameraId: 'CAM-EDGE-01',
-      locationName: 'Kaaval AI - Ramanputhoor',
+      locationName: 'Collectorate Roundana',
       gpsLat: 8.1784,
       gpsLng: 77.4320,
       status: 'online',
@@ -84,6 +84,6 @@ export class CamerasService {
     await this.cameraRepo.save(cam);
 
     await this.cache.del('cameras-all');
-    return { message: 'Seeded 1 camera: Kaaval AI - Ramanputhoor' };
+    return { message: 'Seeded 1 camera: Collectorate Roundana' };
   }
 }
