@@ -81,7 +81,7 @@ const Violations = () => {
 
     try {
       const params: Record<string, string | number> = { limit: PAGE_SIZE, page };
-      if (filters.status) params.status = filters.status;
+      if (filters.status && filters.status !== 'ALL') params.status = filters.status;
       if (filters.cameraId) params.cameraId = filters.cameraId;
       if (filters.vehicleNumber) params.vehicleNumber = filters.vehicleNumber;
       if (filters.violationType) params.violationType = filters.violationType;
@@ -488,11 +488,11 @@ const Violations = () => {
 
       {/* Category Tabs */}
       <div className="category-tabs">
-        {['PENDING', 'CHALLAN_ISSUED', 'REJECTED'].map((status) => (
+        {['ALL', 'PENDING', 'CHALLAN_ISSUED', 'REJECTED'].map((status) => (
           <button
             key={status}
-            className={`tab-btn ${filters.status === status ? 'active' : ''}`}
-            onClick={() => setFilter('status', status)}
+            className={`tab-btn ${filters.status === status || (status === 'ALL' && !filters.status) ? 'active' : ''}`}
+            onClick={() => setFilter('status', status === 'ALL' ? '' : status)}
           >
             {status === 'CHALLAN_ISSUED' ? 'ISSUED' : status}
           </button>
