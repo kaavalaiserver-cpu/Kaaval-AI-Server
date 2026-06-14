@@ -108,7 +108,7 @@ const Violations = () => {
 
       const [vRes, sRes] = await Promise.all([
         axios.get<PaginatedViolations>(`${API_BASE}/violations`, { params, signal }),
-        axios.get<ViolationStats>(`${API_BASE}/violations/stats`, { signal }),
+        axios.get<ViolationStats>(`${API_BASE}/violations/stats`, { params, signal }),
       ]);
 
       const data = vRes.data.data ?? (vRes.data as unknown as ViolationItem[]);
@@ -234,6 +234,25 @@ const Violations = () => {
 
   const hasActiveFilters = Object.entries(filters).some(([, v]) => v !== '');
 
+  const handleDownloadDailyReport = async () => {
+    try {
+      const date = filters.dateFrom || new Date().toISOString().split('T')[0];
+      const res = await axios.get(`${API_BASE}/reports/daily/pdf?date=${date}`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `daily-report-${date}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+    } catch (err) {
+      console.error('Failed to download PDF:', err);
+      alert('Failed to download the Daily Report. Please try again.');
+    }
+  };
+
   return (
     <div className="violations-page">
       {/* Review Modal */}
@@ -254,29 +273,7 @@ const Violations = () => {
                   disabled={violations.findIndex(v => v.id === selectedViolation.id) === violations.length - 1}>
                   <ChevronRight size={32} />
                 </button>
-                <div className="viewer-toolbar-modal">
-                  <button onClick={() => setReviewZoom(Math.min(reviewZoom + 0.25, 3))} title="Zoom In"><ZoomIn size={16} /></button>
-                  <button onClick={() => setReviewZoom(Math.max(reviewZoom - 0.25, 0.5))} title="Zoom Out"><ZoomOut size={16} /></button>
-                  <button onClick={() => setReviewZoom(1)} title="Reset"><RotateCw size={16} /></button>
-                  <button onClick={() => setViewMode(viewMode === 'proof' ? 'plate' : 'proof')} style={{ minWidth: 80, fontSize: 13 }}>
-                    {viewMode === 'proof' ? 'Show Plate' : 'Show Scene'}
-                  </button>
-                  <button onClick={() => {
-                    const url = viewMode === 'plate' ? (selectedViolation.proof_img_url || selectedViolation.image_url) : selectedViolation.image_url;
-                    window.open(url, '_blank');
-                  }} title="Open in New Tab"><ExternalLink size={16} /></button>
-                  <button onClick={() => {
-                    const url = viewMode === 'plate' ? (selectedViolation.proof_img_url || selectedViolation.image_url) : selectedViolation.image_url;
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `violation-${selectedViolation?.vehicle_number || 'unknown'}.jpg`;
-                    a.target = '_blank';
-                    a.click();
-                  }} title="Download"><Download size={16} /></button>
-                  <button onClick={() => violations.length > 0 && openReviewModal(violations[0])} style={{ minWidth: 120, fontSize: 13, background: 'rgba(59, 130, 246, 0.4)' }}>
-                    Recent Violation
-                  </button>
-                </div>
+
                 <div className="evidence-canvas-modal">
                   {selectedViolation.image_url ? (
                     <img
@@ -288,6 +285,30 @@ const Violations = () => {
               </div>
 
               <div className="details-panel-modal">
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingBottom: '20px', borderBottom: '1px solid var(--border)' }}>
+                  <button onClick={() => setReviewZoom(Math.min(reviewZoom + 0.25, 3))} title="Zoom In" className="btn-secondary" style={{ padding: '6px' }}><ZoomIn size={16} /></button>
+                  <button onClick={() => setReviewZoom(Math.max(reviewZoom - 0.25, 0.5))} title="Zoom Out" className="btn-secondary" style={{ padding: '6px' }}><ZoomOut size={16} /></button>
+                  <button onClick={() => setReviewZoom(1)} title="Reset" className="btn-secondary" style={{ padding: '6px' }}><RotateCw size={16} /></button>
+                  <button onClick={() => setViewMode(viewMode === 'proof' ? 'plate' : 'proof')} className="btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>
+                    {viewMode === 'proof' ? 'Show Plate' : 'Show Scene'}
+                  </button>
+                  <button onClick={() => {
+                    const url = viewMode === 'plate' ? (selectedViolation.proof_img_url || selectedViolation.image_url) : selectedViolation.image_url;
+                    window.open(url, '_blank');
+                  }} title="Open in New Tab" className="btn-secondary" style={{ padding: '6px' }}><ExternalLink size={16} /></button>
+                  <button onClick={() => {
+                    const url = viewMode === 'plate' ? (selectedViolation.proof_img_url || selectedViolation.image_url) : selectedViolation.image_url;
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `violation-${selectedViolation?.vehicle_number || 'unknown'}.jpg`;
+                    a.target = '_blank';
+                    a.click();
+                  }} title="Download" className="btn-secondary" style={{ padding: '6px' }}><Download size={16} /></button>
+                  <button onClick={() => violations.length > 0 && openReviewModal(violations[0])} className="btn-secondary" style={{ width: '100%', justifyContent: 'center', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', borderColor: 'rgba(59, 130, 246, 0.3)' }}>
+                    Recent Violation
+                  </button>
+                </div>
+
                 <div className="modal-actions" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none', borderBottom: '1px solid var(--border)', paddingBottom: '20px', marginBottom: '10px' }}>
                   {/* Issue Fine (Approve) — all except developer and viewer */}
                   {hasRole('super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'operator') && (
@@ -381,17 +402,51 @@ const Violations = () => {
         <div className="toolbar-left">
           <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <AlertTriangle size={20} /> Violation Management for
-            <input type="date" 
-              value={filters.dateFrom === filters.dateTo ? filters.dateFrom : ''} 
-              onChange={e => {
-                const d = e.target.value;
-                if (!d) return;
-                setFilters(prev => ({ ...prev, dateFrom: d, dateTo: d }));
-                setPage(1);
-              }} 
-              style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-primary)', padding: '4px 10px', borderRadius: '6px', fontSize: '1.05rem', cursor: 'pointer', outline: 'none' }}
-              title="Select a specific date to view its violations"
-            />
+            <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-primary)', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
+              <button 
+                onClick={() => {
+                  if (!filters.dateFrom) return;
+                  const d = new Date(filters.dateFrom);
+                  d.setDate(d.getDate() - 1);
+                  const newDate = d.toISOString().split('T')[0];
+                  setFilters(prev => ({ ...prev, dateFrom: newDate, dateTo: newDate }));
+                  setPage(1);
+                }}
+                style={{ padding: '6px 8px', background: 'var(--bg-secondary)', border: 'none', borderRight: '1px solid var(--border)', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                title="Previous Day"
+                onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <input type="date" 
+                value={filters.dateFrom === filters.dateTo ? filters.dateFrom : ''} 
+                onChange={e => {
+                  const d = e.target.value;
+                  if (!d) return;
+                  setFilters(prev => ({ ...prev, dateFrom: d, dateTo: d }));
+                  setPage(1);
+                }} 
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', padding: '4px 10px', fontSize: '1.05rem', cursor: 'pointer', outline: 'none' }}
+                title="Select a specific date to view its violations"
+              />
+              <button 
+                onClick={() => {
+                  if (!filters.dateFrom) return;
+                  const d = new Date(filters.dateFrom);
+                  d.setDate(d.getDate() + 1);
+                  const newDate = d.toISOString().split('T')[0];
+                  setFilters(prev => ({ ...prev, dateFrom: newDate, dateTo: newDate }));
+                  setPage(1);
+                }}
+                style={{ padding: '6px 8px', background: 'var(--bg-secondary)', border: 'none', borderLeft: '1px solid var(--border)', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                title="Next Day"
+                onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseOut={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
           </h2>
         </div>
         <div className="toolbar-right">
@@ -402,9 +457,17 @@ const Violations = () => {
             </button>
           )}
           {hasRole('super_admin', 'developer', 'sp') && (
-            <button className="btn-secondary" onClick={() => setShowUpload(!showUpload)}>
-              <Upload size={16} /> Batch Upload
-            </button>
+            <>
+              <button className="btn-secondary" onClick={() => setShowUpload(!showUpload)}>
+                <Upload size={16} /> Batch Upload
+              </button>
+              <button 
+                className="btn-secondary" 
+                onClick={handleDownloadDailyReport}
+              >
+                <Download size={16} /> Download Daily Report
+              </button>
+            </>
           )}
           <button className="btn-secondary" onClick={() => fetchViolations()}>
             <RefreshCw size={16} /> Refresh

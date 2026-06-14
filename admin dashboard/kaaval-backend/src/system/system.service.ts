@@ -1,4 +1,5 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
+import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -36,16 +37,11 @@ export class SystemService {
   async getPlateApiUsage() {
     const apiKey = process.env.PLATE_RECOGNIZER_API_KEY || '478212749124746424275c833ba665b3a168a13e';
     try {
-      const res = await fetch('https://api.platerecognizer.com/v1/statistics/', {
+      const res = await axios.get('https://api.platerecognizer.com/v1/statistics/', {
         headers: { Authorization: `Token ${apiKey}` },
-        signal: AbortSignal.timeout(8000),
+        timeout: 8000,
       });
-      if (!res.ok) {
-        const text = await res.text();
-        Logger.error(`Plate API error ${res.status}: ${text}`, 'SystemService');
-        return { status: 'error', error: `API returned ${res.status}: ${text}` };
-      }
-      const d = await res.json();
+      const d = res.data;
       // Log raw response so we can see all field names
       Logger.log(`Plate API raw response: ${JSON.stringify(d)}`, 'SystemService');
 
@@ -64,7 +60,11 @@ export class SystemService {
         month: d.month ?? d.period ?? null,
         _raw: d, // temporary — helps verify mapping is correct
       };
-    } catch (err) {
+    } catch (err: any) {
+      if (err.response) {
+        Logger.error(`Plate API error ${err.response.status}: ${JSON.stringify(err.response.data)}`, 'SystemService');
+        return { status: 'error', error: `API returned ${err.response.status}: ${JSON.stringify(err.response.data)}` };
+      }
       Logger.error(`Plate API fetch failed: ${err.message}`, 'SystemService');
       return { status: 'error', error: `Network error: ${err.message}` };
     }

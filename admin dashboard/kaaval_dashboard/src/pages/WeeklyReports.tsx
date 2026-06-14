@@ -30,6 +30,7 @@ const WeeklyReports = () => {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const trendRef = useRef<HTMLCanvasElement>(null);
+  const finesRef = useRef<HTMLCanvasElement>(null);
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
@@ -48,8 +49,9 @@ const WeeklyReports = () => {
   useEffect(() => { fetchReport(); }, [fetchReport]);
 
   useEffect(() => {
-    if (!data || !trendRef.current) return;
-    drawTrendChart(trendRef.current, data.dailyTrend);
+    if (!data) return;
+    if (trendRef.current) drawTrendChart(trendRef.current, data.dailyTrend);
+    if (finesRef.current) drawFinesChart(finesRef.current, data.dailyTrend);
   }, [data]);
 
   const handleDownloadPdf = async () => {
@@ -106,14 +108,23 @@ const WeeklyReports = () => {
           </div>
 
           {/* Daily Trend Chart */}
-          <div className="reports-card">
-            <h3><TrendingUp size={17} /> Daily Violation Trend</h3>
-            <div className="chart-legend">
-              <span><span className="dot blue" /> Total</span>
-              <span><span className="dot green" /> Approved</span>
-              <span><span className="dot red" /> Rejected</span>
+          <div className="reports-grid-2">
+            <div className="reports-card">
+              <h3><TrendingUp size={17} /> Daily Violation Trend</h3>
+              <div className="chart-legend">
+                <span><span className="dot blue" /> Total</span>
+                <span><span className="dot red" /> Rejected</span>
+              </div>
+              <canvas ref={trendRef} className="trend-canvas" height={200} />
             </div>
-            <canvas ref={trendRef} className="trend-canvas" height={200} />
+
+            <div className="reports-card">
+              <h3><TrendingUp size={17} /> Fines Issued Trend</h3>
+              <div className="chart-legend">
+                <span><span className="dot green" /> Approved</span>
+              </div>
+              <canvas ref={finesRef} className="trend-canvas" height={200} />
+            </div>
           </div>
 
           {/* Two-column breakdown */}
@@ -265,10 +276,64 @@ function drawTrendChart(canvas: HTMLCanvasElement, data: DayData[]) {
   };
 
   drawLine('#3b82f6', d => d.total, 'rgba(59,130,246,0.06)');
-  drawLine('#22c55e', d => d.verified);
   drawLine('#ef4444', d => d.rejected);
 
   // X labels
+  ctx.fillStyle = '#64748b'; ctx.font = '9px Inter, sans-serif'; ctx.textAlign = 'center';
+  data.forEach((d, i) => {
+    const label = new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+    ctx.fillText(label, x(i), pad.top + h + 14);
+  });
+}
+
+function drawFinesChart(canvas: HTMLCanvasElement, data: DayData[]) {
+  const ctx = canvas.getContext('2d');
+  if (!ctx || !data.length) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const width = canvas.offsetWidth;
+  const height = 200;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  ctx.scale(dpr, dpr);
+
+  ctx.clearRect(0, 0, width, height);
+
+  const pad = { top: 20, right: 20, bottom: 40, left: 40 };
+  const w = width - pad.left - pad.right;
+  const h = height - pad.top - pad.bottom;
+  const maxVal = Math.max(...data.map(d => d.verified), 1);
+
+  const x = (i: number) => pad.left + (i / (data.length - 1 || 1)) * w;
+  const y = (v: number) => pad.top + h - (v / maxVal) * h;
+
+  ctx.strokeStyle = 'rgba(148,163,184,0.1)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const yy = pad.top + (i / 4) * h;
+    ctx.beginPath(); ctx.moveTo(pad.left, yy); ctx.lineTo(pad.left + w, yy); ctx.stroke();
+    ctx.fillStyle = '#475569'; ctx.font = '10px Inter, sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(String(Math.round(maxVal * (1 - i / 4))), pad.left - 5, yy + 3);
+  }
+
+  const drawLine = (color: string, getValue: (d: DayData) => number, fill?: string) => {
+    ctx.beginPath();
+    data.forEach((d, i) => i === 0 ? ctx.moveTo(x(i), y(getValue(d))) : ctx.lineTo(x(i), y(getValue(d))));
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.stroke();
+    if (fill) {
+      ctx.lineTo(x(data.length - 1), pad.top + h);
+      ctx.lineTo(x(0), pad.top + h);
+      ctx.closePath();
+      ctx.fillStyle = fill; ctx.fill();
+    }
+    data.forEach((d, i) => {
+      ctx.beginPath(); ctx.arc(x(i), y(getValue(d)), 3, 0, Math.PI * 2);
+      ctx.fillStyle = color; ctx.fill();
+    });
+  };
+
+  drawLine('#22c55e', d => d.verified, 'rgba(34,197,94,0.06)');
+
   ctx.fillStyle = '#64748b'; ctx.font = '9px Inter, sans-serif'; ctx.textAlign = 'center';
   data.forEach((d, i) => {
     const label = new Date(d.date + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });

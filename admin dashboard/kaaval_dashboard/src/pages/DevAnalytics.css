@@ -208,7 +208,7 @@
 
 /* API stat chips row */
 .da-api-stats {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px;
 }
 
 .da-api-chip {
@@ -342,7 +342,7 @@
 /* ── Charts Row ─────────────────────────────────────────── */
 .da-charts-row {
   display: grid;
-  grid-template-columns: 1fr 320px;
+  grid-template-columns: minmax(0, 1fr) 320px;
   gap: 14px;
 }
 
@@ -446,12 +446,12 @@
 
 /* ── Responsive ─────────────────────────────────────────── */
 @media (max-width: 960px) {
-  .da-charts-row { grid-template-columns: 1fr; }
-  .da-api-stats  { grid-template-columns: repeat(2, 1fr); }
+  .da-charts-row { grid-template-columns: minmax(0, 1fr); }
+  .da-api-stats  { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 640px) {
-  .da-metrics-grid { grid-template-columns: 1fr 1fr; }
+  .da-metrics-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .da-header       { flex-direction: column; align-items: flex-start; }
-  .da-api-stats    { grid-template-columns: 1fr 1fr; }
+  .da-api-stats    { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
 }

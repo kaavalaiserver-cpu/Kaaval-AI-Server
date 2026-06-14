@@ -39,6 +39,7 @@ const Analytics = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'trend' | 'vehicles'>('trend');
+  const [finesActiveTab, setFinesActiveTab] = useState<'trend' | 'vehicles'>('trend');
   const mountTime = useRef(Date.now());
 
   const fetchData = async (isRefresh = false) => {
@@ -100,6 +101,54 @@ const Analytics = () => {
       borderWidth: 2.5,
       pointRadius: 3,
       pointBackgroundColor: '#3b82f6',
+      pointBorderColor: '#1e293b',
+      pointBorderWidth: 2,
+      tension: 0.4,
+      fill: true,
+    }],
+  } : null;
+
+  const finesBarChart = data?.fines_issued_last_30 ? {
+    labels: data.fines_issued_last_30.map(d => {
+      const dt = new Date(d.date);
+      return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+    }),
+    datasets: [{
+      label: 'Fines Issued',
+      data: data.fines_issued_last_30.map(d => d.count),
+      backgroundColor: (ctx: any) => {
+        const canvas = ctx.chart.ctx;
+        const gradient = canvas.createLinearGradient(0, 0, 0, 280);
+        gradient.addColorStop(0, 'rgba(34,197,94,0.85)');
+        gradient.addColorStop(1, 'rgba(34,197,94,0.1)');
+        return gradient;
+      },
+      borderColor: '#22c55e',
+      borderWidth: 1.5,
+      borderRadius: 5,
+      borderSkipped: false,
+    }],
+  } : null;
+
+  const finesLineChart = data?.fines_issued_last_30 ? {
+    labels: data.fines_issued_last_30.map(d => {
+      const dt = new Date(d.date);
+      return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+    }),
+    datasets: [{
+      label: 'Fines Issued',
+      data: data.fines_issued_last_30.map(d => d.count),
+      borderColor: '#22c55e',
+      backgroundColor: (ctx: any) => {
+        const canvas = ctx.chart.ctx;
+        const gradient = canvas.createLinearGradient(0, 0, 0, 250);
+        gradient.addColorStop(0, 'rgba(34,197,94,0.25)');
+        gradient.addColorStop(1, 'rgba(34,197,94,0.0)');
+        return gradient;
+      },
+      borderWidth: 2.5,
+      pointRadius: 3,
+      pointBackgroundColor: '#22c55e',
       pointBorderColor: '#1e293b',
       pointBorderWidth: 2,
       tension: 0.4,
@@ -340,6 +389,38 @@ const Analytics = () => {
         </div>
       </div>
 
+      {/* ── Fines Issued Trend Chart (full width) ───────────────────────── */}
+      <div className="chart-card full-card" style={{ marginTop: '20px' }}>
+        <div className="chart-card-header">
+          <div className="chart-card-title">
+            <TrendingUp size={16} />
+            <span>Fines Issued Trend — Last 30 Days</span>
+          </div>
+          <div className="chart-tab-group">
+            <button
+              className={`chart-tab ${finesActiveTab === 'trend' ? 'active' : ''}`}
+              onClick={() => setFinesActiveTab('trend')}
+            >
+              Bar
+            </button>
+            <button
+              className={`chart-tab ${finesActiveTab === 'vehicles' ? 'active' : ''}`}
+              onClick={() => setFinesActiveTab('vehicles')}
+            >
+              Line
+            </button>
+          </div>
+        </div>
+        <div className="chart-area tall">
+          {finesActiveTab === 'trend' && finesBarChart && (
+            <Bar data={finesBarChart} options={commonBarOpts} />
+          )}
+          {finesActiveTab === 'vehicles' && finesLineChart && (
+            <Line data={finesLineChart} options={lineOpts} />
+          )}
+        </div>
+      </div>
+
       {/* ── Two-col: Type + Camera ────────────────────────── */}
       <div className="charts-grid-2">
         {/* Violation Type Doughnut */}
@@ -416,14 +497,17 @@ const Analytics = () => {
               <Bar data={vehicleChart} options={commonBarOpts} />
             </div>
           )}
-          <div className="offenders-table">
-            <div className="offenders-header">
+          <div className="offenders-table" style={{ maxHeight: '350px', overflowY: 'auto' }}>
+            <div className="offenders-header" style={{ position: 'sticky', top: 0, zIndex: 1 }}>
               <span>#</span>
               <span>Plate Number</span>
               <span>Violations</span>
               <span>Risk Level</span>
             </div>
-            {data.top_vehicles.slice(0, 8).map((v, i) => {
+            {data.top_vehicles
+              .filter(v => v.vehicle_number && v.vehicle_number.toUpperCase() !== 'UNKNOWN')
+              .slice(0, 20)
+              .map((v, i) => {
               const risk = v.count >= 10 ? 'Critical' : v.count >= 5 ? 'High' : v.count >= 3 ? 'Medium' : 'Low';
               const riskClass = v.count >= 10 ? 'critical' : v.count >= 5 ? 'high' : v.count >= 3 ? 'medium' : 'low';
               return (

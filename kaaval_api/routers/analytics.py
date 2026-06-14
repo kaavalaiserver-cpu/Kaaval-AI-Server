@@ -55,6 +55,14 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
             GROUP BY DATE(created_at)
             ORDER BY DATE(created_at) ASC
         """)
+        fines_query = text("""
+            SELECT DATE(created_at) as date, COUNT(*) as count 
+            FROM violations 
+            WHERE created_at >= date('now', '-30 days') AND is_deleted = false
+              AND status IN ('CHALLAN_ISSUED', 'VERIFIED')
+            GROUP BY DATE(created_at)
+            ORDER BY DATE(created_at) ASC
+        """)
     else:
         daily_query = text("""
             SELECT DATE(created_at) as date, COUNT(*) as count 
@@ -63,8 +71,19 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
             GROUP BY DATE(created_at)
             ORDER BY DATE(created_at) ASC
         """)
+        fines_query = text("""
+            SELECT DATE(created_at) as date, COUNT(*) as count 
+            FROM violations 
+            WHERE created_at >= current_date - interval '30 days' AND is_deleted = false
+              AND status IN ('CHALLAN_ISSUED', 'VERIFIED')
+            GROUP BY DATE(created_at)
+            ORDER BY DATE(created_at) ASC
+        """)
     daily_result = await db.execute(daily_query)
     daily_counts = [DailyCount(date=str(row[0]), count=row[1]) for row in daily_result.fetchall()]
+    
+    fines_result = await db.execute(fines_query)
+    fines_counts = [DailyCount(date=str(row[0]), count=row[1]) for row in fines_result.fetchall()]
     
     # 6. Top cameras
     cam_query = text("""
@@ -82,10 +101,14 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
     veh_query = text("""
         SELECT vehicle_number, COUNT(*) as count
         FROM violations
-        WHERE vehicle_number IS NOT NULL AND vehicle_number != 'UNREAD' AND vehicle_number != 'NIL' AND is_deleted = false
+        WHERE vehicle_number IS NOT NULL 
+          AND vehicle_number != 'UNREAD' 
+          AND vehicle_number != 'NIL' 
+          AND vehicle_number != 'UNKNOWN' 
+          AND is_deleted = false
         GROUP BY vehicle_number
         ORDER BY count DESC
-        LIMIT 5
+        LIMIT 20
     """)
     veh_result = await db.execute(veh_query)
     top_vehicles = [TopVehicle(vehicle_number=row[0], count=row[1]) for row in veh_result.fetchall()]
@@ -107,6 +130,7 @@ async def get_summary(db: AsyncSession = Depends(get_db)):
         pending_review=pending or 0,
         challans_issued=challans or 0,
         daily_last_30=daily_counts,
+        fines_issued_last_30=fines_counts,
         top_cameras=top_cameras,
         top_vehicles=top_vehicles,
         by_type=by_type

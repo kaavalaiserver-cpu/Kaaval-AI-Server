@@ -108,6 +108,7 @@ class AnalyticsSummary(BaseModel):
     pending_review: int
     challans_issued: int
     daily_last_30: List[DailyCount]
+    fines_issued_last_30: List[DailyCount]
     top_cameras: List[TopCamera]
     top_vehicles: List[TopVehicle]
     by_type: List[ViolationTypeCount]

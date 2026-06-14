@@ -428,11 +428,27 @@ export class ViolationsService {
     return await this.formatViolation(v);
   }
 
-  async getStats(user?: ScopedUser) {
+  async getStats(query: ViolationQueryDto, user?: ScopedUser) {
     console.log('GETSTATS CALLED for userRole:', user?.role, 'userSubdivision:', user?.subdivision);
+    
+    // Default to today if dates are missing, as requested by user to never show total count
+    const today = new Date().toISOString().split('T')[0];
+    const resolvedDateFrom = query.dateFrom || `${today}T00:00:00`;
+    const resolvedDateTo = query.dateTo || `${today}T23:59:59`;
+
+    // Create a cache key based on the query parameters (ignoring status/page/limit)
+    const queryHashObj = {
+      dateFrom: resolvedDateFrom,
+      dateTo: resolvedDateTo,
+      cameraId: query.cameraId,
+      violationType: query.violationType,
+      minConfidence: query.minConfidence,
+      maxConfidence: query.maxConfidence,
+    };
+    const queryHash = Buffer.from(JSON.stringify(queryHashObj)).toString('base64');
     const cacheKey = user?.role && !hasFullAccessRole(user.role)
-      ? `violation-stats-${user.role}`
-      : 'violation-stats';
+      ? `violation-stats-${user.role}-${queryHash}`
+      : `violation-stats-${queryHash}`;
 
     const cached = await this.cache.get<Record<string, unknown>>(cacheKey);
     if (cached) {
@@ -440,8 +456,29 @@ export class ViolationsService {
       return cached;
     }
 
+    const where: Record<string, unknown> = { isDeleted: false };
+    
+    // Apply filters from query (excluding status, vehicleNumber, limit, page)
+    if (query.cameraId) where['cameraId'] = query.cameraId;
+    if (query.violationType) where['violationType'] = query.violationType;
+    
+    where['createdAt'] = Between(
+      new Date(resolvedDateFrom),
+      new Date(resolvedDateTo),
+    );
+
+    const minConf = query.minConfidence !== undefined ? parseFloat(query.minConfidence) : undefined;
+    const maxConf = query.maxConfidence !== undefined ? parseFloat(query.maxConfidence) : undefined;
+    if (minConf !== undefined && maxConf !== undefined) {
+      where['confidenceScore'] = Between(minConf, maxConf);
+    } else if (minConf !== undefined) {
+      where['confidenceScore'] = MoreThanOrEqual(minConf);
+    } else if (maxConf !== undefined) {
+      where['confidenceScore'] = LessThanOrEqual(maxConf);
+    }
+
     const all = await this.violationRepo.find({
-      where: { isDeleted: false },
+      where,
       select: ['id', 'status', 'violationType', 'createdAt', 'locationLat', 'locationLng', 'cameraId', 'metadata', 'confidenceScore'],
     });
 

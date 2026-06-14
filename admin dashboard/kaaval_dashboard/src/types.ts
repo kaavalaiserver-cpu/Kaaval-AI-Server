@@ -42,6 +42,7 @@ export interface FastAPIAnalyticsSummary {
   pending_review: number;
   challans_issued: number;
   daily_last_30: Array<{ date: string; count: number }>;
+  fines_issued_last_30: Array<{ date: string; count: number }>;
   top_cameras: Array<{ camera_id: string; count: number }>;
   top_vehicles: Array<{ vehicle_number: string; count: number }>;
   by_type: Array<{ violation_type: string; count: number }>;

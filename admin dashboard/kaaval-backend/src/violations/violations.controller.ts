@@ -78,8 +78,8 @@ export class ViolationsController {
   @Get('stats')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN, Role.SP, Role.DSP, Role.DEVELOPER, ...SUBDIVISION_ROLES)
-  getStats(@Request() req: any) {
-    return this.violationsService.getStats(req.user);
+  getStats(@Query() query: ViolationQueryDto, @Request() req: any) {
+    return this.violationsService.getStats(query, req.user);
   }
 
   @Get(':id')
