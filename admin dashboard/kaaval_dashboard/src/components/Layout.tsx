@@ -148,7 +148,7 @@ const Layout = () => {
               <img src="/Kaaval AI Logo.png" alt="Logo" className="sidebar-logo" />
               <div>
                 <h2>
-                  <span style={{ color: 'var(--white)' }}>KAAVAL</span> <span className="text-red">AI</span>
+                  <span style={{ color: theme === 'dark' ? 'var(--white)' : 'var(--navy)' }}>KAAVAL</span> <span className="text-red">AI</span>
                 </h2>
                 <span className="badge">ADMIN</span>
               </div>

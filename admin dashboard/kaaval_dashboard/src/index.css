@@ -50,8 +50,8 @@
   --border-light: #cbd5e1;
   --text-primary: #1e293b;
   --text-secondary: #475569;
-  --text-muted: #64748b;
-  --text-dim: #94a3b8;
+  --text-muted: #475569;
+  --text-dim: #64748b;
   --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
