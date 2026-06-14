@@ -228,7 +228,7 @@ const Violations = () => {
   };
 
   const statusColor = (status: string) => {
-    if (status === 'Pending' || status === 'Review') return 'orange';
+    if (status === 'Pending') return 'orange';
     if (status === 'Verified') return 'green';
     if (status === 'Rejected') return 'red';
     return 'gray';
@@ -315,7 +315,7 @@ const Violations = () => {
                   {/* Issue Fine (Approve) — all except developer and viewer */}
                   {hasRole('super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'operator') && (
                     <>
-                      {['Pending', 'Ready', 'Review'].includes(selectedViolation.status) ? (
+                      {selectedViolation.status === 'Pending' ? (
                         <>
                           <button className="btn-approve" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'approve')}>
                             <CheckCircle size={16} /> Issue Fine
@@ -674,7 +674,7 @@ const Violations = () => {
                 </td>
                 <td>
                   <div className="action-btns">
-                    {(['Pending', 'Ready', 'Review'].includes(v.status)) && hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
+                    {(v.status === 'Pending') && hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
                       <>
                         <button className="act-btn approve" title="Approve Fine" onClick={() => handleVerify(v.id, 'approve')}>
                           <CheckCircle size={14} />

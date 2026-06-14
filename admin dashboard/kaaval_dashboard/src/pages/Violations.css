@@ -916,3 +916,61 @@
   background: #2563eb;
   border-color: #2563eb;
 }
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .toolbar-right {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .stats-bar {
+    gap: 8px;
+  }
+  .stat-chip {
+    min-width: 45%;
+    padding: 12px;
+  }
+  .stat-chip .stat-value {
+    font-size: 1.5rem;
+  }
+  .filter-row-primary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-row-primary select, .filter-row-primary input {
+    width: 100%;
+  }
+  .btn-clear {
+    margin-left: 0;
+    align-self: flex-start;
+  }
+  .category-tabs {
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    min-width: 45%;
+  }
+  .review-layout-modal {
+    flex-direction: column;
+  }
+  .evidence-viewer-modal {
+    height: 45vh;
+    flex: none;
+  }
+  .details-panel-modal {
+    width: 100%;
+    flex: 1;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding: 16px;
+  }
+  .violations-table th, .violations-table td {
+    padding: 10px 8px;
+    font-size: 0.8rem;
+  }
+}

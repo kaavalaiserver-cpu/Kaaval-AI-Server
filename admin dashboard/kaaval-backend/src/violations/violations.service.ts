@@ -63,8 +63,8 @@ export class ViolationsService {
   private mapStatusToDashboard(status: string): string {
     const map: Record<string, string> = {
       PENDING: 'Pending',
-      READY: 'Ready',
-      MANUAL_REVIEW: 'Review',
+      READY: 'Pending',
+      MANUAL_REVIEW: 'Pending',
       CHALLAN_ISSUED: 'Verified',
       VERIFIED: 'Verified',
       REJECTED: 'Rejected',
@@ -494,7 +494,7 @@ export class ViolationsService {
     const rejected = scopedData.filter((v) =>
       ['REJECTED', 'DUPLICATE'].includes(v.status),
     ).length;
-    const review = scopedData.filter((v) => v.status === 'MANUAL_REVIEW').length;
+    const review = 0; // Removed manual_review stats
 
     const byType: Record<string, number> = {};
     for (const v of scopedData) {
@@ -667,8 +667,6 @@ export class ViolationsService {
       const confidence = (ocr['confidence'] as number) ?? 0;
 
       let status = 'PENDING';
-      if (plate && confidence >= 0.7) status = 'READY';
-      else if (plate && confidence > 0) status = 'MANUAL_REVIEW';
 
       const violation = this.violationRepo.create({
         imageUrl: '', // Will be set after storage upload
