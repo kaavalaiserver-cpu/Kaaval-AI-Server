@@ -86,14 +86,16 @@ const Violations = () => {
       if (filters.vehicleNumber) params.vehicleNumber = filters.vehicleNumber;
       if (filters.violationType) params.violationType = filters.violationType;
 
-      // Combine date + time into ISO strings
-      if (filters.dateFrom) {
-        const t = filters.timeFrom || '00:00';
-        params.dateFrom = `${filters.dateFrom}T${t}:00`;
-      }
-      if (filters.dateTo) {
-        const t = filters.timeTo || '23:59';
-        params.dateTo = `${filters.dateTo}T${t}:59`;
+      // Combine date + time into ISO strings (only if not searching by vehicle plate)
+      if (!filters.vehicleNumber) {
+        if (filters.dateFrom) {
+          const t = filters.timeFrom || '00:00';
+          params.dateFrom = `${filters.dateFrom}T${t}:00`;
+        }
+        if (filters.dateTo) {
+          const t = filters.timeTo || '23:59';
+          params.dateTo = `${filters.dateTo}T${t}:59`;
+        }
       }
 
       // Confidence as 0.0–1.0
