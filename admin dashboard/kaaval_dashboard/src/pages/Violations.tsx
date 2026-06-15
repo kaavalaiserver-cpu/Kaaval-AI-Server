@@ -310,9 +310,31 @@ const Violations = () => {
                     a.target = '_blank';
                     a.click();
                   }} title="Download" className="btn-secondary" style={{ padding: '6px' }}><Download size={16} /></button>
-                  <button onClick={() => violations.length > 0 && openReviewModal(violations[0])} className="btn-secondary" style={{ width: '100%', justifyContent: 'center', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', borderColor: 'rgba(59, 130, 246, 0.3)' }}>
-                    Recent Violation
-                  </button>
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: '15px 0' }}>
+                    {editMode ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#facc15', padding: '4px 8px', borderRadius: '8px', border: '2px solid #111' }}>
+                        <input type="text" value={editedPlate}
+                          onChange={e => setEditedPlate(e.target.value.toUpperCase())}
+                          style={{ width: '150px', padding: '4px', fontWeight: '900', fontSize: '1.4rem', textTransform: 'uppercase', background: 'transparent', color: '#000', border: 'none', outline: 'none', textAlign: 'center', letterSpacing: '2px', fontFamily: 'monospace' }}
+                          autoFocus
+                        />
+                        <button onClick={handleSavePlate} disabled={processing} style={{ background: '#22c55e', color: '#fff', border: 'none', borderRadius: '4px', padding: '6px', cursor: 'pointer', display: 'flex' }}><Save size={16} /></button>
+                        <button onClick={() => setEditMode(false)} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', padding: '6px', cursor: 'pointer', display: 'flex' }}><X size={16} /></button>
+                      </div>
+                    ) : (
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', background: '#facc15', padding: '8px 24px', borderRadius: '8px', border: '3px solid #111', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                        <span style={{ fontSize: '1.6rem', fontWeight: '900', color: '#000', letterSpacing: '3px', fontFamily: 'monospace' }}>
+                          {selectedViolation.vehicle_number || 'UNKNOWN'}
+                        </span>
+                        {hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
+                          <button onClick={() => { setEditMode(true); setEditedPlate(selectedViolation.vehicle_number || ''); }}
+                            style={{ position: 'absolute', right: '-40px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: '50%', padding: '8px', cursor: 'pointer', display: 'flex', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }} title="Edit Plate">
+                            <Edit2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="modal-actions" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none', borderBottom: '1px solid var(--border)', paddingBottom: '20px', marginBottom: '10px' }}>
@@ -332,14 +354,16 @@ const Violations = () => {
                                 { id: 'PHONE_WHILE_DRIVING', label: 'Using Mobile Phone' }
                               ].map(reason => (
                                 <button key={reason.id} 
-                                  className={`btn-secondary ${selectedReasons.includes(reason.id) ? 'active' : ''}`} 
                                   disabled={processing} 
                                   onClick={() => setSelectedReasons(prev => prev.includes(reason.id) ? prev.filter(r => r !== reason.id) : [...prev, reason.id])} 
-                                  style={{ flex: '1 1 auto', justifyContent: 'center', fontSize: '0.85rem', padding: '6px 10px', 
+                                  style={{ 
+                                    flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', 
+                                    fontSize: '0.85rem', fontWeight: 600, padding: '8px 16px', borderRadius: '24px', transition: 'all 0.2s', cursor: 'pointer',
                                     background: selectedReasons.includes(reason.id) ? '#3b82f6' : 'var(--bg-secondary)', 
                                     color: selectedReasons.includes(reason.id) ? '#fff' : 'var(--text-primary)',
-                                    borderColor: selectedReasons.includes(reason.id) ? '#3b82f6' : 'var(--border)'
+                                    border: `1px solid ${selectedReasons.includes(reason.id) ? '#3b82f6' : 'var(--border)'}`
                                   }}>
+                                  {selectedReasons.includes(reason.id) && <CheckCircle size={14} />}
                                   {reason.label}
                                 </button>
                               ))}
@@ -376,29 +400,7 @@ const Violations = () => {
                   )}
                 </div>
 
-                <div className="detail-row">
-                  <span className="label">Vehicle:</span>
-                  {editMode ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <input type="text" value={editedPlate}
-                        onChange={e => setEditedPlate(e.target.value.toUpperCase())}
-                        style={{ width: 140, padding: 4, fontWeight: 'bold', textTransform: 'uppercase', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: 4 }}
-                      />
-                      <button onClick={handleSavePlate} disabled={processing} className="btn-icon" style={{ padding: 4, background: '#22c55e' }}><Save size={16} /></button>
-                      <button onClick={() => setEditMode(false)} className="btn-icon" style={{ padding: 4, background: '#ef4444' }}><X size={16} /></button>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span className="value highlight">{selectedViolation.vehicle_number}</span>
-                      {hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
-                        <button onClick={() => { setEditMode(true); setEditedPlate(selectedViolation.vehicle_number); }}
-                          style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8em' }}>
-                          <Edit2 size={14} /> Edit
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
+
                 <div className="detail-row">
                   <span className="label">Type:</span>
                   <span className="value">{selectedViolation.type}</span>
