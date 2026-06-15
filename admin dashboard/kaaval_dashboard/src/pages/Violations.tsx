@@ -90,11 +90,11 @@ const Violations = () => {
       if (!filters.vehicleNumber) {
         if (filters.dateFrom) {
           const t = filters.timeFrom || '00:00';
-          params.dateFrom = `${filters.dateFrom}T${t}:00`;
+          params.dateFrom = new Date(`${filters.dateFrom}T${t}:00`).toISOString();
         }
         if (filters.dateTo) {
           const t = filters.timeTo || '23:59';
-          params.dateTo = `${filters.dateTo}T${t}:59`;
+          params.dateTo = new Date(`${filters.dateTo}T${t}:59`).toISOString();
         }
       }
 
