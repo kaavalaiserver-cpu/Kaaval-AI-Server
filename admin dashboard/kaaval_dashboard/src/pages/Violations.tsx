@@ -146,16 +146,18 @@ const Violations = () => {
     }
   };
 
-  const handleVerify = async (id: string, action: string) => {
+  const handleVerify = async (id: string, action: string, newType?: string) => {
     setProcessing(true);
     try {
-      await axios.post(`${API_BASE}/violations/${id}/verify`, { action });
+      const payload: any = { action };
+      if (newType) payload.violationType = newType;
+      await axios.post(`${API_BASE}/violations/${id}/verify`, payload);
       const newStatus = action === 'approve' ? 'Verified' : 'Rejected';
       
-      setViolations(prev => prev.map(v => v.id === id ? { ...v, status: newStatus } : v));
+      setViolations(prev => prev.map(v => v.id === id ? { ...v, status: newStatus, ...(newType && { type: newType }) } : v));
       
       if (selectedViolation?.id === id) {
-        setSelectedViolation(prev => prev ? { ...prev, status: newStatus } : null);
+        setSelectedViolation(prev => prev ? { ...prev, status: newStatus, ...(newType && { type: newType }) } : null);
       }
     } catch (err) { console.error(err); }
     finally { setProcessing(false); }
@@ -317,13 +319,20 @@ const Violations = () => {
                     <>
                       {selectedViolation.status === 'Pending' ? (
                         <>
-                          <button className="btn-approve" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'approve')}>
-                            <CheckCircle size={16} /> Issue Fine
-                          </button>
+                          <div style={{ width: '100%', marginBottom: '10px' }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Issue Fine For:</span>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                              {['Riding Without Helmet', 'Pillion Without Helmet', 'Expired Insurance', 'Triple Riding', 'Using Mobile Phone While Driving'].map(reason => (
+                                <button key={reason} className="btn-approve" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'approve', reason)} style={{ flex: '1 1 auto', justifyContent: 'center', fontSize: '0.85rem', padding: '6px 10px' }}>
+                                  <CheckCircle size={14} /> {reason}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                           {/* Reject — all except viewer */}
                           {hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'operator') && (
-                            <button className="btn-reject" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'reject')}>
-                              <XCircle size={16} /> Reject
+                            <button className="btn-reject" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'reject')} style={{ width: '100%', justifyContent: 'center' }}>
+                              <XCircle size={16} /> Reject Violation
                             </button>
                           )}
                         </>

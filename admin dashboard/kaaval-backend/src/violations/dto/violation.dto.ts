@@ -17,6 +17,11 @@ export class VerifyViolationDto {
   @IsString()
   @MaxLength(100)
   reviewedBy?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  violationType?: string;
 }
 
 export class UpdateViolationDto {

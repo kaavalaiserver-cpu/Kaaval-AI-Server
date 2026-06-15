@@ -528,6 +528,7 @@ export class ViolationsService {
     }
 
     if (dto.reviewNotes) v.reviewNotes = dto.reviewNotes;
+    if (dto.violationType) v.violationType = dto.violationType;
 
     if (newStatus === 'CHALLAN_ISSUED') {
       v.challanStatus = 'ISSUED';
