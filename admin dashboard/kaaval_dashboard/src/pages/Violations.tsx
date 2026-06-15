@@ -39,6 +39,22 @@ const EMPTY_FILTERS: Filters = {
   minConfidence: '', maxConfidence: '',
 };
 
+const VIOLATION_REASONS = [
+  { id: 'NO_HELMET', label: 'Riding Without Helmet' },
+  { id: 'PILLION_NO_HELMET', label: 'Pillion Without Helmet' },
+  { id: 'EXPIRED_INSURANCE', label: 'Expired Insurance' },
+  { id: 'TRIPLE_RIDING', label: 'Triple Riding' },
+  { id: 'PHONE_WHILE_DRIVING', label: 'Using Mobile Phone' }
+];
+
+const getViolationLabels = (rawStr: string) => {
+  if (!rawStr) return 'Unknown';
+  return rawStr.split(',').map(raw => {
+    const matched = VIOLATION_REASONS.find(r => r.id === raw.trim());
+    return matched ? matched.label : raw.trim();
+  }).join(', ');
+};
+
 const Violations = () => {
   const { hasRole } = useAuth();
   const [violations, setViolations] = useState<ViolationItem[]>([]);
@@ -154,11 +170,12 @@ const Violations = () => {
       if (newType) payload.violationType = newType;
       await axios.post(`${API_BASE}/violations/${id}/verify`, payload);
       const newStatus = action === 'approve' ? 'Verified' : 'Rejected';
+      const formattedType = newType ? getViolationLabels(newType) : undefined;
       
-      setViolations(prev => prev.map(v => v.id === id ? { ...v, status: newStatus, ...(newType && { type: newType }) } : v));
+      setViolations(prev => prev.map(v => v.id === id ? { ...v, status: newStatus, ...(formattedType && { type: formattedType }) } : v));
       
       if (selectedViolation?.id === id) {
-        setSelectedViolation(prev => prev ? { ...prev, status: newStatus, ...(newType && { type: newType }) } : null);
+        setSelectedViolation(prev => prev ? { ...prev, status: newStatus, ...(formattedType && { type: formattedType }) } : null);
       }
     } catch (err) { console.error(err); }
     finally { setProcessing(false); }
@@ -346,13 +363,7 @@ const Violations = () => {
                           <div style={{ width: '100%', marginBottom: '10px' }}>
                             <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Select Violation Reasons:</span>
                             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                              {[
-                                { id: 'NO_HELMET', label: 'Riding Without Helmet' },
-                                { id: 'PILLION_NO_HELMET', label: 'Pillion Without Helmet' },
-                                { id: 'EXPIRED_INSURANCE', label: 'Expired Insurance' },
-                                { id: 'TRIPLE_RIDING', label: 'Triple Riding' },
-                                { id: 'PHONE_WHILE_DRIVING', label: 'Using Mobile Phone' }
-                              ].map(reason => (
+                              {VIOLATION_REASONS.map(reason => (
                                 <button key={reason.id} 
                                   disabled={processing} 
                                   onClick={() => setSelectedReasons(prev => prev.includes(reason.id) ? prev.filter(r => r !== reason.id) : [...prev, reason.id])} 
@@ -662,7 +673,13 @@ const Violations = () => {
                   <span className="plate-number">{v.vehicle_number}</span>
                   <span className="vehicle-type">{v.vehicle_type}</span>
                 </td>
-                <td><span className="violation-type-badge">{v.type}</span></td>
+                <td>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                    {(v.type || 'Unknown').split(',').map((t, idx) => (
+                      <span key={idx} className="violation-type-badge">{t.trim()}</span>
+                    ))}
+                  </div>
+                </td>
                 <td>
                   <span className="camera-location">{v.location}</span>
                   <span className="camera-id">{v.camera_id}</span>
