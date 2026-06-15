@@ -370,16 +370,18 @@ const Violations = () => {
                             </div>
                           </div>
                           
-                          <button className="btn-approve" disabled={processing || selectedReasons.length === 0} onClick={() => handleVerify(selectedViolation.id, 'approve', selectedReasons.join(','))} style={{ width: '100%', justifyContent: 'center', marginBottom: '8px', opacity: selectedReasons.length === 0 ? 0.5 : 1 }}>
-                            <CheckCircle size={16} /> Issue Fine
-                          </button>
-                          
-                          {/* Reject — all except viewer */}
-                          {hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'operator') && (
-                            <button className="btn-reject" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'reject')} style={{ width: '100%', justifyContent: 'center' }}>
-                              <XCircle size={16} /> Reject Violation
+                          <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '15px' }}>
+                            <button className="btn-approve" disabled={processing || selectedReasons.length === 0} onClick={() => handleVerify(selectedViolation.id, 'approve', selectedReasons.join(','))} style={{ flex: 1, justifyContent: 'center', padding: '10px', opacity: selectedReasons.length === 0 ? 0.5 : 1, fontSize: '0.85rem' }}>
+                              <CheckCircle size={16} /> Issue Fine
                             </button>
-                          )}
+                            
+                            {/* Reject — all except viewer */}
+                            {hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'operator') && (
+                              <button className="btn-reject" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'reject')} style={{ flex: 1, justifyContent: 'center', padding: '10px', fontSize: '0.85rem' }}>
+                                <XCircle size={16} /> Reject
+                              </button>
+                            )}
+                          </div>
                         </>
                       ) : selectedViolation.status === 'Verified' ? (
                         <div style={{ padding: '12px', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', borderRadius: '8px', border: '1px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600 }}>
