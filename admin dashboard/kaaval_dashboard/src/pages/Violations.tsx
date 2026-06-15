@@ -62,6 +62,7 @@ const Violations = () => {
   const [editedPlate, setEditedPlate] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [hideNA, setHideNA] = useState(false);
+  const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
 
@@ -203,6 +204,7 @@ const Violations = () => {
   const openReviewModal = (v: ViolationItem) => {
     setSelectedViolation(v); setReviewZoom(1); setViewMode('proof');
     setEditMode(false); setEditedPlate(v.vehicle_number);
+    setSelectedReasons([]);
   };
 
   const handleNext = () => {
@@ -320,15 +322,34 @@ const Violations = () => {
                       {selectedViolation.status === 'Pending' ? (
                         <>
                           <div style={{ width: '100%', marginBottom: '10px' }}>
-                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Issue Fine For:</span>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Select Violation Reasons:</span>
                             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                              {['Riding Without Helmet', 'Pillion Without Helmet', 'Expired Insurance', 'Triple Riding', 'Using Mobile Phone While Driving'].map(reason => (
-                                <button key={reason} className="btn-approve" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'approve', reason)} style={{ flex: '1 1 auto', justifyContent: 'center', fontSize: '0.85rem', padding: '6px 10px' }}>
-                                  <CheckCircle size={14} /> {reason}
+                              {[
+                                { id: 'NO_HELMET', label: 'Riding Without Helmet' },
+                                { id: 'PILLION_NO_HELMET', label: 'Pillion Without Helmet' },
+                                { id: 'EXPIRED_INSURANCE', label: 'Expired Insurance' },
+                                { id: 'TRIPLE_RIDING', label: 'Triple Riding' },
+                                { id: 'PHONE_WHILE_DRIVING', label: 'Using Mobile Phone' }
+                              ].map(reason => (
+                                <button key={reason.id} 
+                                  className={`btn-secondary ${selectedReasons.includes(reason.id) ? 'active' : ''}`} 
+                                  disabled={processing} 
+                                  onClick={() => setSelectedReasons(prev => prev.includes(reason.id) ? prev.filter(r => r !== reason.id) : [...prev, reason.id])} 
+                                  style={{ flex: '1 1 auto', justifyContent: 'center', fontSize: '0.85rem', padding: '6px 10px', 
+                                    background: selectedReasons.includes(reason.id) ? '#3b82f6' : 'var(--bg-secondary)', 
+                                    color: selectedReasons.includes(reason.id) ? '#fff' : 'var(--text-primary)',
+                                    borderColor: selectedReasons.includes(reason.id) ? '#3b82f6' : 'var(--border)'
+                                  }}>
+                                  {reason.label}
                                 </button>
                               ))}
                             </div>
                           </div>
+                          
+                          <button className="btn-approve" disabled={processing || selectedReasons.length === 0} onClick={() => handleVerify(selectedViolation.id, 'approve', selectedReasons.join(','))} style={{ width: '100%', justifyContent: 'center', marginBottom: '8px', opacity: selectedReasons.length === 0 ? 0.5 : 1 }}>
+                            <CheckCircle size={16} /> Issue Fine
+                          </button>
+                          
                           {/* Reject — all except viewer */}
                           {hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'operator') && (
                             <button className="btn-reject" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'reject')} style={{ width: '100%', justifyContent: 'center' }}>

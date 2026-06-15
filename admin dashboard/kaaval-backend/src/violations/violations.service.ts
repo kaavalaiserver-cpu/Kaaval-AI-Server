@@ -39,6 +39,9 @@ const VIOLATION_TYPE_MAP: Record<string, string> = {
   NO_PARKING: 'No Parking',
   DEBUG_TEST: 'Debug Test',
   PENDING_DETECTION: 'Pending Detection',
+  PILLION_NO_HELMET: 'Pillion Without Helmet',
+  EXPIRED_INSURANCE: 'Expired Insurance',
+  PHONE_WHILE_DRIVING: 'Using Mobile Phone',
 };
 
 @Injectable()
@@ -55,6 +58,10 @@ export class ViolationsService {
   ) {}
 
   private formatViolationType(raw: string): string {
+    if (!raw) return 'Unknown';
+    if (raw.includes(',')) {
+      return raw.split(',').map(r => this.formatViolationType(r.trim())).join(', ');
+    }
     return (
       VIOLATION_TYPE_MAP[raw] ?? raw.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
     );
