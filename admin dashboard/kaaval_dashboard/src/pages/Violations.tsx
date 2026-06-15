@@ -620,10 +620,7 @@ const Violations = () => {
                   <div className="evidence-thumb" onClick={e => { e.stopPropagation(); openReviewModal(v); }}
                     style={{ cursor: 'pointer', border: '1px solid var(--border)', background: 'var(--bg-card-hover)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px' }} title="Click to Review">
                     {(v.proof_img_url || v.image_url) ? (
-                      <>
-                        <Eye size={16} color="var(--text-dim)" />
-                        <span style={{ fontSize: '0.6rem', fontWeight: 600, color: 'var(--text-dim)', letterSpacing: '0.5px' }}>VIEW</span>
-                      </>
+                      <img src={v.proof_img_url || v.image_url} alt="Evidence" />
                     ) : <div className="no-evidence">—</div>}
                   </div>
                 </td>
