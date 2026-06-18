@@ -55,6 +55,13 @@ const getViolationLabels = (rawStr: string) => {
   }).join(', ');
 };
 
+// Returns a displayable plate string, or null if the plate is unidentified
+const isPlateUnknown = (plate: string | null | undefined): boolean => {
+  if (!plate) return true;
+  const upper = plate.trim().toUpperCase();
+  return upper === 'UNKNOWN' || upper === 'UNREAD' || upper === 'NIL' || upper === '';
+};
+
 const Violations = () => {
   const { hasRole } = useAuth();
   const [violations, setViolations] = useState<ViolationItem[]>([]);
@@ -339,9 +346,9 @@ const Violations = () => {
                         <button onClick={() => setEditMode(false)} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', padding: '6px', cursor: 'pointer', display: 'flex' }}><X size={16} /></button>
                       </div>
                     ) : (
-                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', background: '#facc15', padding: '8px 24px', borderRadius: '8px', border: '3px solid #111', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-                        <span style={{ fontSize: '1.6rem', fontWeight: '900', color: '#000', letterSpacing: '3px', fontFamily: 'monospace' }}>
-                          {selectedViolation.vehicle_number || 'UNKNOWN'}
+                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', background: isPlateUnknown(selectedViolation.vehicle_number) ? '#374151' : '#facc15', padding: '8px 24px', borderRadius: '8px', border: '3px solid #111', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                        <span style={{ fontSize: isPlateUnknown(selectedViolation.vehicle_number) ? '1rem' : '1.6rem', fontWeight: '900', color: isPlateUnknown(selectedViolation.vehicle_number) ? '#9ca3af' : '#000', letterSpacing: '3px', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                          {isPlateUnknown(selectedViolation.vehicle_number) ? 'PLATE UNIDENTIFIED' : selectedViolation.vehicle_number}
                         </span>
                         {hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
                           <button onClick={() => { setEditMode(true); setEditedPlate(selectedViolation.vehicle_number || ''); }}
@@ -670,7 +677,11 @@ const Violations = () => {
                   </div>
                 </td>
                 <td>
-                  <span className="plate-number">{v.vehicle_number}</span>
+                  {isPlateUnknown(v.vehicle_number) ? (
+                    <span style={{ display: 'inline-block', fontSize: '0.7rem', fontWeight: 700, color: '#6b7280', background: 'rgba(107,114,128,0.12)', border: '1px dashed #6b7280', borderRadius: '4px', padding: '2px 8px', letterSpacing: '0.5px', textTransform: 'uppercase' }}>Unidentified</span>
+                  ) : (
+                    <span className="plate-number">{v.vehicle_number}</span>
+                  )}
                   <span className="vehicle-type">{v.vehicle_type}</span>
                 </td>
                 <td>
