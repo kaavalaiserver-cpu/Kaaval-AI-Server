@@ -34,7 +34,7 @@ const getTodayString = () => {
 };
 
 const EMPTY_FILTERS: Filters = {
-  status: 'PENDING', cameraId: '', vehicleNumber: '', violationType: '',
+  status: '', cameraId: '', vehicleNumber: '', violationType: '',
   dateFrom: getTodayString(), dateTo: getTodayString(), timeFrom: '', timeTo: '',
   minConfidence: '', maxConfidence: '',
 };
