@@ -4,14 +4,60 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+  Index,
 } from 'typeorm';
-
-import { getTimestampColumnType } from '../../common/database.utils.js';
+import { Camera } from '../../cameras/entities/camera.entity.js';
+import { Vehicle } from '../../vehicles/entities/vehicle.entity.js';
+import { ViolationType } from './violation-type.entity.js';
+import { Evidence } from './evidence.entity.js';
+import { User } from '../../users/entities/user.entity.js';
 
 @Entity('violations')
 export class Violation {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
+
+  @Index()
+  @Column({ name: 'camera_id', type: 'uuid', nullable: true })
+  cameraId!: string | null;
+
+  @Index()
+  @Column({ name: 'vehicle_id', type: 'uuid', nullable: true })
+  vehicleId!: string | null;
+
+  @Column({ name: 'violation_type_id', type: 'uuid', nullable: true })
+  violationTypeId!: string | null;
+
+  @Column({ type: 'float', nullable: true })
+  confidence!: number | null;
+
+  @Index()
+  @Column({ name: 'violation_timestamp', type: 'timestamptz' })
+  violationTimestamp!: Date;
+
+  @Column({ type: 'varchar', length: 30, default: 'PENDING' })
+  status!: string; // PENDING, UNDER_REVIEW, APPROVED, REJECTED, AUTO_REJECTED
+
+  @Column({ name: 'reviewed_by', type: 'uuid', nullable: true })
+  reviewedByUserId!: string | null;
+
+  @Column({ name: 'reviewed_at', type: 'timestamptz', nullable: true })
+  reviewedAt!: Date | null;
+
+  @Column({ name: 'approval_notes', type: 'text', nullable: true })
+  approvalNotes!: string | null;
+
+  @Column({ name: 'rejected_reason', type: 'text', nullable: true })
+  rejectedReason!: string | null;
+
+  @Column({ name: 'challan_status', type: 'varchar', length: 50, default: 'NOT_GENERATED' })
+  challanStatus!: string; // NOT_GENERATED, GENERATED, PAID, CANCELLED
+
+  @Column({ name: 'challan_reference', type: 'varchar', length: 100, nullable: true })
+  challanReference!: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
@@ -19,72 +65,23 @@ export class Violation {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 
-  @Column({ name: 'image_url', type: 'text', nullable: true })
-  imageUrl!: string | null;
+  // ── Relations ─────────────────────────────────────────────────
+  @ManyToOne(() => Camera, (c) => c.violations, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'camera_id' })
+  camera!: Camera | null;
 
-  @Column({ name: 'proof_img_url', type: 'text', nullable: true })
-  proofImgUrl!: string | null;
+  @ManyToOne(() => Vehicle, (v) => v.violations, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'vehicle_id' })
+  vehicle!: Vehicle | null;
 
-  @Column({ name: 'full_preview_url', type: 'text', nullable: true })
-  fullPreviewUrl!: string | null;
+  @ManyToOne(() => ViolationType, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'violation_type_id' })
+  violationType!: ViolationType | null;
 
-  @Column({ name: 'cropped_preview_url', type: 'text', nullable: true })
-  croppedPreviewUrl!: string | null;
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'reviewed_by' })
+  reviewedBy!: User | null;
 
-  @Column({ type: 'simple-json', nullable: true })
-  detections!: Record<string, unknown> | null;
-
-  @Column({ name: 'vehicle_number', type: 'varchar', length: 50, nullable: true })
-  vehicleNumber!: string | null;
-
-  @Column({ name: 'violation_type', type: 'varchar', length: 100, default: 'NO_HELMET' })
-  violationType!: string;
-
-  @Column({ name: 'confidence_score', type: 'float', default: 0 })
-  confidenceScore!: number;
-
-  @Column({ name: 'challan_status', type: 'varchar', length: 50, nullable: true })
-  challanStatus!: string | null;
-
-  @Column({ name: 'challan_amount', type: 'int', nullable: true })
-  challanAmount!: number | null;
-
-  @Column({ name: 'challan_issued_at', type: getTimestampColumnType(), nullable: true })
-  challanIssuedAt!: Date | null;
-
-  @Column({ type: 'varchar', length: 50, default: 'PENDING' })
-  status!: string;
-
-  @Column({ name: 'location_lat', type: 'float', nullable: true })
-  locationLat!: number | null;
-
-  @Column({ name: 'location_lng', type: 'float', nullable: true })
-  locationLng!: number | null;
-
-  @Column({ type: 'simple-json', nullable: true })
-  metadata!: Record<string, unknown> | null;
-
-  @Column({ name: 'reviewed_by', type: 'varchar', length: 100, nullable: true })
-  reviewedBy!: string | null;
-
-  @Column({ name: 'reviewed_at', type: getTimestampColumnType(), nullable: true })
-  reviewedAt!: Date | null;
-
-  @Column({ name: 'review_notes', type: 'text', nullable: true })
-  reviewNotes!: string | null;
-
-  @Column({ name: 'camera_id', type: 'varchar', length: 50, nullable: true })
-  cameraId!: string | null;
-
-  @Column({ name: 'vehicle_detection_id', type: 'varchar', length: 100, nullable: true })
-  vehicleDetectionId!: string | null;
-
-  @Column({ name: 'is_deleted', type: 'boolean', default: false })
-  isDeleted!: boolean;
-
-  @Column({ name: 'deleted_at', type: getTimestampColumnType(), nullable: true })
-  deletedAt!: Date | null;
-
-  @Column({ name: 'deleted_by', type: 'varchar', length: 100, nullable: true })
-  deletedBy!: string | null;
+  @OneToMany(() => Evidence, (e) => e.violation)
+  evidence!: Evidence[];
 }

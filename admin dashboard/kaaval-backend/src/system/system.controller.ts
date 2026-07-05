@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Delete, Body, Query, UseGuards } from '@nestjs/common';
 import { SystemService } from './system.service.js';
-import { JwtAuthGuard, RolesGuard, Roles, Role } from '../auth/index.js';
+import { JwtAuthGuard, RolesGuard, Roles } from '../auth/index.js';
 
 @Controller('system')
 export class SystemController {
@@ -8,7 +8,7 @@ export class SystemController {
 
   @Get('logs')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.DEVELOPER)
+  @Roles('SUPER_ADMIN', 'DEVELOPER')
   getLogs(
     @Query('limit') limit?: number,
     @Query('page') page?: number,
@@ -20,7 +20,7 @@ export class SystemController {
 
   @Delete('logs')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.DEVELOPER)
+  @Roles('SUPER_ADMIN', 'DEVELOPER')
   clearLogs() {
     return this.systemService.clearLogs();
   }
@@ -37,28 +37,28 @@ export class SystemController {
 
   @Get('status')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.DEVELOPER)
+  @Roles('SUPER_ADMIN', 'DEVELOPER')
   getStatus() {
     return this.systemService.getStatus();
   }
 
   @Get('health')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.DEVELOPER)
+  @Roles('SUPER_ADMIN', 'DEVELOPER')
   getHealth() {
     return this.systemService.getHealth();
   }
 
   @Get('ai-status')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.DEVELOPER)
+  @Roles('SUPER_ADMIN', 'DEVELOPER')
   getAiStatus() {
     return this.systemService.getAiStatus();
   }
 
   @Get('plate-api-usage')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.DEVELOPER)
+  @Roles('SUPER_ADMIN', 'DEVELOPER')
   getPlateApiUsage() {
     return this.systemService.getPlateApiUsage();
   }

@@ -18,7 +18,7 @@ export class NotificationsService {
   }
 
   async getUnreadCount() {
-    const count = await this.notifRepo.count({ where: { read: false } });
+    const count = await this.notifRepo.count({ where: { isRead: false } });
     return { unread: count };
   }
 
@@ -28,13 +28,16 @@ export class NotificationsService {
     data?: Record<string, unknown>,
     options?: { title?: string; priority?: string; sentBy?: string },
   ) {
+    let severity = 'INFO';
+    if (options?.priority === 'high') severity = 'WARNING';
+    if (options?.priority === 'urgent') severity = 'CRITICAL';
+
     const notif = this.notifRepo.create({
-      type,
-      message,
-      data: data ?? null,
-      title: options?.title ?? null,
-      priority: options?.priority ?? 'normal',
-      sentBy: options?.sentBy ?? null,
+      notificationType: type,
+      message: message + (data ? '\n' + JSON.stringify(data) : ''),
+      title: options?.title ?? 'Notification',
+      severity,
+      senderId: options?.sentBy && options.sentBy !== 'System' ? options.sentBy : null, // must be uuid if present
     });
     return this.notifRepo.save(notif);
   }
@@ -45,20 +48,20 @@ export class NotificationsService {
     priority: 'normal' | 'high' | 'urgent',
     sentBy: string,
   ) {
-    return this.create('broadcast', message, undefined, {
+    return this.create('BROADCAST', message, undefined, {
       title,
       priority,
-      sentBy,
+      sentBy: undefined, // Broadcast sender usually null or admin uuid. 'sentBy' here is probably string name so set null
     });
   }
 
   async markRead(id: string) {
-    await this.notifRepo.update(id, { read: true });
+    await this.notifRepo.update(id, { isRead: true });
     return { status: 'ok' };
   }
 
   async markAllRead() {
-    await this.notifRepo.update({ read: false }, { read: true });
+    await this.notifRepo.update({ isRead: false }, { isRead: true });
     return { status: 'ok' };
   }
 
@@ -80,7 +83,7 @@ export class NotificationsService {
         .join(', ');
       parts.push(`Subdivisions — ${sub}`);
     }
-    return this.create('daily_digest', parts.join('\n'), { stats }, {
+    return this.create('DAILY_DIGEST', parts.join('\n'), { stats }, {
       title: 'Daily Violation Digest',
       priority: 'normal',
       sentBy: 'System',

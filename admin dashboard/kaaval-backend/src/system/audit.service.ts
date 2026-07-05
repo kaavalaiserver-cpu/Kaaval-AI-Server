@@ -34,11 +34,11 @@ export class AuditService {
     const timestamp = new Date();
     try {
       const log = this.auditRepository.create({
-        userId: userId ?? 'SYSTEM',
+        userId: userId === 'SYSTEM' ? null : userId,
         action,
-        violationId,
+        entityId: violationId,
         ipAddress,
-        details,
+        newData: details,
       });
       await this.auditRepository.save(log);
     } catch (err) {

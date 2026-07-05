@@ -1,48 +1,56 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-
-export enum WatchlistStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-}
-
-export enum WatchlistPriority {
-  CRITICAL = 'CRITICAL', // e.g. Stolen
-  HIGH = 'HIGH',       // e.g. Suspicious
-  MEDIUM = 'MEDIUM',     // e.g. Repeat Offender
-  LOW = 'LOW',         // e.g. Monitor
-}
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
+import { Vehicle } from '../../vehicles/entities/vehicle.entity.js';
+import { User } from '../../users/entities/user.entity.js';
 
 @Entity('watchlist')
 export class Watchlist {
   @PrimaryGeneratedColumn('uuid')
-  id: string;
+  id!: string;
 
-  @Column({ unique: true })
-  vehicleNumber: string;
-
-  @Column({ type: 'text', nullable: true })
-  reason: string;
-
-  @Column({
-    type: 'simple-enum',
-    enum: WatchlistPriority,
-    default: WatchlistPriority.MEDIUM,
-  })
-  priority: WatchlistPriority;
-
-  @Column({
-    type: 'simple-enum',
-    enum: WatchlistStatus,
-    default: WatchlistStatus.ACTIVE,
-  })
-  status: WatchlistStatus;
+  @Index({ unique: true })
+  @Column({ name: 'vehicle_id', type: 'uuid' })
+  vehicleId!: string;
 
   @Column({ type: 'text', nullable: true })
-  addedBy: string;
+  reason!: string | null;
 
-  @CreateDateColumn()
-  addedAt: Date;
+  @Column({ type: 'varchar', length: 20, default: 'MEDIUM' })
+  priority!: string; // CRITICAL, HIGH, MEDIUM, LOW
 
-  @UpdateDateColumn()
-  updatedAt: Date;
+  @Column({ name: 'expiry_date', type: 'date', nullable: true })
+  expiryDate!: string | null; // null = permanent
+
+  @Index()
+  @Column({ name: 'added_by', type: 'uuid', nullable: true })
+  addedByUserId!: string | null;
+
+  @Column({ name: 'is_active', type: 'boolean', default: true })
+  isActive!: boolean;
+
+  @Column({ name: 'alert_on_detect', type: 'boolean', default: true })
+  alertOnDetect!: boolean;
+
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updatedAt!: Date;
+
+  // ── Relations ─────────────────────────────────────────────────
+  @ManyToOne(() => Vehicle, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'vehicle_id' })
+  vehicle!: Vehicle;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'added_by' })
+  addedBy!: User | null;
 }

@@ -107,9 +107,15 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
+  // ── Startup validation ─────────────────────────────────────────────────────
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret || jwtSecret.length < 32) {
+    logger.error('FATAL: JWT_SECRET must be set and at least 32 characters long. Refusing to start.');
+    process.exit(1);
+  }
+
   const port = process.env.PORT ?? 8003;
   await app.listen(port);
   logger.log(`Kaaval AI Backend running on port ${port} [${process.env.NODE_ENV ?? 'development'}]`);
 }
 bootstrap();
- 

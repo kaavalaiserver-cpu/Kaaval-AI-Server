@@ -68,6 +68,24 @@ const WeeklyReports = () => {
     finally { setDownloading(false); }
   };
 
+  const handleDownloadCsv = () => {
+    if (!data || !data.dailyTrend.length) return alert('No data to export.');
+    const headers = ['Date', 'Total Violations', 'Approved Fines', 'Rejected', 'Pending', 'Approval Rate (%)'];
+    const rows = data.dailyTrend.map(d => {
+      const pending = d.total - d.verified - d.rejected;
+      const rate = d.total ? Math.round((d.verified / d.total) * 100) : 0;
+      return [d.date, d.total, d.verified, d.rejected, pending, rate].join(',');
+    });
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kaaval-report-${start}-to-${end}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="reports-page">
       {/* Header */}
@@ -87,7 +105,10 @@ const WeeklyReports = () => {
             <RefreshCw size={15} className={loading ? 'spin' : ''} />
           </button>
           <button className="btn-download" onClick={handleDownloadPdf} disabled={downloading || !data}>
-            <Download size={15} /> {downloading ? 'Generating...' : 'Download PDF'}
+            <Download size={15} /> {downloading ? 'PDF...' : 'PDF'}
+          </button>
+          <button className="btn-download" onClick={handleDownloadCsv} disabled={!data}>
+            <Download size={15} /> CSV
           </button>
         </div>
       </div>

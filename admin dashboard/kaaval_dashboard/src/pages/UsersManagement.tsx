@@ -51,7 +51,7 @@ const UsersManagement = () => {
   const [statusFilter, setStatusFilter] = useState('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'reset' | 'status'>('create');
+  const [modalMode, setModalMode] = useState<'create' | 'edit' | 'reset' | 'status' | 'delete'>('create');
   const [selectedUser, setSelectedUser] = useState<UserAccount | null>(null);
 
   // Form State
@@ -77,7 +77,7 @@ const UsersManagement = () => {
     fetchUsers();
   }, []);
 
-  const handleOpenModal = (mode: 'create' | 'edit' | 'reset' | 'status', user?: UserAccount) => {
+  const handleOpenModal = (mode: 'create' | 'edit' | 'reset' | 'status' | 'delete', user?: UserAccount) => {
     setModalMode(mode);
     setSelectedUser(user || null);
     setReason('');
@@ -150,6 +150,12 @@ const UsersManagement = () => {
         });
         setTempPassword(res.data.temporaryPassword);
         fetchUsers();
+      } else if (modalMode === 'delete' && selectedUser) {
+        if (window.confirm(`Are you SURE you want to completely delete the user ${selectedUser.username}? This cannot be undone.`)) {
+          await axios.delete(`${API_BASE}/users/${selectedUser.id}`);
+          handleCloseModal();
+          fetchUsers();
+        }
       }
     } catch (err: any) {
       console.error(err);
@@ -160,7 +166,7 @@ const UsersManagement = () => {
   const filteredUsers = users.filter((u) => {
     const matchesSearch = u.username.toLowerCase().includes(search.toLowerCase()) || 
                           u.fullName.toLowerCase().includes(search.toLowerCase());
-    const matchesRole = roleFilter ? u.role === roleFilter : true;
+    const matchesRole = roleFilter ? (u.role || '').toLowerCase() === roleFilter.toLowerCase() : true;
     const matchesSub = subFilter ? u.subdivision === subFilter : true;
     const matchesStatus = statusFilter === 'active' ? u.isActive : statusFilter === 'inactive' ? !u.isActive : true;
     return matchesSearch && matchesRole && matchesSub && matchesStatus;
@@ -278,7 +284,7 @@ const UsersManagement = () => {
                       </td>
                       <td>
                         <div className="td-stack">
-                          <span className={`role-badge ${user.role}`}>{user.role.replace(/_/g, ' ').toUpperCase()}</span>
+                          <span className={`role-badge ${(user.role || '').toLowerCase()}`}>{(user.role || 'unknown').replace(/_/g, ' ').toUpperCase()}</span>
                           <span className="td-sub">{user.subdivision || 'No subdivision'}</span>
                         </div>
                       </td>
@@ -311,6 +317,12 @@ const UsersManagement = () => {
                           >
                             {user.isActive ? 'Disable' : 'Enable'}
                           </button>
+                          <button
+                            style={{ color: '#ef4444', border: '1px solid #ef4444', background: 'transparent' }}
+                            onClick={() => handleOpenModal('delete', user)}
+                          >
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -330,6 +342,7 @@ const UsersManagement = () => {
                 {modalMode === 'create' ? 'Create New User' : 
                  modalMode === 'edit' ? `Edit User: ${selectedUser?.username}` :
                  modalMode === 'reset' ? `Reset Password: ${selectedUser?.username}` :
+                 modalMode === 'delete' ? `Delete User: ${selectedUser?.username}` :
                  `${selectedUser?.isActive ? 'Deactivate' : 'Activate'} User: ${selectedUser?.username}`}
               </h3>
               {!tempPassword && <button className="btn-close" onClick={handleCloseModal}><XCircle size={24}/></button>}
@@ -431,10 +444,11 @@ const UsersManagement = () => {
 
                 <div className="modal-actions">
                   <button type="button" className="btn-secondary" onClick={handleCloseModal}>Cancel</button>
-                  <button type="submit" className={modalMode === 'status' && selectedUser?.isActive ? 'btn-danger' : 'btn-primary'}>
+                  <button type="submit" className={(modalMode === 'status' && selectedUser?.isActive) || modalMode === 'delete' ? 'btn-danger' : 'btn-primary'}>
                     {modalMode === 'create' ? 'Create Account' : 
                      modalMode === 'edit' ? 'Save Changes' : 
                      modalMode === 'reset' ? (autoGenerate ? 'Generate Password' : 'Set Password') : 
+                     modalMode === 'delete' ? 'Permanently Delete' :
                      selectedUser?.isActive ? 'Deactivate Account' : 'Activate Account'}
                   </button>
                 </div>

@@ -256,8 +256,8 @@ const Violations = () => {
   };
 
   const statusColor = (status: string) => {
-    if (status === 'Pending') return 'orange';
-    if (status === 'Verified') return 'green';
+    if (status === 'Pending' || status === 'Pending Review') return 'orange';
+    if (status === 'Verified' || status === 'Challan Issued') return 'green';
     if (status === 'Rejected') return 'red';
     return 'gray';
   };
@@ -281,6 +281,33 @@ const Violations = () => {
       console.error('Failed to download PDF:', err);
       alert('Failed to download the Daily Report. Please try again.');
     }
+  };
+
+  const handleDownloadCsv = () => {
+    if (violations.length === 0) return alert('No data to export.');
+    const headers = ['ID', 'Date', 'Time', 'Vehicle Number', 'Type', 'Location', 'Camera ID', 'Confidence', 'Status'];
+    const rows = violations.map(v => {
+      const d = new Date(v.timestamp);
+      return [
+        v.id,
+        d.toLocaleDateString(),
+        d.toLocaleTimeString(),
+        v.vehicle_number,
+        `"${v.type.replace(/"/g, '""')}"`,
+        `"${v.location.replace(/"/g, '""')}"`,
+        v.camera_id,
+        Math.round(v.confidence * 100) + '%',
+        v.status
+      ].join(',');
+    });
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `violations-export-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -365,7 +392,7 @@ const Violations = () => {
                   {/* Issue Fine (Approve) — all except developer and viewer */}
                   {hasRole('super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'operator') && (
                     <>
-                      {selectedViolation.status === 'Pending' ? (
+                      {selectedViolation.status === 'Pending' || selectedViolation.status === 'Pending Review' ? (
                         <>
                           <div style={{ width: '100%', marginBottom: '10px' }}>
                             <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Select Violation Reasons:</span>
@@ -401,7 +428,7 @@ const Violations = () => {
                             )}
                           </div>
                         </>
-                      ) : selectedViolation.status === 'Verified' ? (
+                      ) : selectedViolation.status === 'Verified' || selectedViolation.status === 'Challan Issued' ? (
                         <div style={{ padding: '12px', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', borderRadius: '8px', border: '1px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600 }}>
                           <CheckCircle size={18} /> Fine Issued (Approved)
                         </div>
@@ -519,10 +546,13 @@ const Violations = () => {
                 className="btn-secondary" 
                 onClick={handleDownloadDailyReport}
               >
-                <Download size={16} /> Download Daily Report
+                <Download size={16} /> PDF
               </button>
             </>
           )}
+          <button className="btn-secondary" onClick={handleDownloadCsv}>
+            <Download size={16} /> CSV
+          </button>
           <button className="btn-secondary" onClick={() => fetchViolations()}>
             <RefreshCw size={16} /> Refresh
           </button>
@@ -723,7 +753,7 @@ const Violations = () => {
                 <td>
                   {v.reviewed_by ? (
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      {v.status === 'Verified' ? 'Fine Issued by ' : v.status === 'Rejected' ? 'Violation rejected by ' : 'Reviewed by '}
+                      {v.status === 'Verified' || v.status === 'Challan Issued' ? 'Fine Issued by ' : v.status === 'Rejected' ? 'Violation rejected by ' : 'Reviewed by '}
                       <strong>{v.reviewed_by}</strong><br/>
                       at {new Date(v.reviewed_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </div>
@@ -733,7 +763,7 @@ const Violations = () => {
                 </td>
                 <td>
                   <div className="action-btns">
-                    {(v.status === 'Pending') && hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
+                    {(v.status === 'Pending' || v.status === 'Pending Review') && hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
                       <>
                         <button className="act-btn approve" title="Approve Fine" onClick={() => handleVerify(v.id, 'approve')}>
                           <CheckCircle size={14} />

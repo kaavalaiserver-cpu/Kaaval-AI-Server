@@ -1,22 +1,47 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { User } from './user.entity.js';
 
-@Entity('user_sessions')
-export class UserSession {
+@Entity('login_sessions')
+export class LoginSession {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ name: 'user_id' })
+  @Index()
+  @Column({ name: 'user_id', type: 'uuid' })
   userId!: string;
 
-  @Column({ name: 'login_time' })
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user!: User;
+
+  @Index({ unique: true })
+  @Column({ name: 'jwt_id', type: 'varchar', length: 100, nullable: true })
+  jwtId!: string | null;
+
+  @Column({ name: 'refresh_token_hash', type: 'text', nullable: true })
+  refreshTokenHash!: string | null;
+
+  @Column({ name: 'ip_address', type: 'varchar', length: 50, nullable: true })
+  ipAddress!: string | null;
+
+  @Column({ name: 'browser', type: 'varchar', length: 255, nullable: true })
+  browser!: string | null;
+
+  @Column({ name: 'operating_system', type: 'varchar', length: 100, nullable: true })
+  operatingSystem!: string | null;
+
+  @Column({ name: 'login_time', type: 'timestamptz' })
   loginTime!: Date;
 
-  @Column({ name: 'logout_time', nullable: true })
-  logoutTime!: Date;
+  @Column({ name: 'logout_time', type: 'timestamptz', nullable: true })
+  logoutTime!: Date | null;
 
-  @Column({ name: 'ip_address', nullable: true })
-  ipAddress!: string;
+  @Column({ name: 'expires_at', type: 'timestamptz', nullable: true })
+  expiresAt!: Date | null;
 
-  @Column({ name: 'device_info', nullable: true })
-  deviceInfo!: string;
+  @Column({ name: 'is_active', type: 'boolean', default: true })
+  isActive!: boolean;
+
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt!: Date;
 }

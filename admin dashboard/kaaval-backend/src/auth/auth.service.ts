@@ -1,6 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Role } from './roles.enum.js';
 import { UsersService } from '../users/users.service.js';
 import { AuditService } from '../system/audit.service.js';
 import * as bcrypt from 'bcryptjs';
@@ -36,18 +35,19 @@ export class AuthService {
 
     // Update login tracking
     await this.usersService.updateLastLogin(user.id);
-    await this.usersService.createSession(user.id, ipAddress, deviceInfo);
+    const session = await this.usersService.createSession(user.id, ipAddress, deviceInfo);
     
     // Audit log
-    await this.auditService.logAction(user.id, 'LOGIN', undefined, ipAddress, { deviceInfo });
+    await this.auditService.logAction(user.id, 'LOGIN', undefined, ipAddress, { deviceInfo, sessionId: session.id });
 
     const payload = {
       sub: user.id,
       username: user.username,
-      role: user.role,
+      role: user.role?.roleCode ?? 'GUEST',
       name: user.fullName,
-      subdivision: user.subdivision ?? null,
+      subdivision: user.subdivisionId ?? null,
       requiresPasswordChange: user.requiresPasswordChange,
+      sessionId: session.id,
     };
 
     return {
@@ -56,8 +56,8 @@ export class AuthService {
         id: user.id,
         username: user.username,
         name: user.fullName,
-        role: user.role,
-        subdivision: user.subdivision ?? null,
+        role: user.role?.roleCode ?? 'GUEST',
+        subdivision: user.subdivisionId ?? null,
         requiresPasswordChange: user.requiresPasswordChange,
       },
     };
@@ -72,5 +72,10 @@ export class AuthService {
       subdivision: user.subdivision ?? null,
       requiresPasswordChange: user.requiresPasswordChange ?? false,
     };
+  }
+
+  async logoutAll(userId: string) {
+    await this.usersService.invalidateAllSessions(userId);
+    await this.auditService.logAction(userId, 'LOGOUT_ALL_DEVICES');
   }
 }

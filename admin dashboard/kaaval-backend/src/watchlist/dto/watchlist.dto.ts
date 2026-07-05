@@ -1,5 +1,4 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
-import { WatchlistPriority, WatchlistStatus } from '../entities/watchlist.entity.js';
+import { IsOptional, IsString } from 'class-validator';
 
 export class CreateWatchlistDto {
   @IsString()
@@ -8,9 +7,9 @@ export class CreateWatchlistDto {
   @IsString()
   reason: string;
 
-  @IsEnum(WatchlistPriority)
   @IsOptional()
-  priority?: WatchlistPriority;
+  @IsString()
+  priority?: string;
 
   @IsOptional()
   addedBy?: string;
@@ -22,10 +21,10 @@ export class UpdateWatchlistDto {
     reason?: string;
 
     @IsOptional()
-    @IsEnum(WatchlistPriority)
-    priority?: WatchlistPriority;
+    @IsString()
+    priority?: string;
 
     @IsOptional()
-    @IsEnum(WatchlistStatus)
-    status?: WatchlistStatus;
+    @IsString()
+    status?: string;
 }

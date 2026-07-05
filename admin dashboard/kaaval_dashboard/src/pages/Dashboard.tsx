@@ -69,7 +69,7 @@ const DISTRICT_SCOPE: MapScope = {
 };
 
 const SUBDIVISION_SCOPES: Record<
-  Exclude<Role, 'super_admin' | 'sp' | 'dsp' | 'developer'>,
+  Exclude<Role, 'super_admin' | 'sp' | 'dsp' | 'developer' | 'inspector' | 'sub_inspector' | 'operator' | 'viewer'>,
   MapScope
 > = {
   colachel_admin: {
@@ -320,7 +320,7 @@ const Dashboard = () => {
     if (!user || FULL_ACCESS_ROLES.includes(user.role)) {
       return DISTRICT_SCOPE;
     }
-    return SUBDIVISION_SCOPES[user.role as Exclude<Role, 'super_admin' | 'sp' | 'dsp' | 'developer'>] ?? DISTRICT_SCOPE;
+    return SUBDIVISION_SCOPES[user.role as Exclude<Role, 'super_admin' | 'sp' | 'dsp' | 'developer' | 'inspector' | 'sub_inspector' | 'operator' | 'viewer'>] ?? DISTRICT_SCOPE;
   }, [user]);
 
   const canUseDistrictFeatures = !!user && FULL_ACCESS_ROLES.includes(user.role);
@@ -366,7 +366,7 @@ const Dashboard = () => {
       }
     };
     fetchAll();
-    const interval = setInterval(() => fetchAll(true), 2000); // 2s polling
+    const interval = setInterval(() => fetchAll(true), 30000); // 30s polling
     return () => clearInterval(interval);
   }, []);
 

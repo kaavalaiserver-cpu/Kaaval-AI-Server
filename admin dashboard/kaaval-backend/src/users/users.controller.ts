@@ -1,10 +1,10 @@
-import { Controller, Get, Post, Patch, Body, Param, UseGuards, Request, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, UseGuards, Request, BadRequestException } from '@nestjs/common';
 import { UsersService } from './users.service.js';
-import { JwtAuthGuard, RolesGuard, Roles, Role } from '../auth/index.js';
+import { JwtAuthGuard, RolesGuard, Roles } from '../auth/index.js';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(Role.SUPER_ADMIN)
+@Roles('SUPER_ADMIN')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
@@ -15,8 +15,8 @@ export class UsersController {
 
   @Post()
   async createUser(@Body() data: any, @Request() req: any) {
-    if (!data.username || !data.fullName || !data.role) {
-      throw new BadRequestException('Username, full name, and role are required');
+    if (!data.username || !data.fullName) {
+      throw new BadRequestException('Username and full name are required');
     }
     const adminId = req.user.id;
     const ip = req.ip;
@@ -58,5 +58,16 @@ export class UsersController {
       throw new BadRequestException('User not found');
     }
     return { temporaryPassword };
+  }
+
+  @Delete(':id')
+  async deleteUser(@Param('id') id: string, @Request() req: any) {
+    const adminId = req.user.id;
+    const ip = req.ip;
+    const success = await this.usersService.deleteUser(id, adminId, ip);
+    if (!success) {
+      throw new BadRequestException('User not found or could not be deleted');
+    }
+    return { status: 'deleted', id };
   }
 }

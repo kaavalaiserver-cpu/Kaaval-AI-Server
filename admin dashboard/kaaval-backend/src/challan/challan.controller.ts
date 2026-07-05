@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Res, StreamableFile, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { ChallanService } from './challan.service.js';
-import { JwtAuthGuard, Roles, Role, RolesGuard } from '../auth/index.js';
+import { JwtAuthGuard, Roles, RolesGuard } from '../auth/index.js';
 
 @Controller('challan')
 export class ChallanController {
@@ -9,7 +9,7 @@ export class ChallanController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-    @Roles(Role.SUPER_ADMIN, Role.SP, Role.DSP, Role.DEVELOPER)
+    @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER')
   async generateChallan(@Param('id') id: string, @Res() res: Response) {
     const pdfBuffer = await this.challanService.generateChallan(id);
 

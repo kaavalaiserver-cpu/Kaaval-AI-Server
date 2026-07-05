@@ -127,7 +127,7 @@ const Layout = () => {
       }
     };
     fetchStatus();
-    const interval = setInterval(fetchStatus, 2000); // 2s polling
+    const interval = setInterval(fetchStatus, 60000); // 60s polling
     return () => clearInterval(interval);
   }, [user?.role]);
 
@@ -180,6 +180,9 @@ const Layout = () => {
           {hasRole(...CAMERA_HEALTH_ROLES) && <div className="nav-section-label">{isOpen(isSidebarOpen, 'SYSTEM')}</div>}
           <NavItem to="/cameras" icon={<Camera size={20} />} label="Camera Health" isOpen={isSidebarOpen}
             roles={CAMERA_HEALTH_ROLES} />
+
+          <NavItem to="/camera-config" icon={<Settings size={20} />} label="Camera Config" isOpen={isSidebarOpen}
+            roles={['super_admin']} />
 
           <NavItem to="/system" icon={<Activity size={20} />} label="System Metrics" isOpen={isSidebarOpen}
             roles={TECH_ROLES} />

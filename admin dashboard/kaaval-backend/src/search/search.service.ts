@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike, Between, MoreThanOrEqual } from 'typeorm';
+import { Repository, Between, MoreThanOrEqual } from 'typeorm';
 import { Violation } from '../violations/entities/violation.entity.js';
 
 @Injectable()
@@ -15,51 +15,42 @@ export class SearchService {
       return { data: [], count: 0 };
     }
 
-    const where: Array<Record<string, unknown>> = [];
+    const qb = this.violationRepo.createQueryBuilder('violation')
+      .leftJoinAndSelect('violation.vehicle', 'vehicle')
+      .leftJoinAndSelect('violation.violationType', 'violationType')
+      .leftJoinAndSelect('violation.camera', 'camera')
+      .leftJoinAndSelect('camera.junction', 'junction')
+      .leftJoinAndSelect('violation.evidence', 'evidence');
 
     if (query) {
-      where.push({ vehicleNumber: ILike(`%${query}%`) });
-      where.push({ cameraId: ILike(`%${query}%`) });
-      where.push({ violationType: ILike(`%${query}%`) });
+      qb.andWhere(
+        '(vehicle.registrationNumber ILIKE :query OR camera.cameraCode ILIKE :query OR violationType.typeCode ILIKE :query)',
+        { query: `%${query}%` }
+      );
     }
 
-    const dateFilter =
-      dateFrom && dateTo
-        ? { createdAt: Between(new Date(dateFrom), new Date(dateTo)) }
-        : dateFrom
-          ? { createdAt: MoreThanOrEqual(new Date(dateFrom)) }
-          : {};
+    if (dateFrom && dateTo) {
+      qb.andWhere('violation.createdAt BETWEEN :dateFrom AND :dateTo', { dateFrom: new Date(dateFrom), dateTo: new Date(dateTo) });
+    } else if (dateFrom) {
+      qb.andWhere('violation.createdAt >= :dateFrom', { dateFrom: new Date(dateFrom) });
+    }
 
-    const searchWhere = where.length > 0
-      ? where.map((w) => ({ ...w, ...dateFilter }))
-      : [dateFilter];
+    qb.orderBy('violation.createdAt', 'DESC');
+    qb.take(50);
 
-    const results = await this.violationRepo.find({
-      where: searchWhere,
-      order: { createdAt: 'DESC' },
-      take: 50,
-    });
-
-    const CAMERA_LOCATIONS: Record<string, string> = {
-      'CAM-001': 'T. Nagar Junction',
-      'CAM-002': 'Anna Salai Main Road',
-      'CAM-003': 'Chennai Central',
-      'CAM-004': 'Mylapore Market',
-      'CAM-005': 'Guindy Circle',
-      'BATCH_UPLOAD': 'Batch Upload',
-    };
+    const results = await qb.getMany();
 
     return {
       data: results.map((v) => ({
         id: v.id,
-        vehicle_number: v.vehicleNumber ?? 'UNREAD',
-        type: (v.violationType || 'Unknown').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-        camera_id: v.cameraId,
-        location: CAMERA_LOCATIONS[v.cameraId ?? ''] ?? v.cameraId ?? 'Unknown',
+        vehicle_number: v.vehicle?.registrationNumber ?? 'UNREAD',
+        type: (v.violationType?.violationCode || 'Unknown').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()),
+        camera_id: v.camera?.cameraCode ?? 'Unknown',
+        location: v.camera?.junction?.junctionName ?? v.camera?.cameraName ?? 'Unknown',
         status: v.status === 'CHALLAN_ISSUED' ? 'Verified' : v.status === 'REJECTED' ? 'Rejected' : 'Pending',
-        confidence: v.confidenceScore,
+        confidence: v.confidence ?? 0,
         timestamp: v.createdAt.toISOString(),
-        image_url: v.imageUrl ?? '',
+        image_url: v.evidence?.find(e => e.evidenceType === 'RAW_IMAGE')?.filePath ?? '',
         vehicle_type: '2-Wheeler',
       })),
       count: results.length,

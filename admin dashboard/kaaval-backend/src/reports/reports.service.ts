@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between, Not, In } from 'typeorm';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Repository, Between } from 'typeorm';
+import { Cron } from '@nestjs/schedule';
 import { Violation } from '../violations/entities/violation.entity.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 
@@ -25,8 +25,8 @@ export class ReportsService {
     end.setHours(23, 59, 59, 999);
 
     const violations = await this.violationRepo.find({
-      where: { createdAt: Between(start, end), isDeleted: false },
-      select: ['id', 'status', 'violationType', 'createdAt', 'metadata', 'cameraId', 'confidenceScore'],
+      where: { createdAt: Between(start, end) },
+      relations: ['violationType', 'camera', 'camera.junction', 'camera.junction.subdivision'],
     });
 
     return this.buildDailyStats(violations, date);
@@ -36,29 +36,33 @@ export class ReportsService {
     const total     = violations.length;
     const verified  = violations.filter(v => ['CHALLAN_ISSUED', 'VERIFIED'].includes(v.status)).length;
     const rejected  = violations.filter(v => ['REJECTED', 'DUPLICATE'].includes(v.status)).length;
-    const pending   = violations.filter(v => ['PENDING', 'READY', 'MANUAL_REVIEW'].includes(v.status)).length;
+    const pending   = violations.filter(v => ['PENDING', 'READY', 'UNDER_REVIEW'].includes(v.status)).length;
 
     const byType: Record<string, number> = {};
     for (const v of violations) {
-      const t = this.formatType(v.violationType);
+      const t = this.formatType(v.violationType?.violationCode || 'UNKNOWN');
       byType[t] = (byType[t] || 0) + 1;
     }
 
+    // Use readable subdivision name, not UUID
     const bySubdivision: Record<string, number> = {};
     for (const v of violations) {
-      const meta = (v.metadata as Record<string, string>) ?? {};
-      const sub = meta['subdivision'] ?? meta['region'] ?? 'Unknown';
+      const sub = (v.camera?.junction as any)?.subdivision?.subdivisionName
+        ?? v.camera?.junction?.subdivisionId
+        ?? 'Unknown';
       bySubdivision[sub] = (bySubdivision[sub] || 0) + 1;
     }
 
     const byCamera: Record<string, number> = {};
     for (const v of violations) {
-      const cam = v.cameraId ?? 'Unknown';
+      const cam = v.camera?.junction?.junctionName
+        ? `${v.camera.cameraCode} — ${v.camera.junction.junctionName}`
+        : v.camera?.cameraCode ?? 'Unknown';
       byCamera[cam] = (byCamera[cam] || 0) + 1;
     }
 
     const avgConfidence = total
-      ? violations.reduce((s, v) => s + (v.confidenceScore ?? 0), 0) / total
+      ? violations.reduce((s, v) => s + (v.confidence ?? 0), 0) / total
       : 0;
 
     return {
@@ -88,8 +92,8 @@ export class ReportsService {
     start.setHours(0, 0, 0, 0);
 
     const violations = await this.violationRepo.find({
-      where: { createdAt: Between(start, end), isDeleted: false },
-      select: ['id', 'status', 'violationType', 'createdAt', 'metadata', 'cameraId', 'confidenceScore', 'locationLat', 'locationLng'],
+      where: { createdAt: Between(start, end) },
+      relations: ['violationType', 'camera', 'camera.junction'],
     });
 
     // Build day-by-day trend

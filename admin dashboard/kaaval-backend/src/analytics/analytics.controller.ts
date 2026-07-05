@@ -1,38 +1,38 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service.js';
-import { JwtAuthGuard, RolesGuard, Roles, Role } from '../auth/index.js';
+import { JwtAuthGuard, RolesGuard, Roles } from '../auth/index.js';
 
 @Controller('analytics')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
-  @Get('overview')
-  @Roles(Role.SUPER_ADMIN, Role.SP, Role.DSP, Role.DEVELOPER)
+  @Get('summary')
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER')
   async getSummary() {
     return this.analyticsService.getSummary();
   }
 
   @Get('peak-hours')
-  @Roles(Role.SUPER_ADMIN, Role.SP, Role.DSP, Role.DEVELOPER)
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER')
   async getPeakHours() {
     return this.analyticsService.getPeakHours(30);
   }
 
   @Get('camera-efficiency')
-  @Roles(Role.SUPER_ADMIN, Role.SP, Role.DSP, Role.DEVELOPER)
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER')
   async getCameraEfficiency() {
     return this.analyticsService.getCameraEfficiency(30);
   }
 
   @Get('heatmap')
-  @Roles(Role.SUPER_ADMIN, Role.SP, Role.DSP, Role.DEVELOPER)
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER')
   async getHeatmap() {
     return this.analyticsService.getHeatmapData(30);
   }
 
   @Get('dev')
-  @Roles(Role.SUPER_ADMIN, Role.DEVELOPER)
+  @Roles('SUPER_ADMIN', 'DEVELOPER')
   async getDevAnalytics() {
     return this.analyticsService.getDevAnalytics();
   }

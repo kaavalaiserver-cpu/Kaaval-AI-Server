@@ -13,7 +13,7 @@ const SECTIONS = ['Profile', 'Security', 'Appearance', 'Notifications', 'Session
 type Section = typeof SECTIONS[number];
 
 const SettingsPage = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, logoutAllDevices } = useAuth();
   const [activeSection, setActiveSection] = useState<Section>('Profile');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
@@ -59,7 +59,7 @@ const SettingsPage = () => {
           {activeSection === 'Appearance'    && <AppearanceSection showToast={showToast} />}
           {activeSection === 'Notifications' && <NotificationsSection showToast={showToast} />}
           {activeSection === 'Session'       && <SessionSection />}
-          {activeSection === 'Danger Zone'   && <DangerSection logout={logout} showToast={showToast} />}
+          {activeSection === 'Danger Zone'   && <DangerSection logout={logout} logoutAllDevices={logoutAllDevices} showToast={showToast} />}
         </div>
       </div>
     </div>
@@ -160,10 +160,13 @@ const SecuritySection = ({ showToast }: { showToast: Function }) => {
   const save = async () => {
     if (!currentPw || !newPw || !confirmPw) return showToast('error', 'All fields are required');
     if (newPw !== confirmPw) return showToast('error', 'New passwords do not match');
-    if (newPw.length < 6) return showToast('error', 'Password must be at least 6 characters');
+    if (newPw.length < 8) return showToast('error', 'Password must be at least 8 characters');
+    if (!/(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(newPw)) {
+      return showToast('error', 'Password must contain at least one number and one special character');
+    }
     setSaving(true);
     try {
-      await axios.post(`${API_BASE}/users/${user?.id}/reset-password`, {
+      await axios.post(`${API_BASE}/auth/change-password`, {
         currentPassword: currentPw,
         newPassword: newPw,
       });
@@ -395,7 +398,7 @@ const SessionSection = () => {
 };
 
 // ─── Danger Zone Section ─────────────────────────────────────────────────────
-const DangerSection = ({ logout, showToast }: { logout: () => void; showToast: Function }) => {
+const DangerSection = ({ logout, logoutAllDevices, showToast }: { logout: () => void; logoutAllDevices: () => void; showToast: Function }) => {
   const [confirmClear, setConfirmClear] = useState(false);
 
   const clearLocalData = () => {
@@ -420,6 +423,16 @@ const DangerSection = ({ logout, showToast }: { logout: () => void; showToast: F
             <div className="danger-desc">End your current session and return to the login screen</div>
           </div>
           <button className="btn-danger-outline" onClick={logout}><LogOut size={15} /> Sign Out</button>
+        </div>
+      </div>
+
+      <div className="settings-card danger-card">
+        <div className="danger-row">
+          <div>
+            <div className="danger-label">Logout From All Devices</div>
+            <div className="danger-desc">Sign out of all active sessions across all browsers and devices instantly</div>
+          </div>
+          <button className="btn-danger-solid" onClick={logoutAllDevices}><Shield size={15} /> Revoke All Sessions</button>
         </div>
       </div>
 

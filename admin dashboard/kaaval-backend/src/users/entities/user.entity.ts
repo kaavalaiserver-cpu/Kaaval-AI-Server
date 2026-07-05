@@ -1,63 +1,98 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Role } from '../../auth/roles.enum.js';
-import { getTimestampColumnType } from '../../common/database.utils.js';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+} from 'typeorm';
+import { Role } from '../../auth/entities/role.entity.js';
+import { District } from '../../districts/entities/district.entity.js';
+import { Subdivision } from '../../subdivisions/entities/subdivision.entity.js';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ unique: true })
+  @Column({ type: 'varchar', length: 150, unique: true })
   username!: string;
 
-  @Column({ name: 'password_hash' })
+  @Column({ name: 'password_hash', type: 'text' })
   passwordHash!: string;
 
-  @Column({ name: 'full_name' })
+  @Column({ name: 'full_name', type: 'varchar', length: 200 })
   fullName!: string;
 
-  @Column({ nullable: true })
-  designation!: string;
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  designation!: string | null;
 
-  @Column({ name: 'subdivision', nullable: true })
-  subdivision!: string;
+  @Column({ name: 'badge_number', type: 'varchar', length: 50, nullable: true })
+  badgeNumber!: string | null;
 
-  @Column({ name: 'phone_number', nullable: true })
-  phoneNumber!: string;
+  @Column({ name: 'employee_id', type: 'varchar', length: 50, nullable: true })
+  employeeId!: string | null;
 
-  @Column({ name: 'email', nullable: true })
-  email!: string;
+  @Column({ name: 'phone_number', type: 'varchar', length: 20, nullable: true })
+  phoneNumber!: string | null;
 
-  @Column({ name: 'created_by', nullable: true })
-  createdBy!: string;
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  email!: string | null;
 
-  @Column({ name: 'updated_by', nullable: true })
-  updatedBy!: string;
+  // ── Foreign Keys ──────────────────────────────────────────────
+  @Index()
+  @Column({ name: 'role_id', type: 'uuid', nullable: true })
+  roleId!: string | null;
 
-  @Column({ name: 'failed_login_attempts', default: 0 })
-  failedLoginAttempts!: number;
+  @Index()
+  @Column({ name: 'district_id', type: 'uuid', nullable: true })
+  districtId!: string | null;
 
-  @Column({ name: 'locked_until', type: getTimestampColumnType(), nullable: true })
-  lockedUntil!: Date | null;
+  @Index()
+  @Column({ name: 'subdivision_id', type: 'uuid', nullable: true })
+  subdivisionId!: string | null;
 
-  @Column({
-    type: 'varchar',
-    default: Role.VIEWER,
-  })
-  role!: Role;
-
-  @Column({ name: 'is_active', default: true })
+  // ── Status & Auth Fields ──────────────────────────────────────
+  @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive!: boolean;
 
-  @Column({ name: 'requires_password_change', default: false })
+  @Column({ name: 'requires_password_change', type: 'boolean', default: false })
   requiresPasswordChange!: boolean;
 
-  @Column({ name: 'last_login', nullable: true })
-  lastLogin!: Date;
+  @Column({ name: 'failed_login_attempts', type: 'int', default: 0 })
+  failedLoginAttempts!: number;
+
+  @Column({ name: 'locked_until', type: 'timestamptz', nullable: true })
+  lockedUntil!: Date | null;
+
+  @Column({ name: 'last_login', type: 'timestamptz', nullable: true })
+  lastLogin!: Date | null;
+
+  // ── Audit ─────────────────────────────────────────────────────
+  @Column({ name: 'created_by', type: 'uuid', nullable: true })
+  createdByUserId!: string | null;
+
+  @Column({ name: 'updated_by', type: 'uuid', nullable: true })
+  updatedByUserId!: string | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
+
+  // ── Relations ─────────────────────────────────────────────────
+  @ManyToOne(() => Role, (r) => r.users, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'role_id' })
+  role!: Role | null;
+
+  @ManyToOne(() => District, (d) => d.users, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'district_id' })
+  district!: District | null;
+
+  @ManyToOne(() => Subdivision, (s) => s.users, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'subdivision_id' })
+  subdivision!: Subdivision | null;
 }

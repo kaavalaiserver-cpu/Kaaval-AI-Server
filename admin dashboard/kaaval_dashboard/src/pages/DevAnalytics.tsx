@@ -23,7 +23,8 @@ ChartJS.register(
   Tooltip, Legend, Filler,
 );
 
-const PLATE_API_KEY = '478212749124746424275c833ba665b3a168a13e';
+// API key display is handled by the backend — never expose keys in frontend
+const PLATE_API_MASK = '47821274••••••••a168a13e';
 
 interface PlateApiInfo {
   calls_used: number;
@@ -194,7 +195,7 @@ const DevAnalytics = () => {
           <div className="da-card-title">
             <Key size={16} />
             <span>Plate Recognizer API</span>
-            <code className="da-api-key-badge">{PLATE_API_KEY.slice(0, 8)}••••{PLATE_API_KEY.slice(-4)}</code>
+            <code className="da-api-key-badge">{PLATE_API_MASK}</code>
           </div>
           <button className={`da-btn-fetch ${plateLoading ? 'loading' : ''}`} onClick={fetchPlateApiUsage} disabled={plateLoading}>
             {plateLoading

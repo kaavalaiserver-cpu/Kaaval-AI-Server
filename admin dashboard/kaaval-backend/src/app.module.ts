@@ -51,46 +51,23 @@ function checkPort(host: string, port: number, timeout = 2000): Promise<boolean>
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => {
-        const dbType = config.get<string>('DB_TYPE', 'auto');
+        const dbHost = config.get<string>('DB_HOST', 'localhost');
+        const dbPort = config.get<number>('DB_PORT', 5432);
         
-        let usePostgres = false;
-
-        if (dbType === 'postgres') {
-            usePostgres = true;
-        } else if (dbType === 'sqlite') {
-            usePostgres = false;
-        } else {
-            // Auto-detect
-            const dbHost = config.get<string>('DB_HOST', 'localhost');
-            const dbPort = config.get<number>('DB_PORT', 5432);
-            usePostgres = await checkPort(dbHost!, dbPort);
-        }
-
-        if (usePostgres) {
-          const dbHost = config.get<string>('DB_HOST', 'localhost');
-          const dbPort = config.get<number>('DB_PORT', 5432);
-          Logger.log('Using PostgreSQL database', 'TypeORM');
-          return {
-            type: 'postgres' as const,
-            host: dbHost,
-            port: dbPort,
-            username: config.get<string>('DB_USERNAME', 'postgres'),
-            password: config.get<string>('DB_PASSWORD', 'postgres'),
-            database: config.get<string>('DB_NAME', 'kaaval_ai'),
-            autoLoadEntities: true,
-            synchronize: true,
-            ssl: dbHost !== 'localhost'
-              ? { rejectUnauthorized: false }
-              : false,
-          };
-        }
-
-        Logger.warn('PostgreSQL unavailable — using local SQLite', 'TypeORM');
+        Logger.log(`Connecting to PostgreSQL database at ${dbHost}:${dbPort}`, 'TypeORM');
+        
         return {
-          type: 'better-sqlite3' as any,
-          database: 'kaaval_local.db',
-          autoLoadEntities: true,
+          type: 'postgres' as const,
+          host: dbHost,
+          port: dbPort,
+          username: config.get<string>('DB_USERNAME', 'postgres'),
+          password: config.get<string>('DB_PASSWORD', 'postgres'),
+          database: config.get<string>('DB_NAME', 'kaaval_ai'),
+          entities: [__dirname + '/**/*.entity{.ts,.js}'],
           synchronize: process.env.NODE_ENV !== 'production',
+          ssl: dbHost !== 'localhost'
+            ? { rejectUnauthorized: false }
+            : false,
         };
       },
     }),
@@ -137,6 +114,3 @@ function checkPort(host: string, port: number, timeout = 2000): Promise<boolean>
   ],
 })
 export class AppModule {}
-// force reload
- 
- 

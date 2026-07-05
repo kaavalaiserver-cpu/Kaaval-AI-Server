@@ -42,22 +42,23 @@ export class ChallanService {
     // 2. Violation Details
     doc.fontSize(14).text(`Challan ID: ${violation.id}`);
     doc.moveDown(0.5);
-    doc.text(`Date & Time: ${new Date(violation.createdAt).toLocaleString()}`);
+    doc.text(`Date & Time: ${new Date(violation.violationTimestamp || violation.createdAt).toLocaleString()}`);
     doc.moveDown(0.5);
-    doc.text(`Vehicle Number: ${violation.vehicleNumber}`, { underline: true });
+    doc.text(`Vehicle Number: ${violation.vehicle?.registrationNumber ?? 'UNREAD'}`, { underline: true });
     doc.moveDown(0.5);
-    doc.text(`Location: ${violation.location || violation.cameraId}`);
+    doc.text(`Location: ${violation.camera?.junction?.junctionName || violation.camera?.cameraName || 'Unknown Location'}`);
     doc.moveDown(0.5);
-    doc.fillColor('red').text(`Violation Type: ${violation.violationType}`);
+    doc.fillColor('red').text(`Violation Type: ${violation.violationType?.typeCode || 'Unknown'}`);
     doc.fillColor('black');
     doc.moveDown(0.5);
-    doc.text(`Fine Amount: ₹${violation.challan_amount || 1000}`);
+    doc.text(`Fine Amount: ₹${violation.violationType?.defaultFineAmount || 1000}`);
     doc.moveDown();
 
     // 3. Evidence Image
-    if (violation.image_url) {
+    const evidenceImage = violation.evidence?.find((e: any) => e.evidenceType === 'RAW_IMAGE')?.filePath;
+    if (evidenceImage) {
       try {
-        let imageUrl = violation.image_url;
+        let imageUrl = evidenceImage;
         if (imageUrl.startsWith('/')) {
             const aiBackendUrl = process.env.AI_BACKEND_URL || 'http://localhost:8000';
             imageUrl = `${aiBackendUrl}${imageUrl}`;

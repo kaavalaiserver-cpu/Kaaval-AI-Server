@@ -1,25 +1,44 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  Index,
+} from 'typeorm';
 
 @Entity('audit_logs')
 export class AuditLog {
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
 
-  @Column({ name: 'user_id', nullable: true })
-  userId!: string;
+  @Index()
+  @Column({ name: 'user_id', type: 'uuid', nullable: true })
+  userId!: string | null;
 
-  @Column({ name: 'action' })
+  @Column({ type: 'varchar', length: 100 })
   action!: string;
 
-  @Column({ name: 'violation_id', nullable: true })
-  violationId!: string;
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  module!: string | null;
 
-  @CreateDateColumn({ name: 'timestamp' })
-  timestamp!: Date;
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  entity!: string | null;
 
-  @Column({ name: 'ip_address', nullable: true })
-  ipAddress!: string;
+  @Column({ name: 'entity_id', type: 'uuid', nullable: true })
+  entityId!: string | null;
 
-  @Column({ type: 'simple-json', nullable: true })
-  details!: Record<string, any>;
+  @Column({ name: 'old_data', type: 'jsonb', nullable: true })
+  oldData!: any | null;
+
+  @Column({ name: 'new_data', type: 'jsonb', nullable: true })
+  newData!: any | null;
+
+  @Column({ name: 'ip_address', type: 'varchar', length: 50, nullable: true })
+  ipAddress!: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  browser!: string | null;
+
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt!: Date;
 }

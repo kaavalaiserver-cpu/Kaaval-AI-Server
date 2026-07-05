@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Param, Query, Body, Request, UseGuards, BadRequestException } from '@nestjs/common';
 import { NotificationsService } from './notifications.service.js';
-import { JwtAuthGuard, RolesGuard, Roles, Role } from '../auth/index.js';
+import { JwtAuthGuard, RolesGuard, Roles } from '../auth/index.js';
 
 @Controller('notifications')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -29,7 +29,7 @@ export class NotificationsController {
 
   /** Manual broadcast — available to super_admin, developer, sp, dsp */
   @Post('broadcast')
-  @Roles(Role.SUPER_ADMIN, Role.DEVELOPER, Role.SP, Role.DSP)
+  @Roles('SUPER_ADMIN', 'DEVELOPER', 'SP', 'DSP')
   async broadcast(@Body() body: any, @Request() req: any) {
     const { title, message, priority } = body;
     if (!title || !message) {

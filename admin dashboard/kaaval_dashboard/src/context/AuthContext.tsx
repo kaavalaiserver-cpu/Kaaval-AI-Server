@@ -31,6 +31,7 @@ interface AuthContextType {
   loading: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => void;
+  logoutAllDevices: () => Promise<void>;
   hasRole: (...roles: Role[]) => boolean;
 }
 
@@ -55,12 +56,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Restore session from localStorage on mount
   useEffect(() => {
+    axios.defaults.withCredentials = true; // Ensure cookies are sent
     const savedToken = localStorage.getItem('kaaval_token');
     const savedUser = localStorage.getItem('kaaval_user');
     if (savedToken && savedUser) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
       setToken(savedToken);
-      setUser(JSON.parse(savedUser));
+      const storedUser = JSON.parse(savedUser);
+      if (storedUser.role) {
+        storedUser.role = storedUser.role.toLowerCase();
+      }
+      setUser(storedUser);
     }
     setLoading(false);
   }, []);
@@ -73,12 +79,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
     
     setToken(access_token);
-    setUser(userData);
+    const normalizedUser = {
+      ...userData,
+      role: (userData.role as string).toLowerCase() as Role,
+    };
+    setUser(normalizedUser);
     localStorage.setItem('kaaval_token', access_token);
-    localStorage.setItem('kaaval_user', JSON.stringify(userData));
+    localStorage.setItem('kaaval_user', JSON.stringify(normalizedUser));
   };
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      await axios.post(`${API_BASE}/auth/logout`);
+    } catch (e) {
+      // Ignore network errors on logout
+    }
+    delete axios.defaults.headers.common['Authorization'];
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('kaaval_token');
+    localStorage.removeItem('kaaval_user');
+  }, []);
+
+  const logoutAllDevices = useCallback(async () => {
+    try {
+      await axios.post(`${API_BASE}/auth/logout-all`);
+    } catch (e) {
+      // Ignore network errors
+    }
     delete axios.defaults.headers.common['Authorization'];
     setToken(null);
     setUser(null);
@@ -136,7 +164,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, hasRole }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout, logoutAllDevices, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

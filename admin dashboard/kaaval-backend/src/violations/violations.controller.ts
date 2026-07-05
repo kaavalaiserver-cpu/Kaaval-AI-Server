@@ -15,7 +15,9 @@ import {
   BadRequestException,
   HttpException,
   Request,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { ViolationsService } from './violations.service.js';
@@ -26,7 +28,7 @@ import {
   CreateViolationDto,
   DetectDto,
 } from './dto/violation.dto.js';
-import { JwtAuthGuard, RolesGuard, Roles, Role, SUBDIVISION_ROLES } from '../auth/index.js';
+import { JwtAuthGuard, RolesGuard, Roles } from '../auth/index.js';
 
 @Controller('violations')
 export class ViolationsController {
@@ -61,58 +63,74 @@ export class ViolationsController {
     return this.violationsService.processDetection(dto, aiUrl);
   }
 
+  @Get('image/by-key')
+  @UseGuards(JwtAuthGuard)
+  async getImageByKey(@Query('key') key: string, @Request() req: any, @Res() res: Response) {
+    if (!key) {
+      throw new BadRequestException('Image key is required');
+    }
+    
+    const stream = await this.violationsService.getImageStreamByKey(key, req.user);
+    
+    if (key.endsWith('.webp')) res.setHeader('Content-Type', 'image/webp');
+    else if (key.endsWith('.png')) res.setHeader('Content-Type', 'image/png');
+    else res.setHeader('Content-Type', 'image/jpeg');
+    
+    stream.pipe(res);
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.SP, Role.DSP, Role.DEVELOPER, ...SUBDIVISION_ROLES)
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR')
   findAll(@Query() query: ViolationQueryDto, @Request() req: any) {
     return this.violationsService.findAll(query, req.user);
   }
 
   @Get('track/:vehicleNumber')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.SP, Role.DSP, Role.DEVELOPER)
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER')
   async trackVehicle(@Param('vehicleNumber') vehicleNumber: string) {
     return this.violationsService.trackVehicle(vehicleNumber);
   }
 
   @Get('stats')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.SP, Role.DSP, Role.DEVELOPER, ...SUBDIVISION_ROLES)
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR')
   getStats(@Query() query: ViolationQueryDto, @Request() req: any) {
     return this.violationsService.getStats(query, req.user);
   }
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.SP, Role.DSP, Role.DEVELOPER, ...SUBDIVISION_ROLES)
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR')
   findOne(@Param('id') id: string, @Request() req: any) {
     return this.violationsService.findOne(id, req.user);
   }
 
   @Post(':id/verify')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.SP, Role.DSP, Role.DEVELOPER, Role.INSPECTOR, Role.SUB_INSPECTOR, ...SUBDIVISION_ROLES)
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR')
   verify(@Param('id') id: string, @Body() dto: VerifyViolationDto, @Request() req: any) {
     return this.violationsService.verify(id, dto, req.user);
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.SP, Role.DSP, Role.DEVELOPER)
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER')
   update(@Param('id') id: string, @Body() dto: UpdateViolationDto, @Request() req: any) {
     return this.violationsService.update(id, dto, req.user);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.DEVELOPER, Role.SP, Role.DSP, Role.INSPECTOR, Role.SUB_INSPECTOR, ...SUBDIVISION_ROLES)
+  @Roles('SUPER_ADMIN', 'DEVELOPER', 'SP', 'DSP', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR')
   remove(@Param('id') id: string, @Request() req: any) {
     return this.violationsService.remove(id, req.user);
   }
 
   @Post('batch-upload')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.SUPER_ADMIN, Role.DEVELOPER)
+  @Roles('SUPER_ADMIN', 'DEVELOPER')
   @UseInterceptors(
     FilesInterceptor('files', 50, {
       limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB per file

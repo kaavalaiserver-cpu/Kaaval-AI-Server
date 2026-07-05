@@ -1,0 +1,10 @@
+
+# Local Databases
+*.local.db
+kaaval_local.db
+
+# Dev Scripts
+dev-scripts/
+
+# Build Output
+dist/

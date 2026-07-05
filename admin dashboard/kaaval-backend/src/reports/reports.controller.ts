@@ -1,11 +1,10 @@
 import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
 import type { Response } from 'express';
 import { ReportsService } from './reports.service.js';
-import { JwtAuthGuard, RolesGuard, Roles, Role } from '../auth/index.js';
-import { SUBDIVISION_ROLES } from '../auth/subdivision-access.js';
+import { JwtAuthGuard, RolesGuard, Roles } from '../auth/index.js';
 
-const DAILY_ROLES = [Role.SUPER_ADMIN, Role.DEVELOPER, Role.SP, Role.DSP, Role.INSPECTOR, Role.SUB_INSPECTOR, ...SUBDIVISION_ROLES];
-const WEEKLY_ROLES = [Role.SUPER_ADMIN, Role.DEVELOPER, Role.SP, Role.DSP];
+const DAILY_ROLES = ['SUPER_ADMIN', 'DEVELOPER', 'SP', 'DSP', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR'];
+const WEEKLY_ROLES = ['SUPER_ADMIN', 'DEVELOPER', 'SP', 'DSP'];
 
 @Controller('reports')
 @UseGuards(JwtAuthGuard, RolesGuard)

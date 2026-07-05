@@ -15,75 +15,89 @@ export class AnalyticsService {
   ) {}
 
   async getSummary() {
-    const cached = await this.cache.get<Record<string, unknown>>(
-      'analytics-summary',
-    );
+    const cached = await this.cache.get<Record<string, unknown>>('analytics-summary');
     if (cached) return cached;
 
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const violations = await this.violationRepo.find({
-      where: { createdAt: MoreThanOrEqual(sevenDaysAgo), isDeleted: false },
+    // Load 30-day violations with all needed relations
+    const violations30 = await this.violationRepo.find({
+      where: { createdAt: MoreThanOrEqual(thirtyDaysAgo) },
+      relations: ['violationType', 'camera', 'vehicle'],
     });
 
-    const total = violations.length;
-    const pendingReview = violations.filter((v) =>
-      ['PENDING', 'READY', 'MANUAL_REVIEW'].includes(v.status),
+    // All-time totals
+    const allCount = await this.violationRepo.count();
+    const pendingReview = violations30.filter(v =>
+      ['PENDING', 'READY', 'UNDER_REVIEW'].includes(v.status),
     ).length;
-    const finesIssued = violations.filter(
-      (v) => v.status === 'CHALLAN_ISSUED',
-    ).length;
-    const helmetViolations = violations.filter((v) =>
-      v.violationType?.includes('HELMET'),
-    ).length;
-    const helmetCompliance =
-      total > 0 ? ((1 - helmetViolations / total) * 100).toFixed(1) : '100.0';
+    const challansIssued = violations30.filter(v => v.status === 'CHALLAN_ISSUED').length;
 
-    // Violations by day
-    const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const byDay = new Array<number>(7).fill(0);
-    for (const v of violations) {
-      const day = v.createdAt.getDay();
-      const mapped = day === 0 ? 6 : day - 1;
-      byDay[mapped]++;
+    // daily_last_30
+    const dailyMap: Record<string, number> = {};
+    const finesMap: Record<string, number> = {};
+    const typeMap: Record<string, number> = {};
+    const vehicleMap: Record<string, number> = {};
+    const camMap: Record<string, number> = {};
+
+    for (const v of violations30) {
+      const dateKey = v.createdAt.toISOString().slice(0, 10);
+      dailyMap[dateKey] = (dailyMap[dateKey] || 0) + 1;
+
+      if (v.status === 'CHALLAN_ISSUED') {
+        finesMap[dateKey] = (finesMap[dateKey] || 0) + 1;
+      }
+
+      const type = v.violationType?.violationCode ?? 'UNKNOWN';
+      typeMap[type] = (typeMap[type] || 0) + 1;
+
+      const vn = (v.vehicle as any)?.registrationNumber ?? null;
+      if (vn && vn !== 'UNREAD' && vn !== 'UNKNOWN') {
+        vehicleMap[vn] = (vehicleMap[vn] || 0) + 1;
+      }
+
+      const cam = v.camera?.cameraCode || 'Unknown';
+      camMap[cam] = (camMap[cam] || 0) + 1;
     }
 
-    // Violations by camera
-    const byCam: Record<string, number> = {};
-    for (const v of violations) {
-      const cam = v.cameraId || 'Unknown';
-      byCam[cam] = (byCam[cam] || 0) + 1;
-    }
+    const daily_last_30 = Object.entries(dailyMap)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, count]) => ({ date, count }));
 
-    // Peak hours
-    const byHour = new Array<number>(24).fill(0);
-    for (const v of violations) {
-      byHour[v.createdAt.getHours()]++;
-    }
+    const fines_issued_last_30 = Object.entries(finesMap)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, count]) => ({ date, count }));
 
-    // Build violationsByDay array
-    const violationsByDay = dayLabels.map((label, i) => ({ date: label, count: byDay[i] }));
+    const by_type = Object.entries(typeMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([violation_type, count]) => ({ violation_type, count }));
 
-    // Build violationsByCamera array
-    const violationsByCamera = Object.entries(byCam).map(([camera_id, count]) => ({ camera_id, count }));
+    const top_vehicles = Object.entries(vehicleMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([vehicle_number, count]) => ({ vehicle_number, count }));
 
-    // Build peakHours array
-    const peakHours = byHour.map((count, hour) => ({ hour, count }));
+    const top_cameras = Object.entries(camMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([camera_id, count]) => ({ camera_id, count }));
 
-    // Count active cameras
-    const cameraCount = await this.violationRepo.query(
-      `SELECT COUNT(DISTINCT camera_id) as cnt FROM violations WHERE camera_id IS NOT NULL AND camera_id != 'BATCH_UPLOAD'`,
-    );
-    const camerasActive = parseInt(cameraCount?.[0]?.cnt ?? '0', 10);
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const violations_today = dailyMap[todayKey] ?? 0;
 
     const summary = {
-      totalViolations: total,
-      camerasActive,
-      helmetComplianceRate: parseFloat(helmetCompliance as string),
-      violationsByDay,
-      violationsByCamera,
-      peakHours,
+      // Fields expected by Analytics.tsx (FastAPIAnalyticsSummary)
+      total_violations: allCount,
+      violations_today,
+      pending_review: pendingReview,
+      challans_issued: challansIssued,
+      daily_last_30,
+      fines_issued_last_30,
+      by_type,
+      top_vehicles,
+      top_cameras,
     };
 
     await this.cache.set('analytics-summary', summary, 60000);
@@ -95,36 +109,23 @@ export class AnalyticsService {
     const cached = await this.cache.get<Record<string, unknown>>('dev-analytics');
     if (cached) return cached;
 
-    const all = await this.violationRepo.find({ where: { isDeleted: false } });
+    const all = await this.violationRepo.find({ relations: ['violationType', 'vehicle'] });
 
     const twoWheelers = all.filter((v) => {
-      const vt = (v.violationType || '').toLowerCase();
+      const vt = (v.violationType?.violationCode || '').toLowerCase();
       return vt.includes('helmet') || vt.includes('triple');
     });
 
     const fourWheelers = all.filter((v) => {
-      const vt = (v.violationType || '').toLowerCase();
+      const vt = (v.violationType?.violationCode || '').toLowerCase();
       return vt.includes('seatbelt') || vt.includes('speed');
     });
 
     const platesExtracted = all.filter(
-      (v) => v.vehicleNumber && v.vehicleNumber !== 'UNREAD',
+      (v) => v.vehicle?.registrationNumber && v.vehicle.registrationNumber !== 'UNREAD',
     );
-    const highConfidence = all.filter((v) => v.confidenceScore >= 0.7);
-    const lowConfidence = all.filter(
-      (v) => v.confidenceScore > 0 && v.confidenceScore < 0.7,
-    );
-    const noOcr = all.filter((v) => !v.confidenceScore || v.confidenceScore === 0);
-
-    const finesIssued = all.filter((v) => v.status === 'CHALLAN_ISSUED');
-    const twoWheelerFines = finesIssued.filter((v) => {
-      const vt = (v.violationType || '').toLowerCase();
-      return vt.includes('helmet') || vt.includes('triple');
-    });
-    const fourWheelerFines = finesIssued.filter((v) => {
-      const vt = (v.violationType || '').toLowerCase();
-      return vt.includes('seatbelt') || vt.includes('speed');
-    });
+    const highConfidence = all.filter((v) => (v.confidence ?? 0) >= 0.7);
+    const noOcr = all.filter((v) => !v.confidence || v.confidence === 0);
 
     // Processing pipeline metrics
     const byStatus: Record<string, number> = {};
@@ -132,14 +133,10 @@ export class AnalyticsService {
       byStatus[v.status] = (byStatus[v.status] || 0) + 1;
     }
 
-    // Batch vs Camera detections
-    const batchUploads = all.filter((v) => v.cameraId === 'BATCH_UPLOAD').length;
-    const cameraDetections = all.length - batchUploads;
-
     // OCR confidence distribution
     const confBuckets = { '0-30%': 0, '30-50%': 0, '50-70%': 0, '70-90%': 0, '90-100%': 0 };
     for (const v of all) {
-      const c = v.confidenceScore * 100;
+      const c = (v.confidence ?? 0) * 100;
       if (c < 30) confBuckets['0-30%']++;
       else if (c < 50) confBuckets['30-50%']++;
       else if (c < 70) confBuckets['50-70%']++;
@@ -147,19 +144,11 @@ export class AnalyticsService {
       else confBuckets['90-100%']++;
     }
 
-    // Type breakdown
-    const typeBreakdown: Record<string, number> = {};
-    for (const v of all) {
-      const t = v.violationType || 'Unknown';
-      typeBreakdown[t] = (typeBreakdown[t] || 0) + 1;
-    }
-
     const avgConfidence =
       all.length > 0
-        ? all.reduce((s, v) => s + v.confidenceScore, 0) / all.length
+        ? all.reduce((s, v) => s + (v.confidence ?? 0), 0) / all.length
         : 0;
 
-    // Determine pipeline health
     const errorCount = byStatus['ERROR'] ?? 0;
     const pipelineStatus = errorCount > all.length * 0.1 ? 'degraded' : 'healthy';
 
@@ -175,8 +164,8 @@ export class AnalyticsService {
       ocrFailCount: noOcr.length,
       avgConfidence: parseFloat((avgConfidence).toFixed(4)),
       pipelineStatus,
-      cameraFeedCount: cameraDetections,
-      batchUploadCount: batchUploads,
+      cameraFeedCount: all.length,
+      batchUploadCount: 0,
       confidenceDistribution: Object.entries(confBuckets).map(([bucket, count]) => ({ bucket, count })),
     };
 
@@ -188,65 +177,66 @@ export class AnalyticsService {
     const period = days ?? 7;
     const since = new Date();
     since.setDate(since.getDate() - period);
-    
-    // SQLite: strftime('%H', created_at)
-    // Note: Assuming stored as ISO string or compatible format by TypeORM
-    const raw = await this.violationRepo.query(
-        `SELECT strftime('%H', created_at) as hour, COUNT(*) as count FROM violations WHERE created_at >= ? AND is_deleted = false GROUP BY hour ORDER BY hour`,
-        [since.toISOString()]
-    );
-    
-    // Map to full 24h
-    const fullDay = Array.from({ length: 24 }, (_, i) => {
-        const h = i.toString().padStart(2, '0');
-        const found = raw.find((r: any) => r.hour === h);
-        return { hour: i, count: parseInt(found?.count || '0', 10) };
+
+    const violations = await this.violationRepo.find({
+      where: { createdAt: MoreThanOrEqual(since) },
+      select: ['createdAt'],
     });
-    return fullDay;
+
+    const byHour = new Array<number>(24).fill(0);
+    for (const v of violations) {
+      byHour[v.createdAt.getHours()]++;
+    }
+
+    return Array.from({ length: 24 }, (_, i) => ({ hour: i, count: byHour[i] }));
   }
 
   async getCameraEfficiency(days?: number) {
-      const period = days ?? 30;
-      const since = new Date();
-      since.setDate(since.getDate() - period);
+    const period = days ?? 30;
+    const since = new Date();
+    since.setDate(since.getDate() - period);
 
-      const stats = await this.violationRepo.query(`
-        SELECT 
-            camera_id as cameraId, 
-            COUNT(*) as total,
-            SUM(CASE WHEN status = 'CHALLAN_ISSUED' THEN 1 ELSE 0 END) as issued,
-            SUM(CASE WHEN status IN ('REJECTED', 'DUPLICATE') THEN 1 ELSE 0 END) as rejected
-        FROM violations
-        WHERE created_at >= ? AND camera_id IS NOT NULL AND camera_id != 'BATCH_UPLOAD' AND is_deleted = false
-        GROUP BY camera_id
-      `, [since.toISOString()]);
+    const violations = await this.violationRepo.find({
+      where: { createdAt: MoreThanOrEqual(since) },
+      relations: ['camera'],
+    });
 
-      return stats.map((s: any) => ({
-          camera_id: s.cameraId,
-          total_violations: s.total,
-          challans_issued: s.issued || 0,
-          rejected_count: s.rejected || 0,
-          efficiency_rate: s.total > 0 ? ((s.issued || 0) / s.total * 100).toFixed(1) : '0.0'
-      }));
+    const byCam: Record<string, { total: number; issued: number; rejected: number }> = {};
+    for (const v of violations) {
+      if (!v.camera) continue;
+      const cam = v.camera.cameraCode;
+      if (!byCam[cam]) byCam[cam] = { total: 0, issued: 0, rejected: 0 };
+      byCam[cam].total++;
+      if (v.status === 'CHALLAN_ISSUED') byCam[cam].issued++;
+      if (['REJECTED', 'DUPLICATE'].includes(v.status)) byCam[cam].rejected++;
+    }
+
+    return Object.entries(byCam).map(([camera_id, s]) => ({
+      camera_id,
+      total_violations: s.total,
+      challans_issued: s.issued,
+      rejected_count: s.rejected,
+      efficiency_rate: s.total > 0 ? ((s.issued / s.total) * 100).toFixed(1) : '0.0',
+    }));
   }
 
   async getHeatmapData(days?: number) {
-      const period = days ?? 30;
-      const since = new Date();
-      since.setDate(since.getDate() - period);
+    const period = days ?? 30;
+    const since = new Date();
+    since.setDate(since.getDate() - period);
 
-      const points = await this.violationRepo.find({
-          select: ['locationLat', 'locationLng', 'violationType'],
-          where: { createdAt: MoreThanOrEqual(since), isDeleted: false } 
-      });
-      
-      return points
-        .filter(p => p.locationLat != null && p.locationLng != null)
-        .map(p => ({
-          lat: p.locationLat,
-          lng: p.locationLng,
-          type: p.violationType,
-          weight: 1
+    const points = await this.violationRepo.find({
+      where: { createdAt: MoreThanOrEqual(since) },
+      relations: ['camera', 'camera.junction', 'violationType'],
+    });
+
+    return points
+      .filter(p => p.camera?.junction?.latitude != null && p.camera?.junction?.longitude != null)
+      .map(p => ({
+        lat: p.camera!.junction!.latitude,
+        lng: p.camera!.junction!.longitude,
+        type: p.violationType?.violationCode ?? 'Unknown',
+        weight: 1,
       }));
   }
 }
