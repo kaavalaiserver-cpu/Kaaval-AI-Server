@@ -33,10 +33,12 @@ export class AnalyticsService {
     // Enforce role-based access
     const role = (user.role || '').toUpperCase();
     if (!['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER'].includes(role)) {
-      if (!user.subdivisionId) {
-        qb.andWhere('1=0');
-      } else {
+      if (user.junctionId) {
+        qb.andWhere('junction.id = :jId', { jId: user.junctionId });
+      } else if (user.subdivisionId) {
         qb.andWhere('subdivision.id = :subId', { subId: user.subdivisionId });
+      } else {
+        qb.andWhere('1=0');
       }
     } else if (requestedSubdivisionCode && requestedSubdivisionCode.toLowerCase() !== 'all') {
       // Superadmin filtering by a specific subdivision
@@ -52,8 +54,9 @@ export class AnalyticsService {
       .leftJoin('junction.subdivision', 'subdivision');
       
     if (!['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER'].includes(role)) {
-      if (!user.subdivisionId) countQb.where('1=0');
-      else countQb.where('subdivision.id = :subId', { subId: user.subdivisionId });
+      if (user.junctionId) countQb.where('junction.id = :jId', { jId: user.junctionId });
+      else if (user.subdivisionId) countQb.where('subdivision.id = :subId', { subId: user.subdivisionId });
+      else countQb.where('1=0');
     } else if (requestedSubdivisionCode && requestedSubdivisionCode.toLowerCase() !== 'all') {
       countQb.where('LOWER(subdivision.subdivision_name) = LOWER(:code)', { code: requestedSubdivisionCode });
     }

@@ -22,7 +22,9 @@ export class CamerasService {
 
   async findAll(user?: any, subdivisionCode?: string) {
     let whereClause: any = {};
-    if (user?.subdivisionId) {
+    if (user?.junctionId) {
+      whereClause = { junctionId: user.junctionId };
+    } else if (user?.subdivisionId) {
       whereClause = { junction: { subdivisionId: user.subdivisionId } };
     } else if (subdivisionCode && subdivisionCode.toLowerCase() !== 'all') {
       const ILike = require('typeorm').ILike;

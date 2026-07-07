@@ -9,6 +9,7 @@ import { AuditService } from '../system/audit.service.js';
 import { Role } from '../auth/entities/role.entity.js';
 import { District } from '../districts/entities/district.entity.js';
 import { Subdivision } from '../subdivisions/entities/subdivision.entity.js';
+import { Junction } from '../junctions/entities/junction.entity.js';
 
 @Injectable()
 export class UsersService implements OnModuleInit {
@@ -25,6 +26,8 @@ export class UsersService implements OnModuleInit {
     private districtsRepository: Repository<District>,
     @InjectRepository(Subdivision)
     private subdivisionsRepository: Repository<Subdivision>,
+    @InjectRepository(Junction)
+    private junctionsRepository: Repository<Junction>,
     @Inject(forwardRef(() => AuditService))
     private auditService: AuditService,
   ) {}
@@ -176,7 +179,7 @@ export class UsersService implements OnModuleInit {
   async findAll(): Promise<Omit<User, 'passwordHash'>[]> {
     const users = await this.usersRepository.find({
       order: { createdAt: 'DESC' },
-      relations: ['role', 'subdivision', 'district']
+      relations: ['role', 'subdivision', 'district', 'junction']
     });
     return users.map(user => this.stripPassword(user));
   }
@@ -197,6 +200,17 @@ export class UsersService implements OnModuleInit {
         resolved.districtId = sub.districtId;
       }
       delete resolved.subdivision;
+    }
+    
+    if (resolved.junction) {
+      const junc = await this.junctionsRepository.findOneBy({ junctionName: resolved.junction });
+      if (junc) {
+        resolved.junctionId = junc.id;
+        resolved.subdivisionId = junc.subdivisionId;
+        const sub = await this.subdivisionsRepository.findOneBy({ id: junc.subdivisionId });
+        if (sub) resolved.districtId = sub.districtId;
+      }
+      delete resolved.junction;
     }
     
     if (resolved.district !== undefined) delete resolved.district;
@@ -221,7 +235,7 @@ export class UsersService implements OnModuleInit {
     const saved = Array.isArray(savedResult) ? savedResult[0] : savedResult;
     const withRole = await this.usersRepository.findOne({
       where: { id: saved.id },
-      relations: ['role', 'subdivision', 'district'],
+      relations: ['role', 'subdivision', 'district', 'junction'],
     });
 
     await this.auditService.logAction(adminId, 'CREATE_USER', undefined, ip, {
@@ -236,7 +250,7 @@ export class UsersService implements OnModuleInit {
     const resolvedData = await this.resolveRelations(data);
     
     await this.usersRepository.update(id, { ...resolvedData, updatedByUserId: adminId });
-    const user = await this.usersRepository.findOne({ where: { id }, relations: ['role', 'subdivision', 'district'] });
+    const user = await this.usersRepository.findOne({ where: { id }, relations: ['role', 'subdivision', 'district', 'junction'] });
     if (user && data.role) {
       await this.auditService.logAction(adminId, 'ROLE_CHANGE', undefined, ip, { targetUsername: user.username, newRole: data.role, reason });
     }
@@ -245,7 +259,7 @@ export class UsersService implements OnModuleInit {
 
   async updateStatus(id: string, isActive: boolean, adminId: string, reason: string, ip?: string): Promise<Omit<User, 'passwordHash'> | null> {
     await this.usersRepository.update(id, { isActive, updatedByUserId: adminId });
-    const user = await this.usersRepository.findOne({ where: { id }, relations: ['role', 'subdivision', 'district'] });
+    const user = await this.usersRepository.findOne({ where: { id }, relations: ['role', 'subdivision', 'district', 'junction'] });
     if (user) {
       await this.auditService.logAction(adminId, isActive ? 'ACTIVATE_USER' : 'DISABLE_USER', undefined, ip, { targetUsername: user.username, reason });
     }
@@ -313,13 +327,14 @@ export class UsersService implements OnModuleInit {
   }
 
   private stripPassword(user: User): any {
-    const { passwordHash, role, subdivision, district, ...rest } = user;
+    const { passwordHash, role, subdivision, district, junction, ...rest } = user;
     return {
       ...rest,
       // Flatten relational objects to plain values the frontend expects
       role: (role as any)?.roleCode ?? rest.roleId ?? null,
       subdivision: (subdivision as any)?.subdivisionName ?? null,
       district: (district as any)?.districtName ?? null,
+      junction: (junction as any)?.junctionName ?? null,
     };
   }
 }

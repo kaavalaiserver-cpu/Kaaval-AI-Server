@@ -11,6 +11,7 @@ import {
 import { Role } from '../../auth/entities/role.entity.js';
 import { District } from '../../districts/entities/district.entity.js';
 import { Subdivision } from '../../subdivisions/entities/subdivision.entity.js';
+import { Junction } from '../../junctions/entities/junction.entity.js';
 
 @Entity('users')
 export class User {
@@ -54,6 +55,10 @@ export class User {
   @Column({ name: 'subdivision_id', type: 'varchar', nullable: true })
   subdivisionId!: string | null;
 
+  @Index()
+  @Column({ name: 'junction_id', type: 'varchar', nullable: true })
+  junctionId!: string | null;
+
   // ── Status & Auth Fields ──────────────────────────────────────
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive!: boolean;
@@ -95,4 +100,8 @@ export class User {
   @ManyToOne(() => Subdivision, (s) => s.users, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'subdivision_id' })
   subdivision!: Subdivision | null;
+
+  @ManyToOne(() => Junction, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'junction_id' })
+  junction!: Junction | null;
 }

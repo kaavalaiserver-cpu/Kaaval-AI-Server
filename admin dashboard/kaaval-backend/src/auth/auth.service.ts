@@ -86,6 +86,7 @@ export class AuthService {
       role: user.role?.roleCode ?? 'GUEST',
       name: user.fullName,
       subdivision: user.subdivisionId ?? null,
+      junction: user.junctionId ?? null,
       requiresPasswordChange: user.requiresPasswordChange,
       sessionId: session.id,
     };
@@ -98,6 +99,7 @@ export class AuthService {
         name: user.fullName,
         role: user.role?.roleCode ?? 'GUEST',
         subdivision: user.subdivisionId ?? null,
+        junction: user.junctionId ?? null,
         requiresPasswordChange: user.requiresPasswordChange,
       },
     };
@@ -125,13 +127,14 @@ export class AuthService {
     }
   }
 
-  getProfile(user: { id: string; username: string; role: string; name: string; subdivision?: string | null; requiresPasswordChange?: boolean }) {
+  getProfile(user: { id: string; username: string; role: string; name: string; subdivision?: string | null; junction?: string | null; requiresPasswordChange?: boolean }) {
     return {
       id: user.id,
       username: user.username,
       name: user.name,
       role: user.role,
       subdivision: user.subdivision ?? null,
+      junction: user.junction ?? null,
       requiresPasswordChange: user.requiresPasswordChange ?? false,
     };
   }

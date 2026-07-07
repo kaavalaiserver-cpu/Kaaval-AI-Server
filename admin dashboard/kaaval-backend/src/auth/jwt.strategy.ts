@@ -45,7 +45,7 @@ export class JwtStrategy extends JwtPassportStrategy {
     });
   }
 
-  async validate(payload: { sub: string; username: string; role: string; name: string; subdivision?: string | null; sessionId?: string }) {
+  async validate(payload: { sub: string; username: string; role: string; name: string; subdivision?: string | null; junction?: string | null; sessionId?: string }) {
     if (payload.sessionId) {
       const isValid = await this.usersService.isSessionValid(payload.sessionId);
       if (!isValid) {
@@ -58,7 +58,8 @@ export class JwtStrategy extends JwtPassportStrategy {
       username: payload.username,
       role: payload.role, // This is now roleCode
       name: payload.name,
-      subdivision: payload.subdivision ?? null,
+      subdivisionId: payload.subdivision ?? null,
+      junctionId: payload.junction ?? null,
     };
   }
 }

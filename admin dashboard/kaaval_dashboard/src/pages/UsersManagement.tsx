@@ -44,6 +44,7 @@ const SUBDIVISIONS = [
 
 const UsersManagement = () => {
   const [users, setUsers] = useState<UserAccount[]>([]);
+  const [junctions, setJunctions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -61,20 +62,24 @@ const UsersManagement = () => {
   const [customPassword, setCustomPassword] = useState('');
   const [autoGenerate, setAutoGenerate] = useState(true);
 
-  const fetchUsers = async () => {
+  const fetchUsersAndJunctions = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`${API_BASE}/users`);
-      setUsers(res.data);
+      const [usersRes, juncRes] = await Promise.all([
+        axios.get(`${API_BASE}/users`),
+        axios.get(`${API_BASE}/cameras/junctions`)
+      ]);
+      setUsers(usersRes.data);
+      setJunctions(juncRes.data);
     } catch (err) {
-      console.error('Failed to fetch users', err);
+      console.error('Failed to fetch users or junctions', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsersAndJunctions();
   }, []);
 
   const handleOpenModal = (mode: 'create' | 'edit' | 'reset' | 'status' | 'delete', user?: UserAccount) => {
@@ -100,6 +105,7 @@ const UsersManagement = () => {
         designation: user.designation,
         role: user.role,
         subdivision: user.subdivision,
+        junction: user.junction,
         phoneNumber: user.phoneNumber,
         email: user.email
       });
@@ -118,7 +124,7 @@ const UsersManagement = () => {
       if (modalMode === 'create') {
         const res = await axios.post(`${API_BASE}/users`, formData);
         setTempPassword(res.data.temporaryPassword);
-        fetchUsers();
+        fetchUsersAndJunctions();
       } else if (modalMode === 'edit' && selectedUser) {
         if (!reason && formData.role !== selectedUser.role) {
             alert('Reason is required for role changes');
@@ -126,7 +132,7 @@ const UsersManagement = () => {
         }
         await axios.patch(`${API_BASE}/users/${selectedUser.id}`, { ...formData, reason });
         handleCloseModal();
-        fetchUsers();
+        fetchUsersAndJunctions();
       } else if (modalMode === 'status' && selectedUser) {
         if (!reason) {
             alert('Reason is required to change status');
@@ -134,7 +140,7 @@ const UsersManagement = () => {
         }
         await axios.patch(`${API_BASE}/users/${selectedUser.id}/status`, { isActive: !selectedUser.isActive, reason });
         handleCloseModal();
-        fetchUsers();
+        fetchUsersAndJunctions();
       } else if (modalMode === 'reset' && selectedUser) {
         if (!reason) {
             alert('Reason is required to reset password');
@@ -149,12 +155,12 @@ const UsersManagement = () => {
           customPassword: autoGenerate ? undefined : customPassword.trim()
         });
         setTempPassword(res.data.temporaryPassword);
-        fetchUsers();
+        fetchUsersAndJunctions();
       } else if (modalMode === 'delete' && selectedUser) {
         if (window.confirm(`Are you SURE you want to completely delete the user ${selectedUser.username}? This cannot be undone.`)) {
           await axios.delete(`${API_BASE}/users/${selectedUser.id}`);
           handleCloseModal();
-          fetchUsers();
+          fetchUsersAndJunctions();
         }
       }
     } catch (err: any) {
@@ -181,7 +187,7 @@ const UsersManagement = () => {
       <div className="users-header">
         <h2><Users size={22} /> User Management</h2>
         <div className="users-header-right">
-          <button className="btn-secondary" onClick={fetchUsers}><RefreshCw size={15} /> Refresh</button>
+          <button className="btn-secondary" onClick={fetchUsersAndJunctions}><RefreshCw size={15} /> Refresh</button>
           <button className="btn-primary" onClick={() => handleOpenModal('create')}><UserPlus size={15} /> Create User</button>
         </div>
       </div>
@@ -285,7 +291,7 @@ const UsersManagement = () => {
                       <td>
                         <div className="td-stack">
                           <span className={`role-badge ${(user.role || '').toLowerCase()}`}>{(user.role || 'unknown').replace(/_/g, ' ').toUpperCase()}</span>
-                          <span className="td-sub">{user.subdivision || 'No subdivision'}</span>
+                          <span className="td-sub">{user.junction || user.subdivision || 'Full Access'}</span>
                         </div>
                       </td>
                       <td>
@@ -379,9 +385,18 @@ const UsersManagement = () => {
                       </div>
                       <div className="form-group">
                         <label>Subdivision</label>
-                        <select value={formData.subdivision || ''} onChange={e => setFormData({...formData, subdivision: e.target.value})}>
-                          <option value="">None</option>
+                        <select value={formData.subdivision || ''} onChange={e => setFormData({...formData, subdivision: e.target.value, junction: ''})}>
+                          <option value="">None (All Subdivisions)</option>
                           {SUBDIVISIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>Junction (Optional)</label>
+                        <select value={formData.junction || ''} onChange={e => setFormData({...formData, junction: e.target.value})}>
+                          <option value="">None (All Junctions)</option>
+                          {junctions.filter(j => !formData.subdivision || j.subdivision?.subdivisionName === formData.subdivision).map(j => (
+                            <option key={j.id} value={j.junctionName}>{j.junctionName}</option>
+                          ))}
                         </select>
                       </div>
                     </div>
