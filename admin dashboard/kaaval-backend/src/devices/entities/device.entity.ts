@@ -20,7 +20,7 @@ export class Device {
   id!: string;
 
   @Index({ unique: true })
-  @Column({ name: 'camera_id', type: 'uuid' })
+  @Column({ name: 'camera_id', type: 'varchar' })
   cameraId!: string;
 
   @Column({ name: 'chip_serial', type: 'varchar', length: 100, nullable: true })
@@ -41,10 +41,10 @@ export class Device {
   @Column({ name: 'api_secret', type: 'varchar', length: 200, nullable: true })
   apiSecret!: string | null;
 
-  @Column({ name: 'registered_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'registered_at', type: 'datetime', nullable: true })
   registeredAt!: Date | null;
 
-  @Column({ name: 'last_sync', type: 'timestamptz', nullable: true })
+  @Column({ name: 'last_sync', type: 'datetime', nullable: true })
   lastSync!: Date | null;
 
   @Column({ name: 'is_registered', type: 'boolean', default: false })

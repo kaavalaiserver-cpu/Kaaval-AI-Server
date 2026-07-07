@@ -57,17 +57,10 @@ function checkPort(host: string, port: number, timeout = 2000): Promise<boolean>
         Logger.log(`Connecting to PostgreSQL database at ${dbHost}:${dbPort}`, 'TypeORM');
         
         return {
-          type: 'postgres' as const,
-          host: dbHost,
-          port: dbPort,
-          username: config.get<string>('DB_USERNAME', 'postgres'),
-          password: config.get<string>('DB_PASSWORD', 'postgres'),
-          database: config.get<string>('DB_NAME', 'kaaval_ai'),
+          type: 'sqlite' as const,
+          database: 'kaaval_local.db',
           entities: [__dirname + '/**/*.entity{.ts,.js}'],
           synchronize: process.env.NODE_ENV !== 'production',
-          ssl: dbHost !== 'localhost'
-            ? { rejectUnauthorized: false }
-            : false,
         };
       },
     }),

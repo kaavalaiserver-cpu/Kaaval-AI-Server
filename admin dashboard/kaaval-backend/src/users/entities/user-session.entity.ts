@@ -7,7 +7,7 @@ export class LoginSession {
   id!: string;
 
   @Index()
-  @Column({ name: 'user_id', type: 'uuid' })
+  @Column({ name: 'user_id', type: 'varchar' })
   userId!: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
@@ -30,13 +30,13 @@ export class LoginSession {
   @Column({ name: 'operating_system', type: 'varchar', length: 100, nullable: true })
   operatingSystem!: string | null;
 
-  @Column({ name: 'login_time', type: 'timestamptz' })
+  @Column({ name: 'login_time', type: 'datetime' })
   loginTime!: Date;
 
-  @Column({ name: 'logout_time', type: 'timestamptz', nullable: true })
+  @Column({ name: 'logout_time', type: 'datetime', nullable: true })
   logoutTime!: Date | null;
 
-  @Column({ name: 'expires_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'expires_at', type: 'datetime', nullable: true })
   expiresAt!: Date | null;
 
   @Column({ name: 'is_active', type: 'boolean', default: true })

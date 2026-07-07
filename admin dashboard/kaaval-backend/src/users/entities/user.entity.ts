@@ -43,15 +43,15 @@ export class User {
 
   // ── Foreign Keys ──────────────────────────────────────────────
   @Index()
-  @Column({ name: 'role_id', type: 'uuid', nullable: true })
+  @Column({ name: 'role_id', type: 'varchar', nullable: true })
   roleId!: string | null;
 
   @Index()
-  @Column({ name: 'district_id', type: 'uuid', nullable: true })
+  @Column({ name: 'district_id', type: 'varchar', nullable: true })
   districtId!: string | null;
 
   @Index()
-  @Column({ name: 'subdivision_id', type: 'uuid', nullable: true })
+  @Column({ name: 'subdivision_id', type: 'varchar', nullable: true })
   subdivisionId!: string | null;
 
   // ── Status & Auth Fields ──────────────────────────────────────
@@ -64,17 +64,17 @@ export class User {
   @Column({ name: 'failed_login_attempts', type: 'int', default: 0 })
   failedLoginAttempts!: number;
 
-  @Column({ name: 'locked_until', type: 'timestamptz', nullable: true })
+  @Column({ name: 'locked_until', type: 'datetime', nullable: true })
   lockedUntil!: Date | null;
 
-  @Column({ name: 'last_login', type: 'timestamptz', nullable: true })
+  @Column({ name: 'last_login', type: 'datetime', nullable: true })
   lastLogin!: Date | null;
 
   // ── Audit ─────────────────────────────────────────────────────
-  @Column({ name: 'created_by', type: 'uuid', nullable: true })
+  @Column({ name: 'created_by', type: 'varchar', nullable: true })
   createdByUserId!: string | null;
 
-  @Column({ name: 'updated_by', type: 'uuid', nullable: true })
+  @Column({ name: 'updated_by', type: 'varchar', nullable: true })
   updatedByUserId!: string | null;
 
   @CreateDateColumn({ name: 'created_at' })

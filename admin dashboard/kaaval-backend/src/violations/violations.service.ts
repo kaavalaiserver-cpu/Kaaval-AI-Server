@@ -354,4 +354,50 @@ export class ViolationsService {
     };
     return map[raw] ?? raw;
   }
+
+  // ── Violation Type CRUD ────────────────────────────────────────
+  async getViolationTypes() {
+    return this.violationTypeRepo.find({ order: { violationName: 'ASC' } });
+  }
+
+  async createViolationType(dto: {
+    violationCode: string;
+    violationName: string;
+    description?: string;
+    defaultFine?: number;
+    color?: string;
+    severity?: string;
+  }) {
+    const vt = this.violationTypeRepo.create({
+      violationCode: dto.violationCode.toUpperCase().replace(/\s+/g, '_'),
+      violationName: dto.violationName,
+      description: dto.description ?? null,
+      defaultFine: dto.defaultFine ?? 500,
+      color: dto.color ?? '#FF4B4B',
+      severity: dto.severity ?? 'HIGH',
+      isActive: true,
+    });
+    return this.violationTypeRepo.save(vt);
+  }
+
+  async updateViolationType(id: string, dto: Partial<{
+    violationCode: string;
+    violationName: string;
+    description: string;
+    defaultFine: number;
+    color: string;
+    severity: string;
+    isActive: boolean;
+  }>) {
+    await this.violationTypeRepo.update(id, dto);
+    return this.violationTypeRepo.findOne({ where: { id } });
+  }
+
+  async removeViolationType(id: string) {
+    const vt = await this.violationTypeRepo.findOne({ where: { id } });
+    if (!vt) return { status: 'not_found', id };
+    // Soft-delete: mark as inactive rather than hard delete (protects historical data)
+    await this.violationTypeRepo.update(id, { isActive: false });
+    return { status: 'deactivated', id };
+  }
 }

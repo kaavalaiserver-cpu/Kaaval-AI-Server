@@ -17,7 +17,7 @@ export class MaintenanceSchedule {
   id!: string;
 
   @Index()
-  @Column({ name: 'camera_id', type: 'uuid' })
+  @Column({ name: 'camera_id', type: 'varchar' })
   cameraId!: string;
 
   @Column({ name: 'maintenance_type', type: 'varchar', length: 50 })
@@ -33,10 +33,10 @@ export class MaintenanceSchedule {
   notes!: string | null;
 
   @Index()
-  @Column({ name: 'assigned_to', type: 'uuid', nullable: true })
+  @Column({ name: 'assigned_to', type: 'varchar', nullable: true })
   assignedToUserId!: string | null;
 
-  @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'completed_at', type: 'datetime', nullable: true })
   completedAt!: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

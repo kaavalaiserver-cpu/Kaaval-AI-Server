@@ -79,6 +79,34 @@ export class ViolationsController {
     stream.pipe(res);
   }
 
+  @Get('types')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR')
+  getViolationTypes() {
+    return this.violationsService.getViolationTypes();
+  }
+
+  @Post('types')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'DEVELOPER')
+  createViolationType(@Body() dto: any) {
+    return this.violationsService.createViolationType(dto);
+  }
+
+  @Patch('types/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'DEVELOPER')
+  updateViolationType(@Param('id') id: string, @Body() dto: any) {
+    return this.violationsService.updateViolationType(id, dto);
+  }
+
+  @Delete('types/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN')
+  removeViolationType(@Param('id') id: string) {
+    return this.violationsService.removeViolationType(id);
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR')

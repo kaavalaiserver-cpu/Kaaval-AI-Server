@@ -16,14 +16,14 @@ export class CameraModelMapping {
   id!: string;
 
   @Index()
-  @Column({ name: 'camera_id', type: 'uuid' })
+  @Column({ name: 'camera_id', type: 'varchar' })
   cameraId!: string;
 
   @Index()
-  @Column({ name: 'ai_model_id', type: 'uuid' })
+  @Column({ name: 'ai_model_id', type: 'varchar' })
   aiModelId!: string;
 
-  @Column({ name: 'assigned_at', type: 'timestamptz' })
+  @Column({ name: 'assigned_at', type: 'datetime' })
   assignedAt!: Date;
 
   @Column({ name: 'is_active', type: 'boolean', default: true })

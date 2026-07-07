@@ -29,19 +29,19 @@ export class Notification {
   notificationType!: string;
 
   @Index()
-  @Column({ name: 'sender_id', type: 'uuid', nullable: true })
+  @Column({ name: 'sender_id', type: 'varchar', nullable: true })
   senderId!: string | null;
 
   @Index()
-  @Column({ name: 'target_role_id', type: 'uuid', nullable: true })
+  @Column({ name: 'target_role_id', type: 'varchar', nullable: true })
   targetRoleId!: string | null;
 
   @Index()
-  @Column({ name: 'target_subdivision_id', type: 'uuid', nullable: true })
+  @Column({ name: 'target_subdivision_id', type: 'varchar', nullable: true })
   targetSubdivisionId!: string | null;
 
   @Index()
-  @Column({ name: 'target_user_id', type: 'uuid', nullable: true })
+  @Column({ name: 'target_user_id', type: 'varchar', nullable: true })
   targetUserId!: string | null;
 
   @Column({ name: 'is_read', type: 'boolean', default: false })

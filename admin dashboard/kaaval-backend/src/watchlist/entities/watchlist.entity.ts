@@ -17,7 +17,7 @@ export class Watchlist {
   id!: string;
 
   @Index({ unique: true })
-  @Column({ name: 'vehicle_id', type: 'uuid' })
+  @Column({ name: 'vehicle_id', type: 'varchar' })
   vehicleId!: string;
 
   @Column({ type: 'text', nullable: true })
@@ -30,7 +30,7 @@ export class Watchlist {
   expiryDate!: string | null; // null = permanent
 
   @Index()
-  @Column({ name: 'added_by', type: 'uuid', nullable: true })
+  @Column({ name: 'added_by', type: 'varchar', nullable: true })
   addedByUserId!: string | null;
 
   @Column({ name: 'is_active', type: 'boolean', default: true })

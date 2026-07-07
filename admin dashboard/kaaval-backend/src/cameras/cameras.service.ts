@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -89,17 +89,31 @@ export class CamerasService {
     return await this.junctionRepo.save(junction);
   }
 
+  async updateJunction(id: string, dto: any) {
+    await this.junctionRepo.update(id, dto);
+    return await this.junctionRepo.findOne({
+      where: { id },
+      relations: ['subdivision'],
+    });
+  }
+
+  async removeJunction(id: string) {
+    const junction = await this.junctionRepo.findOne({ where: { id } });
+    if (!junction) return { status: 'not_found', id };
+    await this.junctionRepo.delete(id);
+    return { status: 'deleted', id };
+  }
+
   async create(dto: any) {
     if (!dto.junctionId) {
-      throw new import('@nestjs/common').BadRequestException('Junction ID is required');
+      throw new BadRequestException('Junction ID is required');
     }
     const camera = this.cameraRepo.create(dto);
     try {
       return await this.cameraRepo.save(camera);
     } catch (e: any) {
-      require('fs').writeFileSync('../../scratch/backend_err.txt', e.stack || e.message);
       console.error('Error creating camera', e);
-      throw new import('@nestjs/common').InternalServerErrorException('Failed to create camera');
+      throw new InternalServerErrorException('Failed to create camera');
     }
   }
 

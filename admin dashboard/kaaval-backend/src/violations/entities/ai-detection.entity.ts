@@ -18,31 +18,31 @@ export class AiDetection {
   id!: string;
 
   @Index()
-  @Column({ name: 'camera_id', type: 'uuid' })
+  @Column({ name: 'camera_id', type: 'varchar' })
   cameraId!: string;
 
   @Index()
-  @Column({ name: 'vehicle_id', type: 'uuid', nullable: true })
+  @Column({ name: 'vehicle_id', type: 'varchar', nullable: true })
   vehicleId!: string | null;
 
-  @Column({ name: 'raw_detection', type: 'jsonb' })
+  @Column({ name: 'raw_detection', type: 'json' })
   rawDetection!: any;
 
   @Index()
-  @Column({ name: 'ai_model_id', type: 'uuid', nullable: true })
+  @Column({ name: 'ai_model_id', type: 'varchar', nullable: true })
   aiModelId!: string | null;
 
   @Column({ type: 'float', nullable: true })
   confidence!: number | null;
 
-  @Column({ name: 'detection_time', type: 'timestamptz' })
+  @Column({ name: 'detection_time', type: 'datetime' })
   detectionTime!: Date;
 
   @Column({ name: 'promoted_to_violation', type: 'boolean', default: false })
   promotedToViolation!: boolean;
 
   @Index()
-  @Column({ name: 'violation_id', type: 'uuid', nullable: true })
+  @Column({ name: 'violation_id', type: 'varchar', nullable: true })
   violationId!: string | null;
 
   @CreateDateColumn({ name: 'created_at' })

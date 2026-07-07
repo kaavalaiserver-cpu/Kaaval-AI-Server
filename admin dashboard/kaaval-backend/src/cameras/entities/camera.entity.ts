@@ -23,7 +23,7 @@ export class Camera {
   id!: string;
 
   @Index()
-  @Column({ name: 'junction_id', type: 'uuid' })
+  @Column({ name: 'junction_id', type: 'varchar' })
   junctionId!: string;
 
   @Column({ name: 'camera_name', type: 'varchar', length: 200 })
@@ -53,7 +53,7 @@ export class Camera {
   @Column({ type: 'varchar', length: 20, default: 'OFFLINE' })
   status!: string; // ONLINE, OFFLINE, NO_STREAM, MAINTENANCE, ERROR, BOOTING
 
-  @Column({ name: 'last_seen', type: 'timestamptz', nullable: true })
+  @Column({ name: 'last_seen', type: 'datetime', nullable: true })
   lastSeen!: Date | null;
 
   @Column({ type: 'text', nullable: true })

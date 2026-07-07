@@ -15,7 +15,7 @@ export class Evidence {
   id!: string;
 
   @Index()
-  @Column({ name: 'violation_id', type: 'uuid' })
+  @Column({ name: 'violation_id', type: 'varchar' })
   violationId!: string;
 
   @Column({ name: 'evidence_type', type: 'varchar', length: 50 })
@@ -30,7 +30,7 @@ export class Evidence {
   @Column({ name: 'file_size', type: 'bigint', nullable: true })
   fileSize!: number | null;
 
-  @Column({ name: 'captured_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'captured_at', type: 'datetime', nullable: true })
   capturedAt!: Date | null;
 
   @CreateDateColumn({ name: 'uploaded_at' })

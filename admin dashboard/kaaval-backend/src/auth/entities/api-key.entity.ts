@@ -27,23 +27,23 @@ export class ApiKey {
   keyName!: string;
 
   @Index()
-  @Column({ name: 'device_id', type: 'uuid', nullable: true })
+  @Column({ name: 'device_id', type: 'varchar', nullable: true })
   deviceId!: string | null;
 
   @Index()
-  @Column({ name: 'created_by', type: 'uuid', nullable: true })
+  @Column({ name: 'created_by', type: 'varchar', nullable: true })
   createdByUserId!: string | null;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'json', nullable: true })
   scopes!: any | null; // e.g. ["TELEMETRY_WRITE", "EVIDENCE_UPLOAD"]
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive!: boolean;
 
-  @Column({ name: 'expires_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'expires_at', type: 'datetime', nullable: true })
   expiresAt!: Date | null;
 
-  @Column({ name: 'last_used_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'last_used_at', type: 'datetime', nullable: true })
   lastUsedAt!: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

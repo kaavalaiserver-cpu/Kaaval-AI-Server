@@ -21,30 +21,30 @@ export class Violation {
   id!: string;
 
   @Index()
-  @Column({ name: 'camera_id', type: 'uuid', nullable: true })
+  @Column({ name: 'camera_id', type: 'varchar', nullable: true })
   cameraId!: string | null;
 
   @Index()
-  @Column({ name: 'vehicle_id', type: 'uuid', nullable: true })
+  @Column({ name: 'vehicle_id', type: 'varchar', nullable: true })
   vehicleId!: string | null;
 
-  @Column({ name: 'violation_type_id', type: 'uuid', nullable: true })
+  @Column({ name: 'violation_type_id', type: 'varchar', nullable: true })
   violationTypeId!: string | null;
 
   @Column({ type: 'float', nullable: true })
   confidence!: number | null;
 
   @Index()
-  @Column({ name: 'violation_timestamp', type: 'timestamptz' })
+  @Column({ name: 'violation_timestamp', type: 'datetime' })
   violationTimestamp!: Date;
 
   @Column({ type: 'varchar', length: 30, default: 'PENDING' })
   status!: string; // PENDING, UNDER_REVIEW, APPROVED, REJECTED, AUTO_REJECTED
 
-  @Column({ name: 'reviewed_by', type: 'uuid', nullable: true })
+  @Column({ name: 'reviewed_by', type: 'varchar', nullable: true })
   reviewedByUserId!: string | null;
 
-  @Column({ name: 'reviewed_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'reviewed_at', type: 'datetime', nullable: true })
   reviewedAt!: Date | null;
 
   @Column({ name: 'approval_notes', type: 'text', nullable: true })

@@ -17,11 +17,11 @@ export class PlatformMetric {
   @Column({ type: 'float' })
   value!: number;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'json', nullable: true })
   labels!: any | null; // e.g. {"subdivision_id": "...", "node": "worker-1"}
 
   @Index()
-  @Column({ name: 'recorded_at', type: 'timestamptz' })
+  @Column({ name: 'recorded_at', type: 'datetime' })
   recordedAt!: Date;
 
   @CreateDateColumn({ name: 'created_at' })

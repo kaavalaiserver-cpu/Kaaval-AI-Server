@@ -18,7 +18,7 @@ export class CameraSettings {
   id!: string;
 
   @Index({ unique: true })
-  @Column({ name: 'camera_id', type: 'uuid' })
+  @Column({ name: 'camera_id', type: 'varchar' })
   cameraId!: string;
 
   @Column({ name: 'helmet_detection', type: 'boolean', default: false })
@@ -63,7 +63,7 @@ export class CameraSettings {
   @Column({ name: 'auto_cleanup_days', type: 'int', default: 30 })
   autoCleanupDays!: number;
 
-  @Column({ name: 'updated_by', type: 'uuid', nullable: true })
+  @Column({ name: 'updated_by', type: 'varchar', nullable: true })
   updatedByUserId!: string | null;
 
   @CreateDateColumn({ name: 'created_at' })

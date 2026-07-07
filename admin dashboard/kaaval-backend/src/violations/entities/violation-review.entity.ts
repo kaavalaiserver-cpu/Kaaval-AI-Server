@@ -16,11 +16,11 @@ export class ViolationReview {
   id!: string;
 
   @Index()
-  @Column({ name: 'violation_id', type: 'uuid' })
+  @Column({ name: 'violation_id', type: 'varchar' })
   violationId!: string;
 
   @Index()
-  @Column({ name: 'reviewed_by', type: 'uuid' })
+  @Column({ name: 'reviewed_by', type: 'varchar' })
   reviewedByUserId!: string;
 
   @Column({ name: 'previous_status', type: 'varchar', length: 50 })
@@ -32,7 +32,7 @@ export class ViolationReview {
   @Column({ type: 'text', nullable: true })
   remarks!: string | null;
 
-  @Column({ name: 'reviewed_at', type: 'timestamptz' })
+  @Column({ name: 'reviewed_at', type: 'datetime' })
   reviewedAt!: Date;
 
   @CreateDateColumn({ name: 'created_at' })

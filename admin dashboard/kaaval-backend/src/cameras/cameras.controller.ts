@@ -43,6 +43,18 @@ export class CamerasController {
     return this.camerasService.createJunction(dto, req.user);
   }
 
+  @Patch('junctions/:id')
+  @Roles('SUPER_ADMIN', 'DEVELOPER')
+  updateJunction(@Param('id') id: string, @Body() dto: any) {
+    return this.camerasService.updateJunction(id, dto);
+  }
+
+  @Delete('junctions/:id')
+  @Roles('SUPER_ADMIN')
+  removeJunction(@Param('id') id: string) {
+    return this.camerasService.removeJunction(id);
+  }
+
   @Post()
   @Roles('SUPER_ADMIN', 'SP', 'DEVELOPER')
   create(@Body() dto: any) {

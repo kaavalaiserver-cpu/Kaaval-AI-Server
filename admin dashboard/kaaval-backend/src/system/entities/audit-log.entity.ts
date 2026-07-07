@@ -12,7 +12,7 @@ export class AuditLog {
   id!: string;
 
   @Index()
-  @Column({ name: 'user_id', type: 'uuid', nullable: true })
+  @Column({ name: 'user_id', type: 'varchar', nullable: true })
   userId!: string | null;
 
   @Column({ type: 'varchar', length: 100 })
@@ -24,13 +24,13 @@ export class AuditLog {
   @Column({ type: 'varchar', length: 100, nullable: true })
   entity!: string | null;
 
-  @Column({ name: 'entity_id', type: 'uuid', nullable: true })
+  @Column({ name: 'entity_id', type: 'varchar', nullable: true })
   entityId!: string | null;
 
-  @Column({ name: 'old_data', type: 'jsonb', nullable: true })
+  @Column({ name: 'old_data', type: 'json', nullable: true })
   oldData!: any | null;
 
-  @Column({ name: 'new_data', type: 'jsonb', nullable: true })
+  @Column({ name: 'new_data', type: 'json', nullable: true })
   newData!: any | null;
 
   @Column({ name: 'ip_address', type: 'varchar', length: 50, nullable: true })

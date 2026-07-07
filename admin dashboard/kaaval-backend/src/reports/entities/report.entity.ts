@@ -22,7 +22,7 @@ export class Report {
   reportType!: string; // DAILY, WEEKLY, MONTHLY, CUSTOM
 
   @Index()
-  @Column({ name: 'generated_by', type: 'uuid', nullable: true })
+  @Column({ name: 'generated_by', type: 'varchar', nullable: true })
   generatedByUserId!: string | null;
 
   @Column({ name: 'from_date', type: 'date', nullable: true })
@@ -32,7 +32,7 @@ export class Report {
   toDate!: string | null;
 
   @Index()
-  @Column({ name: 'subdivision_id', type: 'uuid', nullable: true })
+  @Column({ name: 'subdivision_id', type: 'varchar', nullable: true })
   subdivisionId!: string | null;
 
   @Column({ name: 'file_path', type: 'text', nullable: true })

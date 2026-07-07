@@ -15,7 +15,7 @@ export class DeviceTelemetry {
   id!: string;
 
   @Index()
-  @Column({ name: 'device_id', type: 'uuid' })
+  @Column({ name: 'device_id', type: 'varchar' })
   deviceId!: string;
 
   @Column({ name: 'cpu_usage', type: 'float', nullable: true })
@@ -48,11 +48,11 @@ export class DeviceTelemetry {
   @Column({ name: 'power_status', type: 'varchar', length: 20, default: 'UNKNOWN' })
   powerStatus!: string; // NORMAL, LOW_POWER, BATTERY, UNKNOWN
 
-  @Column({ name: 'heartbeat_received_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'heartbeat_received_at', type: 'datetime', nullable: true })
   heartbeatReceivedAt!: Date | null;
 
   @Index()
-  @Column({ name: 'recorded_at', type: 'timestamptz' })
+  @Column({ name: 'recorded_at', type: 'datetime' })
   recordedAt!: Date;
 
   @ManyToOne(() => Device, (d) => d.telemetry, { onDelete: 'CASCADE' })

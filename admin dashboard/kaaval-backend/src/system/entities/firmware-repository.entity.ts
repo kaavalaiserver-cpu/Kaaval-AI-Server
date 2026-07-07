@@ -29,7 +29,7 @@ export class FirmwareRepository {
   @Column({ name: 'is_mandatory', type: 'boolean', default: false })
   isMandatory!: boolean;
 
-  @Column({ name: 'release_date', type: 'timestamptz' })
+  @Column({ name: 'release_date', type: 'datetime' })
   releaseDate!: Date;
 
   @CreateDateColumn({ name: 'created_at' })

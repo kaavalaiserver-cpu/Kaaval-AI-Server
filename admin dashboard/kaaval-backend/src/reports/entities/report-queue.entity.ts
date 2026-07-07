@@ -18,19 +18,19 @@ export class ReportQueue {
   reportType!: string;
 
   @Index()
-  @Column({ name: 'requested_by', type: 'uuid' })
+  @Column({ name: 'requested_by', type: 'varchar' })
   requestedByUserId!: string;
 
   @Column({ type: 'varchar', length: 50, default: 'PENDING' })
   status!: string;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'json', nullable: true })
   parameters!: any | null;
 
-  @Column({ name: 'started_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'started_at', type: 'datetime', nullable: true })
   startedAt!: Date | null;
 
-  @Column({ name: 'completed_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'completed_at', type: 'datetime', nullable: true })
   completedAt!: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

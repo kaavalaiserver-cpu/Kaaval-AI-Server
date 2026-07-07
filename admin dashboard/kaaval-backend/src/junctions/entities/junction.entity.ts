@@ -19,7 +19,7 @@ export class Junction {
   id!: string;
 
   @Index()
-  @Column({ name: 'subdivision_id', type: 'uuid' })
+  @Column({ name: 'subdivision_id', type: 'varchar' })
   subdivisionId!: string;
 
   @Column({ name: 'junction_name', type: 'varchar', length: 200 })

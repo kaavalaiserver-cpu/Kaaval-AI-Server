@@ -20,7 +20,7 @@ export class CameraStorage {
   id!: string;
 
   @Index({ unique: true })
-  @Column({ name: 'camera_id', type: 'uuid' })
+  @Column({ name: 'camera_id', type: 'varchar' })
   cameraId!: string;
 
   @Column({ name: 'storage_path', type: 'varchar', length: 500 })
@@ -38,10 +38,10 @@ export class CameraStorage {
   @Column({ name: 'retention_days', type: 'int', default: 30 })
   retentionDays!: number;
 
-  @Column({ name: 'last_cleanup_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'last_cleanup_at', type: 'datetime', nullable: true })
   lastCleanupAt!: Date | null;
 
-  @Column({ name: 'last_updated_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'last_updated_at', type: 'datetime', nullable: true })
   lastUpdatedAt!: Date | null;
 
   @OneToOne(() => Camera, (c) => c.storage, { onDelete: 'CASCADE' })

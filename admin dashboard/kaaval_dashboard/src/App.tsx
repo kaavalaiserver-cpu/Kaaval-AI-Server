@@ -15,6 +15,7 @@ import CameraConfig from './pages/CameraConfig';
 import UsersManagement from './pages/UsersManagement';
 import SettingsPage from './pages/Settings';
 import WeeklyReports from './pages/WeeklyReports';
+import KitManagement from './pages/KitManagement';
 
 const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer'];
 const ALL_EXCEPT_VIEWERS: Role[] = ['super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'developer', 'operator'];
@@ -78,6 +79,11 @@ function AppRoutes() {
         <Route path="camera-config" element={
           <ProtectedRoute roles={['super_admin']}>
             <CameraConfig />
+          </ProtectedRoute>
+        } />
+        <Route path="kit-management" element={
+          <ProtectedRoute roles={['super_admin']}>
+            <KitManagement />
           </ProtectedRoute>
         } />
         <Route path="settings" element={<SettingsPage />} />

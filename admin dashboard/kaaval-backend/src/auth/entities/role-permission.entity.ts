@@ -15,7 +15,7 @@ export class RolePermission {
   id!: string;
 
   @Index()
-  @Column({ name: 'role_id', type: 'uuid' })
+  @Column({ name: 'role_id', type: 'varchar' })
   roleId!: string;
 
   @Column({ type: 'varchar', length: 100 })

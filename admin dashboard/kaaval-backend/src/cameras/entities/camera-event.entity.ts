@@ -15,7 +15,7 @@ export class CameraEvent {
   id!: string;
 
   @Index()
-  @Column({ name: 'camera_id', type: 'uuid' })
+  @Column({ name: 'camera_id', type: 'varchar' })
   cameraId!: string;
 
   @Column({ name: 'event_type', type: 'varchar', length: 50 })
@@ -27,7 +27,7 @@ export class CameraEvent {
   @Column({ type: 'text', nullable: true })
   message!: string | null;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'json', nullable: true })
   metadata!: any | null;
 
   @Index()

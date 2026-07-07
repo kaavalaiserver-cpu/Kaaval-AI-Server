@@ -19,17 +19,17 @@ export class NotificationRecipient {
   id!: string;
 
   @Index()
-  @Column({ name: 'notification_id', type: 'uuid' })
+  @Column({ name: 'notification_id', type: 'varchar' })
   notificationId!: string;
 
   @Index()
-  @Column({ name: 'user_id', type: 'uuid' })
+  @Column({ name: 'user_id', type: 'varchar' })
   userId!: string;
 
   @Column({ name: 'is_read', type: 'boolean', default: false })
   isRead!: boolean;
 
-  @Column({ name: 'read_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'read_at', type: 'datetime', nullable: true })
   readAt!: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

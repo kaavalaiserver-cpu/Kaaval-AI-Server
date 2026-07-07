@@ -12,7 +12,7 @@ export class LoginOtp {
   id!: string;
 
   @Index()
-  @Column({ name: 'user_id', type: 'uuid' })
+  @Column({ name: 'user_id', type: 'varchar' })
   userId!: string;
 
   @Column({ type: 'varchar', length: 100 })
@@ -21,10 +21,10 @@ export class LoginOtp {
   @Column({ type: 'varchar', length: 50, default: 'LOGIN' })
   purpose!: string; // LOGIN, PASSWORD_RESET, EMAIL_VERIFICATION
 
-  @Column({ name: 'expires_at', type: 'timestamptz' })
+  @Column({ name: 'expires_at', type: 'datetime' })
   expiresAt!: Date;
 
-  @Column({ name: 'used_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'used_at', type: 'datetime', nullable: true })
   usedAt!: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

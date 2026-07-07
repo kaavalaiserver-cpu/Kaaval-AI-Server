@@ -16,11 +16,11 @@ export class AiInferenceLog {
   id!: string;
 
   @Index()
-  @Column({ name: 'camera_id', type: 'uuid' })
+  @Column({ name: 'camera_id', type: 'varchar' })
   cameraId!: string;
 
   @Index()
-  @Column({ name: 'ai_model_id', type: 'uuid', nullable: true })
+  @Column({ name: 'ai_model_id', type: 'varchar', nullable: true })
   aiModelId!: string | null;
 
   @Column({ name: 'inference_time_ms', type: 'float' })
@@ -39,7 +39,7 @@ export class AiInferenceLog {
   confidenceAvg!: number | null;
 
   @Index()
-  @Column({ name: 'recorded_at', type: 'timestamptz' })
+  @Column({ name: 'recorded_at', type: 'datetime' })
   recordedAt!: Date;
 
   @CreateDateColumn({ name: 'created_at' })

@@ -16,26 +16,26 @@ export class DeviceCommand {
   id!: string;
 
   @Index()
-  @Column({ name: 'device_id', type: 'uuid' })
+  @Column({ name: 'device_id', type: 'varchar' })
   deviceId!: string;
 
   @Column({ name: 'command_type', type: 'varchar', length: 50 })
   commandType!: string;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'json', nullable: true })
   payload!: any | null;
 
   @Column({ type: 'varchar', length: 20, default: 'QUEUED' })
   status!: string;
 
-  @Column({ name: 'executed_at', type: 'timestamptz', nullable: true })
+  @Column({ name: 'executed_at', type: 'datetime', nullable: true })
   executedAt!: Date | null;
 
   @Column({ type: 'text', nullable: true })
   response!: string | null;
 
   @Index()
-  @Column({ name: 'created_by', type: 'uuid', nullable: true })
+  @Column({ name: 'created_by', type: 'varchar', nullable: true })
   createdByUserId!: string | null;
 
   @CreateDateColumn({ name: 'created_at' })

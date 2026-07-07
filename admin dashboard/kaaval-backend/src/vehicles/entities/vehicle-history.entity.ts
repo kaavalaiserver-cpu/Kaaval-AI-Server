@@ -16,7 +16,7 @@ export class VehicleHistory {
   id!: string;
 
   @Index({ unique: true })
-  @Column({ name: 'vehicle_id', type: 'uuid' })
+  @Column({ name: 'vehicle_id', type: 'varchar' })
   vehicleId!: string;
 
   @Column({ name: 'total_violations', type: 'int', default: 0 })
@@ -31,7 +31,7 @@ export class VehicleHistory {
   @Column({ name: 'total_fine', type: 'decimal', precision: 10, scale: 2, default: 0 })
   totalFine!: number;
 
-  @Column({ name: 'last_violation', type: 'timestamptz', nullable: true })
+  @Column({ name: 'last_violation', type: 'datetime', nullable: true })
   lastViolation!: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

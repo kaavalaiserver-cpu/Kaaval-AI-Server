@@ -19,7 +19,7 @@ export class Subdivision {
   id!: string;
 
   @Index()
-  @Column({ name: 'district_id', type: 'uuid' })
+  @Column({ name: 'district_id', type: 'varchar' })
   districtId!: string;
 
   @Column({ name: 'subdivision_name', type: 'varchar', length: 150 })
@@ -31,7 +31,7 @@ export class Subdivision {
   @Column({ type: 'varchar', length: 200, nullable: true })
   headquarters!: string | null;
 
-  @Column({ name: 'polygon_coordinates', type: 'jsonb', nullable: true })
+  @Column({ name: 'polygon_coordinates', type: 'json', nullable: true })
   polygonCoordinates!: any | null; // e.g. [[lng, lat], [lng, lat], ...]
 
   @Column({ type: 'varchar', length: 20, default: 'ACTIVE' })

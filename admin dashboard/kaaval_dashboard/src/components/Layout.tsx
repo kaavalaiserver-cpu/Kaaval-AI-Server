@@ -21,6 +21,7 @@ import {
   Settings,
   Sun,
   Moon,
+  MapPin,
 } from 'lucide-react';
 import type { SystemStatus } from '../types';
 import NotificationPanel from './NotificationPanel';
@@ -182,6 +183,9 @@ const Layout = () => {
             roles={CAMERA_HEALTH_ROLES} />
 
           <NavItem to="/camera-config" icon={<Settings size={20} />} label="Camera Config" isOpen={isSidebarOpen}
+            roles={['super_admin']} />
+
+          <NavItem to="/kit-management" icon={<MapPin size={20} />} label="Kit Management" isOpen={isSidebarOpen}
             roles={['super_admin']} />
 
           <NavItem to="/system" icon={<Activity size={20} />} label="System Metrics" isOpen={isSidebarOpen}

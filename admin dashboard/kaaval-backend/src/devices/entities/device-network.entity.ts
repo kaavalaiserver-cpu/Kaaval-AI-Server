@@ -15,7 +15,7 @@ export class DeviceNetwork {
   id!: string;
 
   @Index({ unique: true })
-  @Column({ name: 'device_id', type: 'uuid' })
+  @Column({ name: 'device_id', type: 'varchar' })
   deviceId!: string;
 
   @Column({ name: 'local_ip', type: 'varchar', length: 50, nullable: true })
@@ -33,7 +33,7 @@ export class DeviceNetwork {
   @Column({ name: 'network_type', type: 'varchar', length: 20, nullable: true })
   networkType!: string | null; // LAN, ETHERNET, Wi-Fi, VPN
 
-  @Column({ name: 'last_ping', type: 'timestamptz', nullable: true })
+  @Column({ name: 'last_ping', type: 'datetime', nullable: true })
   lastPing!: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })
