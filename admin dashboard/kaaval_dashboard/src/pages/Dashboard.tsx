@@ -13,300 +13,11 @@ import {
   MapPin,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import HeatmapLayer from '../components/HeatmapLayer';
 import { useAuth } from '../context/AuthContext';
 import type { Role } from '../context/AuthContext';
 import './Dashboard.css';
 
-const KANYAKUMARI_CENTER: [number, number] = [8.0883, 77.5385];
-const DISTRICT_BOUNDS = L.latLngBounds(
-  L.latLng(7.9, 77.2),
-  L.latLng(8.4, 77.7),
-);
-
 const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer'];
-
-type LngLat = [number, number];
-
-interface MapScope {
-  name: string;
-  center: [number, number];
-  bounds: L.LatLngBounds;
-  keywords: string[];
-  polygon?: LngLat[];
-}
-
-const makeBoundsFromPolygon = (polygon: LngLat[]) =>
-  L.latLngBounds(polygon.map(([lng, lat]) => L.latLng(lat, lng)));
-
-const pointInPolygon = (point: LngLat, polygon: LngLat[]) => {
-  const [x, y] = point;
-  let inside = false;
-
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const [xi, yi] = polygon[i];
-    const [xj, yj] = polygon[j];
-
-    const intersects =
-      yi > y !== yj > y &&
-      x < ((xj - xi) * (y - yi)) / ((yj - yi) || Number.EPSILON) + xi;
-
-    if (intersects) {
-      inside = !inside;
-    }
-  }
-
-  return inside;
-};
-
-const DISTRICT_SCOPE: MapScope = {
-  name: 'Kanyakumari District',
-  center: KANYAKUMARI_CENTER,
-  bounds: DISTRICT_BOUNDS,
-  keywords: ['kanyakumari'],
-};
-
-const SUBDIVISION_SCOPES: Record<
-  Exclude<Role, 'super_admin' | 'sp' | 'dsp' | 'developer' | 'inspector' | 'sub_inspector' | 'operator' | 'viewer'>,
-  MapScope
-> = {
-  colachel_admin: {
-    name: 'Colachel',
-    center: [8.17, 77.24],
-    polygon: [
-      [77.172, 8.082],
-      [77.21, 8.12],
-      [77.265, 8.132],
-      [77.302, 8.112],
-      [77.332, 8.14],
-      [77.335, 8.19],
-      [77.308, 8.226],
-      [77.252, 8.236],
-      [77.206, 8.224],
-      [77.168, 8.192],
-    ],
-    bounds: L.latLngBounds(L.latLng(8.08, 77.16), L.latLng(8.24, 77.34)),
-    keywords: ['colachel'],
-  },
-  marthandam_admin: {
-    name: 'Marthandam',
-    center: [8.31, 77.22],
-    polygon: [
-      [77.145, 8.228],
-      [77.2, 8.218],
-      [77.252, 8.236],
-      [77.282, 8.272],
-      [77.312, 8.306],
-      [77.304, 8.36],
-      [77.246, 8.392],
-      [77.184, 8.382],
-      [77.136, 8.334],
-      [77.128, 8.278],
-    ],
-    bounds: L.latLngBounds(L.latLng(8.22, 77.12), L.latLng(8.4, 77.32)),
-    keywords: ['marthandam'],
-  },
-  nagercoil_admin: {
-    name: 'Nagercoil',
-    center: [8.19, 77.41],
-    polygon: [
-      [77.328, 8.132],
-      [77.366, 8.116],
-      [77.41, 8.122],
-      [77.454, 8.148],
-      [77.478, 8.188],
-      [77.472, 8.238],
-      [77.428, 8.274],
-      [77.372, 8.282],
-      [77.326, 8.246],
-      [77.31, 8.19],
-    ],
-    bounds: L.latLngBounds(L.latLng(8.11, 77.31), L.latLng(8.29, 77.48)),
-    keywords: ['nagercoil', 'ramanputhoor', 'collectorate', 'roundana'],
-  },
-  kanyakumari_admin: {
-    name: 'Kanyakumari',
-    center: [8.1, 77.55],
-    polygon: [
-      [77.39, 7.982],
-      [77.444, 8.002],
-      [77.506, 8.028],
-      [77.566, 8.066],
-      [77.624, 8.112],
-      [77.65, 8.162],
-      [77.63, 8.212],
-      [77.566, 8.226],
-      [77.504, 8.206],
-      [77.448, 8.168],
-      [77.404, 8.116],
-      [77.386, 8.056],
-    ],
-    bounds: L.latLngBounds(L.latLng(7.98, 77.38), L.latLng(8.23, 77.66)),
-    keywords: ['kanyakumari', 'cape'],
-  },
-  thuckalay_admin: {
-    name: 'Thuckalay',
-    center: [8.25, 77.3],
-    polygon: [
-      [77.234, 8.162],
-      [77.276, 8.152],
-      [77.322, 8.17],
-      [77.358, 8.21],
-      [77.372, 8.258],
-      [77.352, 8.304],
-      [77.304, 8.328],
-      [77.252, 8.318],
-      [77.216, 8.284],
-      [77.206, 8.228],
-    ],
-    bounds: L.latLngBounds(L.latLng(8.15, 77.2), L.latLng(8.33, 77.38)),
-    keywords: ['thuckalay'],
-  },
-};
-
-for (const scope of Object.values(SUBDIVISION_SCOPES)) {
-  if (scope.polygon) {
-    scope.bounds = makeBoundsFromPolygon(scope.polygon);
-  }
-}
-
-const WORLD_RING: [number, number][] = [
-  [90, -180],
-  [90, 180],
-  [-90, 180],
-  [-90, -180],
-];
-
-const toLatLngRing = (ring: number[][]): L.LatLngExpression[] =>
-  ring.map(([lng, lat]) => [lat, lng]);
-
-const getMaskHolesFromGeoJson = (geoJson: any): L.LatLngExpression[][] => {
-  const holes: L.LatLngExpression[][] = [];
-
-  const collectFromGeometry = (geometry: any) => {
-    if (!geometry?.type || !geometry?.coordinates) return;
-
-    if (geometry.type === 'Polygon') {
-      for (const ring of geometry.coordinates as number[][][]) {
-        holes.push(toLatLngRing(ring));
-      }
-      return;
-    }
-
-    if (geometry.type === 'MultiPolygon') {
-      for (const polygon of geometry.coordinates as number[][][][]) {
-        for (const ring of polygon) {
-          holes.push(toLatLngRing(ring));
-        }
-      }
-    }
-  };
-
-  if (geoJson?.type === 'FeatureCollection' && Array.isArray(geoJson.features)) {
-    for (const feature of geoJson.features) {
-      collectFromGeometry(feature?.geometry);
-    }
-  } else if (geoJson?.type === 'Feature') {
-    collectFromGeometry(geoJson.geometry);
-  } else {
-    collectFromGeometry(geoJson);
-  }
-
-  return holes;
-};
-
-const KanyakumariMapControl = ({
-  center,
-  bounds,
-  geoJsonUrl,
-  subdivisionPolygon,
-}: {
-  center: [number, number];
-  bounds: L.LatLngBounds;
-  geoJsonUrl?: string;
-  subdivisionPolygon?: LngLat[];
-}) => {
-  const map = useMap();
-
-  useEffect(() => {
-    let geoLayer: L.GeoJSON | null = null;
-    let maskLayer: L.Polygon | null = null;
-    let polygonOutline: L.Polygon | null = null;
-    let cancelled = false;
-
-    map.setView(center, 11);
-    map.setMinZoom(10);
-    map.setMaxZoom(16);
-    map.setMaxBounds(bounds);
-    map.options.maxBoundsViscosity = 1.0;
-
-    if (subdivisionPolygon && subdivisionPolygon.length >= 3) {
-      const hole = subdivisionPolygon.map(([lng, lat]) => [lat, lng]) as L.LatLngExpression[];
-
-      maskLayer = L.polygon([WORLD_RING, hole], {
-        color: '#2f4858',
-        weight: 0,
-        fillColor: '#2f4858',
-        fillOpacity: 0.28,
-        interactive: false,
-      }).addTo(map);
-
-      polygonOutline = L.polygon(hole, {
-        color: '#0f4c81',
-        weight: 2,
-        fillOpacity: 0.04,
-      }).addTo(map);
-      map.fitBounds(polygonOutline.getBounds());
-      map.setMaxBounds(polygonOutline.getBounds());
-    } else if (geoJsonUrl) {
-      fetch(geoJsonUrl)
-        .then((res) => {
-          if (!res.ok) throw new Error('GeoJSON not found');
-          return res.json();
-        })
-        .then((data) => {
-          if (cancelled) return;
-
-          const maskHoles = getMaskHolesFromGeoJson(data);
-          if (maskHoles.length > 0) {
-            maskLayer = L.polygon([WORLD_RING, ...maskHoles], {
-              color: '#2f4858',
-              weight: 0,
-              fillColor: '#2f4858',
-              fillOpacity: 0.28,
-              interactive: false,
-            }).addTo(map);
-          }
-
-          geoLayer = L.geoJSON(data, {
-            style: { color: '#0f4c81', weight: 2, fillOpacity: 0.04 },
-          }).addTo(map);
-          map.fitBounds(geoLayer.getBounds());
-          map.setMaxBounds(geoLayer.getBounds());
-        })
-        .catch(() => {
-          // Optional district boundary file; ignore if missing.
-        });
-    }
-
-    return () => {
-      cancelled = true;
-      if (geoLayer) {
-        map.removeLayer(geoLayer);
-      }
-      if (maskLayer) {
-        map.removeLayer(maskLayer);
-      }
-      if (polygonOutline) {
-        map.removeLayer(polygonOutline);
-      }
-    };
-  }, [map, center, bounds, geoJsonUrl, subdivisionPolygon]);
-
-  return null;
-};
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -320,25 +31,13 @@ const Dashboard = () => {
 
   const canUseDistrictFeatures = !!user && FULL_ACCESS_ROLES.includes(user.role);
 
-  const mapScope = useMemo<MapScope>(() => {
-    if (!user) return DISTRICT_SCOPE;
-    if (canUseDistrictFeatures) {
-      if (selectedSubdivision === 'all') return DISTRICT_SCOPE;
-      const key = `${selectedSubdivision.toLowerCase()}_admin` as keyof typeof SUBDIVISION_SCOPES;
-      return SUBDIVISION_SCOPES[key] ?? DISTRICT_SCOPE;
-    }
-    return SUBDIVISION_SCOPES[user.role as keyof typeof SUBDIVISION_SCOPES] ?? DISTRICT_SCOPE;
-  }, [user, canUseDistrictFeatures, selectedSubdivision]);
-
-  const isInScope = (lat?: number | null, lng?: number | null, location?: string | null) => {
+  const isInScope = (location?: string | null) => {
     if (canUseDistrictFeatures) return true;
-
-    if (typeof lat === 'number' && typeof lng === 'number' && mapScope.polygon) {
-      return pointInPolygon([lng, lat], mapScope.polygon);
+    if (selectedSubdivision !== 'all') {
+      return (location ?? '').toLowerCase().includes(selectedSubdivision.toLowerCase());
     }
-
-    const loc = (location ?? '').toLowerCase();
-    return mapScope.keywords.some((k) => loc.includes(k));
+    // Very basic fallback if they are an admin
+    return true;
   };
 
   useEffect(() => {
@@ -390,33 +89,17 @@ const Dashboard = () => {
     return match ? match.count : 0;
   }, [stats]);
 
-  const cameraIcon = useMemo(
-    () =>
-      L.divIcon({
-        className: 'camera-map-icon',
-        html: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1e3a5f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14],
-        popupAnchor: [0, -14],
-      }),
-    [],
-  );
-
   const visibleCameras = useMemo(() => {
     if (!cameraStatus?.cameras) return [];
-    return cameraStatus.cameras.filter((c) => isInScope(c.gps_lat ?? null, c.gps_lng ?? null, c.location));
-  }, [cameraStatus, mapScope, canUseDistrictFeatures]);
-
-  const heatPoints = useMemo<[number, number, number][]>(() => {
-    return visibleCameras
-      .filter((c) => c.gps_lat && c.gps_lng)
-      .map((c) => [c.gps_lat!, c.gps_lng!, (c.violation_count ?? 0) + 0.3]);
-  }, [visibleCameras]);
+    return cameraStatus.cameras.filter((c) => isInScope(c.location));
+  }, [cameraStatus, canUseDistrictFeatures, selectedSubdivision]);
 
   const visibleRecentViolations = useMemo(() => {
-    const filtered = recentViolations.filter((v) => isInScope(v.gps_lat, v.gps_lng, v.location));
-    return filtered.slice(0, 5);
-  }, [recentViolations, mapScope, canUseDistrictFeatures]);
+    const filtered = recentViolations.filter((v) => isInScope(v.location));
+    return filtered.slice(0, 10);
+  }, [recentViolations, canUseDistrictFeatures, selectedSubdivision]);
+
+
 
   const visibleOnline = visibleCameras.filter((c) => c.status === 'online').length;
   const visibleOffline = Math.max(0, visibleCameras.length - visibleOnline);
@@ -467,54 +150,44 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* Camera Map with Heatmap */}
-      <div className="dash-card map-card">
-        <div className="card-header">
-          <h3><MapPin size={18} /> {canUseDistrictFeatures ? 'Camera Network & Violation Heatmap' : `${mapScope.name} Subdivision Map`}</h3>
+      {/* Live Violation Feed */}
+      <div className="dash-card live-feed-card" style={{ marginBottom: '24px' }}>
+        <div className="card-header" style={{ borderBottom: '1px solid var(--border)', paddingBottom: '16px' }}>
+          <h3><Shield size={18} /> Live Violation Action Feed</h3>
           {canUseDistrictFeatures && (
-            <button className="link-btn" onClick={() => navigate('/cameras')}>
-              All Cameras
+            <button className="link-btn" onClick={() => navigate('/violations')}>
+              View All Violations
             </button>
           )}
         </div>
-        <div className="map-container">
-          <MapContainer
-            center={KANYAKUMARI_CENTER}
-            zoom={11}
-            minZoom={10}
-            maxZoom={16}
-            maxBounds={mapScope.bounds}
-            scrollWheelZoom
-            style={{ height: '400px', width: '100%', borderRadius: '8px' }}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <KanyakumariMapControl
-              center={mapScope.center}
-              bounds={mapScope.bounds}
-              geoJsonUrl={canUseDistrictFeatures ? '/kanyakumari.geojson' : undefined}
-              subdivisionPolygon={!canUseDistrictFeatures ? mapScope.polygon : undefined}
-            />
-            {visibleCameras
-              .filter((c) => c.gps_lat && c.gps_lng)
-              .map((cam) => (
-                <Marker key={cam.id} position={[cam.gps_lat!, cam.gps_lng!]} icon={cameraIcon}>
-                  <Popup>
-                    <div className="cam-popup">
-                      <strong>{cam.location}</strong>
-                      <span>{cam.camera_id ?? cam.cameraId}</span>
-                      <span className={`cam-popup-status ${cam.status}`}>
-                        {cam.status === 'online' ? '● Online' : '● Offline'}
-                      </span>
-                      <span>Violations: {cam.violation_count ?? cam.violationCount ?? 0}</span>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-            {heatPoints.length > 0 && <HeatmapLayer points={heatPoints} />}
-          </MapContainer>
+        <div className="live-feed-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px', marginTop: '16px' }}>
+          {visibleRecentViolations.length === 0 ? (
+            <div className="empty-state" style={{ gridColumn: '1/-1', padding: '40px' }}>No recent violations detected.</div>
+          ) : (
+            visibleRecentViolations.map((v) => (
+              <div key={v.id} className="live-feed-item" style={{ background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                <div style={{ height: '140px', background: '#000', position: 'relative' }}>
+                  {v.image_url ? (
+                    <img src={v.image_url} alt="Evidence" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}><Camera size={30} /></div>
+                  )}
+                  <div style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(239, 68, 68, 0.9)', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+                    {v.type}
+                  </div>
+                </div>
+                <div style={{ padding: '12px' }}>
+                  <div style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '4px' }}>{v.vehicle_number}</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>
+                    <MapPin size={12} /> {v.location}
+                  </div>
+                  <button onClick={() => navigate('/violations')} style={{ width: '100%', background: 'var(--accent)', color: '#fff', border: 'none', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <Eye size={14} /> Review Offense
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

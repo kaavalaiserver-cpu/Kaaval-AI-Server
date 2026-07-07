@@ -23,17 +23,6 @@ ChartJS.register(
   Tooltip, Legend, Filler,
 );
 
-// API key display is handled by the backend — never expose keys in frontend
-const PLATE_API_MASK = '47821274••••••••a168a13e';
-
-interface PlateApiInfo {
-  calls_used: number;
-  total_limit: number;
-  remaining: number;
-  status: 'ok' | 'error';
-  month?: string;
-  error?: string;
-}
 
 const tooltipStyle = {
   backgroundColor: '#0f172a',
@@ -49,9 +38,7 @@ const DevAnalytics = () => {
   const [data, setData]                 = useState<DevAnalyticsData | null>(null);
   const [loading, setLoading]           = useState(true);
   const [refreshing, setRefreshing]     = useState(false);
-  const [plateInfo, setPlateInfo]       = useState<PlateApiInfo | null>(null);
-  const [plateLoading, setPlateLoading] = useState(false);
-  const [plateFetched, setPlateFetched] = useState(false);
+
   const [uptime, setUptime]             = useState(0); // seconds
 
   // Live uptime counter
@@ -69,29 +56,6 @@ const DevAnalytics = () => {
     finally { setLoading(false); setRefreshing(false); }
   };
 
-  const fetchPlateApiUsage = async () => {
-    setPlateLoading(true); setPlateFetched(false);
-    try {
-      const res = await axios.get(`${API_BASE}/system/plate-api-usage`);
-      const d = res.data;
-      if (d.status === 'error') {
-        setPlateInfo({ status: 'error', calls_used: 0, total_limit: 0, remaining: 0, error: d.error });
-      } else {
-        setPlateInfo({
-          status: 'ok',
-          calls_used: d.calls_used ?? 0,
-          total_limit: d.total_limit ?? 0,
-          remaining: d.remaining ?? 0,
-          month: d.month,
-        });
-      }
-    } catch (err: any) {
-      setPlateInfo({
-        status: 'error', calls_used: 0, total_limit: 0, remaining: 0,
-        error: err?.response?.data?.message || 'Failed to reach backend.',
-      });
-    } finally { setPlateLoading(false); setPlateFetched(true); }
-  };
 
   useEffect(() => { fetchData(); }, []);
 
@@ -100,7 +64,6 @@ const DevAnalytics = () => {
   const ocrSuccessRate  = ocrTotal > 0 ? Math.round(((data?.ocrSuccessCount ?? 0) / ocrTotal) * 100) : 0;
   const confPct         = Math.round((data?.avgConfidence ?? 0) * 100);
   const extractPct      = parseFloat((data?.plateExtractionRate ?? 0).toFixed(1));
-  const usedPct         = plateInfo ? Math.min(((plateInfo.calls_used / (plateInfo.total_limit || 1)) * 100), 100) : 0;
   const isHealthy       = data?.pipelineStatus === 'healthy';
 
   const fmtUptime = (s: number) => {
@@ -189,72 +152,6 @@ const DevAnalytics = () => {
         </div>
       </div>
 
-      {/* ── Plate Recognizer API ─────────────────────────────────── */}
-      <div className="da-card da-api-card">
-        <div className="da-card-header">
-          <div className="da-card-title">
-            <Key size={16} />
-            <span>Plate Recognizer API</span>
-            <code className="da-api-key-badge">{PLATE_API_MASK}</code>
-          </div>
-          <button className={`da-btn-fetch ${plateLoading ? 'loading' : ''}`} onClick={fetchPlateApiUsage} disabled={plateLoading}>
-            {plateLoading
-              ? <><RefreshCw size={14} className="da-spin" /> Fetching...</>
-              : <><Zap size={14} /> Fetch API Analysis</>
-            }
-          </button>
-        </div>
-
-        {!plateFetched && !plateLoading && (
-          <div className="da-api-idle">
-            <Clock size={15} />
-            <span>Click <strong>Fetch API Analysis</strong> to view live quota stats</span>
-          </div>
-        )}
-
-        {plateFetched && plateInfo && (
-          plateInfo.status === 'error' ? (
-            <div className="da-api-error"><AlertCircle size={17} />{plateInfo.error}</div>
-          ) : (
-            <div className="da-api-result">
-              {/* Stats Row */}
-              <div className="da-api-stats">
-                <ApiStatChip label="Calls Used" value={plateInfo.calls_used.toLocaleString()} color="orange" />
-                <ApiStatChip label="Remaining" value={plateInfo.remaining.toLocaleString()} color="green" />
-                <ApiStatChip label="Monthly Limit" value={plateInfo.total_limit.toLocaleString()} color="blue" />
-                <div className="da-api-status-chip">
-                  <CheckCircle size={20} color="#4ade80" />
-                  <span>Active</span>
-                </div>
-              </div>
-
-              {/* Usage Bar */}
-              <div className="da-usage-bar-card">
-                <div className="da-usage-bar-row">
-                  <span className="da-usage-label">Monthly Usage</span>
-                  <span className="da-usage-pct" style={{ color: usedPct > 80 ? '#f87171' : '#4ade80' }}>
-                    {usedPct.toFixed(1)}% used
-                  </span>
-                </div>
-                <div className="da-usage-track">
-                  <div className="da-usage-fill" style={{
-                    width: `${usedPct}%`,
-                    background: usedPct > 80
-                      ? 'linear-gradient(90deg,#ef4444,#f87171)'
-                      : usedPct > 50
-                      ? 'linear-gradient(90deg,#f59e0b,#fbbf24)'
-                      : 'linear-gradient(90deg,#22c55e,#4ade80)',
-                  }} />
-                </div>
-                <div className="da-usage-sub-row">
-                  {plateInfo.month && <span>Period: {plateInfo.month}</span>}
-                  <span>{(100 - usedPct).toFixed(1)}% remaining</span>
-                </div>
-              </div>
-            </div>
-          )
-        )}
-      </div>
 
       {/* ── Detection Statistics ─────────────────────────────────── */}
       <div className="da-section-label"><Cpu size={14} /> Detection Statistics</div>

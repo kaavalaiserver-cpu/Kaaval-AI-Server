@@ -98,3 +98,8 @@ body {
 .text-red {
   color: var(--red) !important;
 }
+
+select option {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+}
