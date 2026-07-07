@@ -24,6 +24,9 @@ function emptyCamera() {
 function emptyVType() {
   return { violationCode: '', violationName: '', description: '', defaultFine: 500, color: '#FF4B4B', severity: 'HIGH' };
 }
+function emptySubdivision() {
+  return { subdivisionCode: '', subdivisionName: '', headquarters: '', districtId: 'e8e3d3b7-7eb9-40e1-bb5c-482a5c4d0a1b' }; // Using default district
+}
 
 export default function KitManagement() {
   const [tab, setTab]               = useState('subdivisions');
@@ -33,7 +36,7 @@ export default function KitManagement() {
   const [vtypes, setVtypes]         = useState<any[]>([]);
   const [search, setSearch]         = useState('');
   const [loading, setLoading]       = useState(false);
-  const [modal, setModal]           = useState<'junction'|'camera'|'vtype'|'del'|null>(null);
+  const [modal, setModal]           = useState<'subdivision'|'junction'|'camera'|'vtype'|'del'|null>(null);
   const [editing, setEditing]       = useState<any>(null);
   const [delTarget, setDelTarget]   = useState<{ type: string; id: string; name: string } | null>(null);
   const [saving, setSaving]         = useState(false);
@@ -93,6 +96,7 @@ export default function KitManagement() {
     setSaving(true);
     try {
       const map: Record<string, string> = {
+        subdivision: `${API_BASE}/cameras/subdivisions/${delTarget.id}`,
         junction: `${API_BASE}/cameras/junctions/${delTarget.id}`,
         camera:   `${API_BASE}/cameras/${delTarget.id}`,
         vtype:    `${API_BASE}/violations/types/${delTarget.id}`,
@@ -103,13 +107,13 @@ export default function KitManagement() {
     setSaving(false);
   }
 
-  function openAdd(type: 'junction'|'camera'|'vtype') {
-    const defaults: Record<string, any> = { junction: emptyJunction(), camera: emptyCamera(), vtype: emptyVType() };
+  function openAdd(type: 'subdivision'|'junction'|'camera'|'vtype') {
+    const defaults: Record<string, any> = { subdivision: emptySubdivision(), junction: emptyJunction(), camera: emptyCamera(), vtype: emptyVType() };
     setEditing(defaults[type]);
     setModal(type);
   }
 
-  function openEdit(type: 'junction'|'camera'|'vtype', row: any) {
+  function openEdit(type: 'subdivision'|'junction'|'camera'|'vtype', row: any) {
     setEditing({ ...row });
     setModal(type);
   }
@@ -165,31 +169,45 @@ export default function KitManagement() {
 
       {/* ── TAB: Subdivisions ─────────────────────────────────────── */}
       {tab === 'subdivisions' && (
-        <div className="subdivision-grid">
-          {subdivisions.map(sub => {
-            const jCount = junctions.filter(j => j.subdivisionId === sub.id || j.subdivision?.id === sub.id).length;
-            const cCount = cameras.filter(c => c.junction?.subdivisionId === sub.id).length;
-            return (
-              <div key={sub.id} className="subdivision-card">
-                <div className="subdivision-card-header">
-                  <span className="subdivision-badge">{sub.subdivisionCode}</span>
-                  <span className="sub-status-dot" title="Active" />
-                </div>
-                <p className="subdivision-name">{sub.subdivisionName}</p>
-                <p className="subdivision-hq">📍 HQ: {sub.headquarters}</p>
-                <div className="subdivision-stats">
-                  <div className="sub-stat"><div className="sub-stat-value">{jCount}</div><div className="sub-stat-label">Locations</div></div>
-                  <div className="sub-stat"><div className="sub-stat-value">{cCount}</div><div className="sub-stat-label">Cameras</div></div>
-                </div>
+        <>
+          <div className="kit-toolbar">
+            <div className="kit-toolbar-left">
+              <div className="search-input-wrap">
+                <Search size={15} />
+                <input placeholder="Search subdivisions…" value={search} onChange={e => setSearch(e.target.value)} />
               </div>
-            );
-          })}
-          {subdivisions.length === 0 && !loading && (
-            <div className="empty-state" style={{ gridColumn: '1/-1' }}>
-              <Shield size={40} /><p>No subdivisions found. Run the seed script first.</p>
             </div>
-          )}
-        </div>
+            <button className="kit-add-btn" onClick={() => openAdd('subdivision')}><Plus size={16} /> Add Subdivision</button>
+          </div>
+          <div className="subdivision-grid">
+            {subdivisions.filter(s => s.subdivisionName?.toLowerCase().includes(search.toLowerCase()) || s.subdivisionCode?.toLowerCase().includes(search.toLowerCase())).map(sub => {
+              const jCount = junctions.filter(j => j.subdivisionId === sub.id || j.subdivision?.id === sub.id).length;
+              const cCount = cameras.filter(c => c.junction?.subdivisionId === sub.id).length;
+              return (
+                <div key={sub.id} className="subdivision-card">
+                  <div className="subdivision-card-header">
+                    <span className="subdivision-badge">{sub.subdivisionCode}</span>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <button className="btn-icon-edit" onClick={() => openEdit('subdivision', sub)} title="Edit"><Pencil size={14} /></button>
+                      <button className="btn-icon-del" onClick={() => openDel('subdivision', sub.id, sub.subdivisionName)} title="Delete"><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+                  <p className="subdivision-name">{sub.subdivisionName}</p>
+                  <p className="subdivision-hq">📍 HQ: {sub.headquarters}</p>
+                  <div className="subdivision-stats">
+                    <div className="sub-stat"><div className="sub-stat-value">{jCount}</div><div className="sub-stat-label">Locations</div></div>
+                    <div className="sub-stat"><div className="sub-stat-value">{cCount}</div><div className="sub-stat-label">Cameras</div></div>
+                  </div>
+                </div>
+              );
+            })}
+            {subdivisions.length === 0 && !loading && (
+              <div className="empty-state" style={{ gridColumn: '1/-1' }}>
+                <Shield size={40} /><p>No subdivisions found. Add one above.</p>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* ── TAB: Junctions ────────────────────────────────────────── */}
@@ -320,6 +338,17 @@ export default function KitManagement() {
         </>
       )}
 
+      {/* ── MODAL: Subdivision ────────────────────────────────────── */}
+      {modal === 'subdivision' && editing && (
+        <SubdivisionModal
+          data={editing}
+          saving={saving}
+          onChange={setEditing}
+          onSave={() => saveSubdivision(editing)}
+          onClose={closeModal}
+        />
+      )}
+
       {/* ── MODAL: Junction ───────────────────────────────────────── */}
       {modal === 'junction' && editing && (
         <JunctionModal
@@ -362,6 +391,7 @@ export default function KitManagement() {
             <div className="confirm-icon">⚠️</div>
             <p><strong>Delete "{delTarget.name}"?</strong></p>
             <p style={{ fontSize: '0.85rem', marginTop: '0.5rem' }}>
+              {delTarget.type === 'subdivision' && 'This will remove all locations and cameras within this subdivision.'}
               {delTarget.type === 'junction' && 'This will also remove all cameras attached to this location.'}
               {delTarget.type === 'camera' && 'Camera data will be removed. Associated violations will remain.'}
               {delTarget.type === 'vtype' && 'The violation type will be deactivated (historical data is preserved).'}
@@ -380,6 +410,40 @@ export default function KitManagement() {
 }
 
 // ── Sub-components ─────────────────────────────────────────────────
+function SubdivisionModal({ data, saving, onChange, onSave, onClose }: any) {
+  const set = (k: string, v: any) => onChange({ ...data, [k]: v });
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>{data.id ? '✏️ Edit Subdivision' : '➕ Add Subdivision'}</h2>
+          <button className="modal-close" onClick={onClose}><X size={18} /></button>
+        </div>
+        <div className="form-grid">
+          <div className="form-group span2">
+            <label>Subdivision Name *</label>
+            <input value={data.subdivisionName} onChange={e => set('subdivisionName', e.target.value)} placeholder="e.g. Nagercoil" />
+          </div>
+          <div className="form-group">
+            <label>Code *</label>
+            <input value={data.subdivisionCode} onChange={e => set('subdivisionCode', e.target.value)} placeholder="e.g. NGL" />
+          </div>
+          <div className="form-group">
+            <label>Headquarters *</label>
+            <input value={data.headquarters} onChange={e => set('headquarters', e.target.value)} placeholder="e.g. Nagercoil Town" />
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn-cancel" onClick={onClose}>Cancel</button>
+          <button className="btn-save" onClick={onSave} disabled={saving || !data.subdivisionName || !data.subdivisionCode || !data.headquarters}>
+            {saving ? 'Saving…' : data.id ? 'Update' : 'Add Subdivision'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function JunctionModal({ data, subdivisions, saving, onChange, onSave, onClose }: any) {
   const set = (k: string, v: any) => onChange({ ...data, [k]: v });
   return (
