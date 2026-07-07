@@ -164,4 +164,9 @@ export class ViolationQueryDto {
   @IsString()
   @MaxLength(6)
   maxConfidence?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  subdivisionCode?: string;
 }

@@ -15,8 +15,8 @@ export class CamerasController {
 
   @Get('status')
   @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR')
-  getStatus(@Request() req: any) {
-    return this.camerasService.getStatus(req.user);
+  getStatus(@Request() req: any, @Query('subdivisionCode') subdivisionCode?: string) {
+    return this.camerasService.getStatus(req.user, subdivisionCode);
   }
 
   @Get('junctions')

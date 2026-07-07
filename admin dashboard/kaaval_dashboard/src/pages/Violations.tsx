@@ -23,6 +23,7 @@ interface Filters {
   timeTo: string;
   minConfidence: string;
   maxConfidence: string;
+  subdivisionCode: string;
 }
 
 const getTodayString = () => {
@@ -36,7 +37,7 @@ const getTodayString = () => {
 const EMPTY_FILTERS: Filters = {
   status: '', cameraId: '', vehicleNumber: '', violationType: '',
   dateFrom: getTodayString(), dateTo: getTodayString(), timeFrom: '', timeTo: '',
-  minConfidence: '', maxConfidence: '',
+  minConfidence: '', maxConfidence: '', subdivisionCode: '',
 };
 
 const VIOLATION_REASONS = [
@@ -109,6 +110,7 @@ const Violations = () => {
       if (filters.cameraId) params.cameraId = filters.cameraId;
       if (filters.vehicleNumber) params.vehicleNumber = filters.vehicleNumber;
       if (filters.violationType) params.violationType = filters.violationType;
+      if (filters.subdivisionCode) params.subdivisionCode = filters.subdivisionCode;
 
       // Combine date + time into ISO strings (only if not searching by vehicle plate)
       if (!filters.vehicleNumber) {
@@ -596,6 +598,17 @@ const Violations = () => {
             <option value="RED_LIGHT_JUMP">Red Light Jump</option>
             <option value="OVER_SPEEDING">Over Speeding</option>
           </select>
+
+          {hasRole('super_admin', 'sp', 'dsp', 'developer') && (
+            <select value={filters.subdivisionCode} onChange={e => setFilter('subdivisionCode', e.target.value)}>
+              <option value="">All Subdivisions</option>
+              <option value="Nagercoil">Nagercoil</option>
+              <option value="Colachel">Colachel</option>
+              <option value="Kanyakumari">Kanyakumari</option>
+              <option value="Thuckalay">Thuckalay</option>
+              <option value="Marthandam">Marthandam</option>
+            </select>
+          )}
 
           <input type="text" placeholder="Vehicle Number..."
             value={filters.vehicleNumber} onChange={e => setFilter('vehicleNumber', e.target.value)} />

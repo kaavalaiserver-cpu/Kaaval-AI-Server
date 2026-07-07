@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, Request, Query } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service.js';
 import { JwtAuthGuard, RolesGuard, Roles } from '../auth/index.js';
 
@@ -8,9 +8,9 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get('summary')
-  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER')
-  async getSummary() {
-    return this.analyticsService.getSummary();
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR')
+  async getSummary(@Request() req: any, @Query('subdivisionCode') subdivisionCode?: string) {
+    return this.analyticsService.getSummary(req.user, subdivisionCode);
   }
 
   @Get('peak-hours')

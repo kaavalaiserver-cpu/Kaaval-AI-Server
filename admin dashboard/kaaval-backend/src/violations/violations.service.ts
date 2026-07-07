@@ -53,14 +53,16 @@ export class ViolationsService {
     return subdivisionId === user.subdivisionId;
   }
 
-  private applySubdivisionScope(qb: SelectQueryBuilder<Violation>, user: any) {
+  private applySubdivisionScope(qb: SelectQueryBuilder<Violation>, user: any, requestedSubdivisionCode?: string) {
     const role = (user?.role || '').toUpperCase();
-    if (!user || ['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER'].includes(role)) return;
-    if (user.subdivisionId) {
-      qb.andWhere('junction.subdivision_id = :subId', { subId: user.subdivisionId });
-    } else {
-      // No subdivision assigned — see nothing
-      qb.andWhere('1=0');
+    if (!['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER'].includes(role)) {
+      if (user.subdivisionId) {
+        qb.andWhere('junction.subdivision_id = :subId', { subId: user.subdivisionId });
+      } else {
+        qb.andWhere('1=0');
+      }
+    } else if (requestedSubdivisionCode && requestedSubdivisionCode.toLowerCase() !== 'all') {
+      qb.andWhere('LOWER(subdivision.subdivision_name) = LOWER(:reqSubCode)', { reqSubCode: requestedSubdivisionCode });
     }
   }
 
@@ -128,6 +130,7 @@ export class ViolationsService {
       .leftJoinAndSelect('v.violationType', 'violationType')
       .leftJoinAndSelect('v.camera', 'camera')
       .leftJoinAndSelect('camera.junction', 'junction')
+      .leftJoinAndSelect('junction.subdivision', 'subdivision')
       .leftJoinAndSelect('v.evidence', 'evidence')
       .orderBy('v.violationTimestamp', 'DESC')
       .take(limit)
@@ -162,7 +165,7 @@ export class ViolationsService {
     }
 
     // ── RBAC subdivision scope ────────────────────────────────────
-    this.applySubdivisionScope(qb, user);
+    this.applySubdivisionScope(qb, user, query.subdivisionCode);
 
     const [violations, total] = await qb.getManyAndCount();
 
@@ -207,7 +210,7 @@ export class ViolationsService {
       qb.andWhere('v.violationTimestamp <= :to', { to });
     }
 
-    this.applySubdivisionScope(qb, user);
+    this.applySubdivisionScope(qb, user, query.subdivisionCode);
 
     const all = await qb.select([
       'v.id', 'v.status', 'v.confidence',

@@ -316,14 +316,19 @@ const Dashboard = () => {
   const [cameraStatus, setCameraStatus] = useState<CameraStatus | null>(null);
   const navigate = useNavigate();
 
-  const mapScope = useMemo<MapScope>(() => {
-    if (!user || FULL_ACCESS_ROLES.includes(user.role)) {
-      return DISTRICT_SCOPE;
-    }
-    return SUBDIVISION_SCOPES[user.role as Exclude<Role, 'super_admin' | 'sp' | 'dsp' | 'developer' | 'inspector' | 'sub_inspector' | 'operator' | 'viewer'>] ?? DISTRICT_SCOPE;
-  }, [user]);
+  const [selectedSubdivision, setSelectedSubdivision] = useState<string>('all');
 
   const canUseDistrictFeatures = !!user && FULL_ACCESS_ROLES.includes(user.role);
+
+  const mapScope = useMemo<MapScope>(() => {
+    if (!user) return DISTRICT_SCOPE;
+    if (canUseDistrictFeatures) {
+      if (selectedSubdivision === 'all') return DISTRICT_SCOPE;
+      const key = `${selectedSubdivision.toLowerCase()}_admin` as keyof typeof SUBDIVISION_SCOPES;
+      return SUBDIVISION_SCOPES[key] ?? DISTRICT_SCOPE;
+    }
+    return SUBDIVISION_SCOPES[user.role as keyof typeof SUBDIVISION_SCOPES] ?? DISTRICT_SCOPE;
+  }, [user, canUseDistrictFeatures, selectedSubdivision]);
 
   const isInScope = (lat?: number | null, lng?: number | null, location?: string | null) => {
     if (canUseDistrictFeatures) return true;
@@ -341,11 +346,12 @@ const Dashboard = () => {
       // Skip if page is hidden to save resources
       if (background && document.visibilityState !== 'visible') return;
 
+      const subQuery = selectedSubdivision !== 'all' ? `?subdivisionCode=${selectedSubdivision}` : '';
       const [statsRes, violationsRes, camerasRes, violationStatsRes] = await Promise.allSettled([
-        axios.get<FastAPIAnalyticsSummary>(`${API_BASE}/analytics/summary`),
-        axios.get<{ data: ViolationItem[] }>(`${API_BASE}/violations?limit=5`),
-        axios.get<CameraStatus>(`${API_BASE}/cameras/status`),
-        axios.get<ViolationStats>(`${API_BASE}/violations/stats`),
+        axios.get<FastAPIAnalyticsSummary>(`${API_BASE}/analytics/summary${subQuery}`),
+        axios.get<{ data: ViolationItem[] }>(`${API_BASE}/violations?limit=5${selectedSubdivision !== 'all' ? `&subdivisionCode=${selectedSubdivision}` : ''}`),
+        axios.get<CameraStatus>(`${API_BASE}/cameras/status${subQuery}`),
+        axios.get<ViolationStats>(`${API_BASE}/violations/stats${subQuery}`),
       ]);
 
       if (statsRes.status === 'fulfilled') {
@@ -368,7 +374,7 @@ const Dashboard = () => {
     fetchAll();
     const interval = setInterval(() => fetchAll(true), 30000); // 30s polling
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedSubdivision]);
 
   const todayCount = stats?.total_violations ?? 0;
   const pendingCount = stats?.pending_review ?? 0;
@@ -441,6 +447,25 @@ const Dashboard = () => {
           color="green"
         />
       </div>
+
+      {/* Subdivision Filter for Superadmin */}
+      {canUseDistrictFeatures && (
+        <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <label style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Filter by Subdivision:</label>
+          <select 
+            value={selectedSubdivision} 
+            onChange={(e) => setSelectedSubdivision(e.target.value)}
+            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', outline: 'none' }}
+          >
+            <option value="all">All District (Kanyakumari)</option>
+            <option value="nagercoil">Nagercoil</option>
+            <option value="colachel">Colachel</option>
+            <option value="kanyakumari">Kanyakumari</option>
+            <option value="thuckalay">Thuckalay</option>
+            <option value="marthandam">Marthandam</option>
+          </select>
+        </div>
+      )}
 
       {/* Camera Map with Heatmap */}
       <div className="dash-card map-card">

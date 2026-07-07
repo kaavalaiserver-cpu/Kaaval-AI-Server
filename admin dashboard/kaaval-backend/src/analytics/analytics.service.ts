@@ -14,21 +14,51 @@ export class AnalyticsService {
     private readonly cache: Cache,
   ) {}
 
-  async getSummary() {
-    const cached = await this.cache.get<Record<string, unknown>>('analytics-summary');
+  async getSummary(user: any, requestedSubdivisionCode?: string) {
+    const cacheKey = `analytics-summary-${user.role}-${requestedSubdivisionCode || 'all'}-${user.subdivisionId || 'all'}`;
+    const cached = await this.cache.get<Record<string, unknown>>(cacheKey);
     if (cached) return cached;
 
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Load 30-day violations with all needed relations
-    const violations30 = await this.violationRepo.find({
-      where: { createdAt: MoreThanOrEqual(thirtyDaysAgo) },
-      relations: ['violationType', 'camera', 'vehicle'],
-    });
+    const qb = this.violationRepo.createQueryBuilder('v')
+      .leftJoinAndSelect('v.violationType', 'violationType')
+      .leftJoinAndSelect('v.camera', 'camera')
+      .leftJoinAndSelect('camera.junction', 'junction')
+      .leftJoinAndSelect('junction.subdivision', 'subdivision')
+      .leftJoinAndSelect('v.vehicle', 'vehicle')
+      .where('v.createdAt >= :date', { date: thirtyDaysAgo });
 
-    // All-time totals
-    const allCount = await this.violationRepo.count();
+    // Enforce role-based access
+    const role = (user.role || '').toUpperCase();
+    if (!['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER'].includes(role)) {
+      if (!user.subdivisionId) {
+        qb.andWhere('1=0');
+      } else {
+        qb.andWhere('subdivision.id = :subId', { subId: user.subdivisionId });
+      }
+    } else if (requestedSubdivisionCode && requestedSubdivisionCode.toLowerCase() !== 'all') {
+      // Superadmin filtering by a specific subdivision
+      qb.andWhere('LOWER(subdivision.subdivision_name) = LOWER(:code)', { code: requestedSubdivisionCode });
+    }
+
+    const violations30 = await qb.getMany();
+
+    // All-time totals with the same filter
+    const countQb = this.violationRepo.createQueryBuilder('v')
+      .leftJoin('v.camera', 'camera')
+      .leftJoin('camera.junction', 'junction')
+      .leftJoin('junction.subdivision', 'subdivision');
+      
+    if (!['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER'].includes(role)) {
+      if (!user.subdivisionId) countQb.where('1=0');
+      else countQb.where('subdivision.id = :subId', { subId: user.subdivisionId });
+    } else if (requestedSubdivisionCode && requestedSubdivisionCode.toLowerCase() !== 'all') {
+      countQb.where('LOWER(subdivision.subdivision_name) = LOWER(:code)', { code: requestedSubdivisionCode });
+    }
+    
+    const allCount = await countQb.getCount();
     const pendingReview = violations30.filter(v =>
       ['PENDING', 'READY', 'UNDER_REVIEW'].includes(v.status),
     ).length;
@@ -100,7 +130,7 @@ export class AnalyticsService {
       top_cameras,
     };
 
-    await this.cache.set('analytics-summary', summary, 60000);
+    await this.cache.set(cacheKey, summary, 60000);
     return summary;
   }
 

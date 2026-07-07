@@ -20,24 +20,26 @@ export class CamerasService {
     private readonly cache: Cache,
   ) {}
 
-  async findAll(user?: any) {
-    // If user has a subdivision constraint (e.g. Inspector/Operator), filter by it
+  async findAll(user?: any, subdivisionCode?: string) {
     let whereClause: any = {};
     if (user?.subdivisionId) {
       whereClause = { junction: { subdivisionId: user.subdivisionId } };
+    } else if (subdivisionCode && subdivisionCode.toLowerCase() !== 'all') {
+      const ILike = require('typeorm').ILike;
+      whereClause = { junction: { subdivision: { subdivisionName: ILike(`%${subdivisionCode}%`) } } };
     }
 
     const cameras = await this.cameraRepo.find({
       where: whereClause,
-      relations: ['junction', 'settings', 'device'],
+      relations: ['junction', 'junction.subdivision', 'settings', 'device'],
       order: { cameraName: 'ASC' }
     });
 
     return cameras;
   }
 
-  async getStatus(user?: any) {
-    const cameras = await this.findAll(user);
+  async getStatus(user?: any, subdivisionCode?: string) {
+    const cameras = await this.findAll(user, subdivisionCode);
     const online = cameras.filter((c) => c.status === 'ONLINE').length;
     const offline = cameras.length - online;
 
