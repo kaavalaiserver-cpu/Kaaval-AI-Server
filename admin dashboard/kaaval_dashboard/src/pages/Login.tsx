@@ -7,7 +7,7 @@ const MAX_ATTEMPTS = 5;
 const LOCKOUT_SECONDS = 30;
 
 const Login = () => {
-  const { login } = useAuth();
+  const { login, verifyOtp } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -15,6 +15,9 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [lockout, setLockout] = useState(0); // seconds remaining
+  const [step, setStep] = useState<'login' | 'otp'>('login');
+  const [otp, setOtp] = useState('');
+  const [tempToken, setTempToken] = useState('');
   const lockoutTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Countdown ticker
@@ -40,16 +43,28 @@ const Login = () => {
     setError('');
     setLoading(true);
     try {
-      await login(username, password);
-      setAttempts(0); // reset on success
+      if (step === 'login') {
+        const res = await login(username, password);
+        if (res?.requiresOtp) {
+          setStep('otp');
+          setTempToken(res.tempToken);
+          setAttempts(0);
+        } else {
+          setAttempts(0);
+        }
+      } else {
+        await verifyOtp(tempToken, otp);
+        // On success, AuthContext handles redirect
+      }
     } catch {
       const next = attempts + 1;
       setAttempts(next);
       if (next >= MAX_ATTEMPTS) {
         setLockout(LOCKOUT_SECONDS);
+        setStep('login');
         setError(`Too many failed attempts. Try again in ${LOCKOUT_SECONDS} seconds.`);
       } else {
-        setError(`Invalid username or password. ${MAX_ATTEMPTS - next} attempt${MAX_ATTEMPTS - next !== 1 ? 's' : ''} remaining.`);
+        setError(step === 'login' ? `Invalid username or password. ${MAX_ATTEMPTS - next} attempt(s) remaining.` : `Invalid OTP. ${MAX_ATTEMPTS - next} attempt(s) remaining.`);
       }
     } finally {
       setLoading(false);
@@ -70,41 +85,63 @@ const Login = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label htmlFor="username">Username</label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter username"
-              autoComplete="username"
-              required
-            />
-          </div>
+          {step === 'login' ? (
+            <>
+              <div className="form-group">
+                <label htmlFor="username">Username</label>
+                <input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter username"
+                  autoComplete="username"
+                  required
+                />
+              </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <div className="password-input-wrapper">
+              <div className="form-group">
+                <label htmlFor="password">Password</label>
+                <div className="password-input-wrapper">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                    autoComplete="current-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="form-group">
+              <label htmlFor="otp">2-Step Verification (OTP)</label>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-dim)', marginBottom: '10px' }}>
+                An OTP has been sent to your registered email address.
+              </p>
               <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
-                autoComplete="current-password"
+                id="otp"
+                type="text"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                placeholder="Enter 6-digit OTP"
+                maxLength={6}
+                autoComplete="off"
                 required
+                style={{ textAlign: 'center', letterSpacing: '4px', fontSize: '1.2rem', fontWeight: 'bold' }}
               />
-              <button
-                type="button"
-                className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
             </div>
-          </div>
+          )}
 
           {error && <div className="login-error">{error}</div>}
 
@@ -114,7 +151,7 @@ const Login = () => {
             </button>
           ) : (
             <button type="submit" className="login-btn" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? (step === 'login' ? 'Signing in...' : 'Verifying...') : (step === 'login' ? 'Sign In' : 'Verify & Sign In')}
             </button>
           )}
         </form>

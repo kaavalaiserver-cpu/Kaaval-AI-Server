@@ -19,6 +19,14 @@ class LoginDto {
   password!: string;
 }
 
+class VerifyOtpDto {
+  @IsString()
+  tempToken!: string;
+
+  @IsString()
+  otp!: string;
+}
+
 class ChangePasswordDto {
   @IsString()
   @MinLength(1)
@@ -46,12 +54,32 @@ export class AuthController {
     const userAgent = req.headers['user-agent'];
     const result = await this.authService.login(body.username, body.password, ip, userAgent);
 
-    res.cookie('kaaval_token', result.access_token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 8 * 60 * 60 * 1000, // 8 hours
-    });
+    if (result.access_token) {
+      res.cookie('kaaval_token', result.access_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 8 * 60 * 60 * 1000, // 8 hours
+      });
+    }
+
+    return result;
+  }
+
+  @Post('verify-otp')
+  async verifyOtp(@Body() body: VerifyOtpDto, @Request() req: any, @Res({ passthrough: true }) res: Response) {
+    const ip = req.ip || req.connection?.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+    const result = await this.authService.verifyOtp(body.tempToken, body.otp, ip, userAgent);
+
+    if (result.access_token) {
+      res.cookie('kaaval_token', result.access_token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 8 * 60 * 60 * 1000, // 8 hours
+      });
+    }
 
     return result;
   }

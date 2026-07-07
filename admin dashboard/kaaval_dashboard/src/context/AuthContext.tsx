@@ -29,7 +29,8 @@ interface AuthContextType {
   user: AuthUser | null;
   token: string | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<any>;
+  verifyOtp: (tempToken: string, otp: string) => Promise<void>;
   logout: () => void;
   logoutAllDevices: () => Promise<void>;
   hasRole: (...roles: Role[]) => boolean;
@@ -71,13 +72,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   }, []);
 
-  const login = async (username: string, password: string) => {
-    const res = await axios.post(`${API_BASE}/auth/login`, { username, password });
-    const { access_token, user: userData } = res.data;
-    
-    // Set header synchronously to prevent race condition before children mount
+  const processLoginSuccess = (access_token: string, userData: any) => {
     axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-    
     setToken(access_token);
     const normalizedUser = {
       ...userData,
@@ -86,6 +82,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(normalizedUser);
     localStorage.setItem('kaaval_token', access_token);
     localStorage.setItem('kaaval_user', JSON.stringify(normalizedUser));
+  };
+
+  const login = async (username: string, password: string) => {
+    const res = await axios.post(`${API_BASE}/auth/login`, { username, password });
+    
+    if (res.data.requiresOtp) {
+      return { requiresOtp: true, tempToken: res.data.tempToken };
+    }
+    
+    processLoginSuccess(res.data.access_token, res.data.user);
+    return { success: true };
+  };
+
+  const verifyOtp = async (tempToken: string, otp: string) => {
+    const res = await axios.post(`${API_BASE}/auth/verify-otp`, { tempToken, otp });
+    processLoginSuccess(res.data.access_token, res.data.user);
   };
 
   const logout = useCallback(async () => {
@@ -164,7 +176,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, logoutAllDevices, hasRole }}>
+    <AuthContext.Provider value={{ user, token, loading, login, verifyOtp, logout, logoutAllDevices, hasRole }}>
       {children}
     </AuthContext.Provider>
   );
