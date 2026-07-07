@@ -38,18 +38,16 @@ export default function KitManagement() {
   const [delTarget, setDelTarget]   = useState<{ type: string; id: string; name: string } | null>(null);
   const [saving, setSaving]         = useState(false);
 
-  const token = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-
   useEffect(() => { loadAll(); }, []);
 
   async function loadAll() {
     setLoading(true);
     try {
       const [s, j, c, v] = await Promise.all([
-        axios.get(`${API_BASE}/cameras/subdivisions`, token()),
-        axios.get(`${API_BASE}/cameras/junctions`, token()),
-        axios.get(`${API_BASE}/cameras`, token()),
-        axios.get(`${API_BASE}/violations/types`, token()),
+        axios.get(`${API_BASE}/cameras/subdivisions`),
+        axios.get(`${API_BASE}/cameras/junctions`),
+        axios.get(`${API_BASE}/cameras`),
+        axios.get(`${API_BASE}/violations/types`),
       ]);
       setSubdivisions(s.data || []);
       setJunctions(j.data || []);
@@ -63,8 +61,8 @@ export default function KitManagement() {
   async function saveJunction(data: any) {
     setSaving(true);
     try {
-      if (data.id) await axios.patch(`${API_BASE}/cameras/junctions/${data.id}`, data, token());
-      else         await axios.post(`${API_BASE}/cameras/junctions`, data, token());
+      if (data.id) await axios.patch(`${API_BASE}/cameras/junctions/${data.id}`, data);
+      else         await axios.post(`${API_BASE}/cameras/junctions`, data);
       await loadAll(); closeModal();
     } catch (e: any) { alert(e.response?.data?.message || 'Failed to save'); }
     setSaving(false);
@@ -73,8 +71,8 @@ export default function KitManagement() {
   async function saveCamera(data: any) {
     setSaving(true);
     try {
-      if (data.id) await axios.patch(`${API_BASE}/cameras/${data.id}`, data, token());
-      else         await axios.post(`${API_BASE}/cameras`, data, token());
+      if (data.id) await axios.patch(`${API_BASE}/cameras/${data.id}`, data);
+      else         await axios.post(`${API_BASE}/cameras`, data);
       await loadAll(); closeModal();
     } catch (e: any) { alert(e.response?.data?.message || 'Failed to save'); }
     setSaving(false);
@@ -83,8 +81,8 @@ export default function KitManagement() {
   async function saveVType(data: any) {
     setSaving(true);
     try {
-      if (data.id) await axios.patch(`${API_BASE}/violations/types/${data.id}`, data, token());
-      else         await axios.post(`${API_BASE}/violations/types`, data, token());
+      if (data.id) await axios.patch(`${API_BASE}/violations/types/${data.id}`, data);
+      else         await axios.post(`${API_BASE}/violations/types`, data);
       await loadAll(); closeModal();
     } catch (e: any) { alert(e.response?.data?.message || 'Failed to save'); }
     setSaving(false);
@@ -99,7 +97,7 @@ export default function KitManagement() {
         camera:   `${API_BASE}/cameras/${delTarget.id}`,
         vtype:    `${API_BASE}/violations/types/${delTarget.id}`,
       };
-      await axios.delete(map[delTarget.type], token());
+      await axios.delete(map[delTarget.type]);
       await loadAll(); closeModal();
     } catch (e: any) { alert(e.response?.data?.message || 'Delete failed'); }
     setSaving(false);
