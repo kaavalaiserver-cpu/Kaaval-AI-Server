@@ -31,6 +31,24 @@ export class CamerasController {
     return this.camerasService.getSubdivisions(req.user);
   }
 
+  @Post('subdivisions')
+  @Roles('SUPER_ADMIN', 'DEVELOPER')
+  createSubdivision(@Body() dto: any) {
+    return this.camerasService.createSubdivision(dto);
+  }
+
+  @Patch('subdivisions/:id')
+  @Roles('SUPER_ADMIN', 'DEVELOPER')
+  updateSubdivision(@Param('id') id: string, @Body() dto: any) {
+    return this.camerasService.updateSubdivision(id, dto);
+  }
+
+  @Delete('subdivisions/:id')
+  @Roles('SUPER_ADMIN', 'DEVELOPER')
+  removeSubdivision(@Param('id') id: string) {
+    return this.camerasService.removeSubdivision(id);
+  }
+
   @Get('geocode')
   @Roles('SUPER_ADMIN', 'SP', 'DEVELOPER')
   async geocode(@Query('q') query: string) {

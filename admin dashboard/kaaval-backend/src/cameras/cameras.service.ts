@@ -139,6 +139,22 @@ export class CamerasService {
     return { status: 'deleted', id };
   }
 
+  // Subdivisions CRUD
+  async createSubdivision(dto: any) {
+    const sub = this.subdivisionRepo.create(dto);
+    return await this.subdivisionRepo.save(sub);
+  }
+
+  async updateSubdivision(id: string, dto: any) {
+    await this.subdivisionRepo.update(id, dto);
+    return await this.subdivisionRepo.findOne({ where: { id } });
+  }
+
+  async removeSubdivision(id: string) {
+    await this.subdivisionRepo.delete(id);
+    return { status: 'deleted', id };
+  }
+
   async geocode(query: string) {
     const axios = require('axios');
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
