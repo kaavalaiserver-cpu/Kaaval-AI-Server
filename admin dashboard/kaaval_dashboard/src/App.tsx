@@ -5,13 +5,10 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Violations from './pages/Violations';
-
-import Cameras from './pages/Cameras';
 import Analytics from './pages/Analytics';
 import DevAnalytics from './pages/DevAnalytics';
 import SystemStatus from './pages/SystemStatus';
 import SystemLogs from './pages/SystemLogs';
-import CameraConfig from './pages/CameraConfig';
 import UsersManagement from './pages/UsersManagement';
 import SettingsPage from './pages/Settings';
 import WeeklyReports from './pages/WeeklyReports';
@@ -45,11 +42,6 @@ function AppRoutes() {
             <Violations />
           </ProtectedRoute>
         } />
-        <Route path="cameras" element={
-          <ProtectedRoute roles={FULL_ACCESS_ROLES}>
-            <Cameras />
-          </ProtectedRoute>
-        } />
         <Route path="analytics" element={
           <ProtectedRoute roles={FULL_ACCESS_ROLES}>
             <Analytics />
@@ -76,13 +68,8 @@ function AppRoutes() {
             <UsersManagement />
           </ProtectedRoute>
         } />
-        <Route path="camera-config" element={
-          <ProtectedRoute roles={['super_admin']}>
-            <CameraConfig />
-          </ProtectedRoute>
-        } />
         <Route path="kit-management" element={
-          <ProtectedRoute roles={['super_admin']}>
+          <ProtectedRoute roles={CAMERA_HEALTH_ROLES}>
             <KitManagement />
           </ProtectedRoute>
         } />

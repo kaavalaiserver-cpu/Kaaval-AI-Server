@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
-import { MapPin, Camera, AlertTriangle, Plus, Pencil, Trash2, X, Search, Shield } from 'lucide-react';
+import { MapPin, Camera, AlertTriangle, Plus, Pencil, Trash2, X, Search, Shield, PlayCircle, XCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import './KitManagement.css';
 
 const TABS = [
@@ -16,7 +17,7 @@ const SEVERITIES     = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL'];
 const CAM_STATUSES   = ['ONLINE', 'OFFLINE', 'MAINTENANCE'];
 
 function emptyJunction() {
-  return { junctionName: '', junctionCode: '', address: '', latitude: '', longitude: '', junctionType: 'SIGNAL', speedLimit: '', subdivisionId: '', isActive: true };
+  return { junctionName: '', junctionCode: '', address: '', latitude: '', longitude: '', junctionType: 'SIGNAL', isOneWay: false, subdivisionId: '', isActive: true };
 }
 function emptyCamera() {
   return { cameraName: '', cameraCode: '', junctionId: '', streamUrl: '', ipAddress: '', status: 'OFFLINE' };
@@ -40,6 +41,10 @@ export default function KitManagement() {
   const [editing, setEditing]       = useState<any>(null);
   const [delTarget, setDelTarget]   = useState<{ type: string; id: string; name: string } | null>(null);
   const [saving, setSaving]         = useState(false);
+  const [selectedStream, setSelectedStream] = useState<any>(null);
+
+  const { hasRole } = useAuth();
+  const isSuperAdmin = hasRole('super_admin');
 
   useEffect(() => { loadAll(); }, []);
 
@@ -177,7 +182,9 @@ export default function KitManagement() {
                 <input placeholder="Search subdivisions…" value={search} onChange={e => setSearch(e.target.value)} />
               </div>
             </div>
-            <button className="kit-add-btn" onClick={() => openAdd('subdivision')}><Plus size={16} /> Add Subdivision</button>
+            {isSuperAdmin && (
+              <button className="kit-add-btn" onClick={() => openAdd('subdivision')}><Plus size={16} /> Add Subdivision</button>
+            )}
           </div>
           <div className="subdivision-grid">
             {subdivisions.filter(s => s.subdivisionName?.toLowerCase().includes(search.toLowerCase()) || s.subdivisionCode?.toLowerCase().includes(search.toLowerCase())).map(sub => {
@@ -188,8 +195,12 @@ export default function KitManagement() {
                   <div className="subdivision-card-header">
                     <span className="subdivision-badge">{sub.subdivisionCode}</span>
                     <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <button className="btn-icon-edit" onClick={() => openEdit('subdivision', sub)} title="Edit"><Pencil size={14} /></button>
-                      <button className="btn-icon-del" onClick={() => openDel('subdivision', sub.id, sub.subdivisionName)} title="Delete"><Trash2 size={14} /></button>
+                      {isSuperAdmin && (
+                        <>
+                          <button className="btn-icon-edit" onClick={() => openEdit('subdivision', sub)} title="Edit"><Pencil size={14} /></button>
+                          <button className="btn-icon-del" onClick={() => openDel('subdivision', sub.id, sub.subdivisionName)} title="Delete"><Trash2 size={14} /></button>
+                        </>
+                      )}
                     </div>
                   </div>
                   <p className="subdivision-name">{sub.subdivisionName}</p>
@@ -220,13 +231,16 @@ export default function KitManagement() {
                 <input placeholder="Search locations…" value={search} onChange={e => setSearch(e.target.value)} />
               </div>
             </div>
-            <button className="kit-add-btn" onClick={() => openAdd('junction')}><Plus size={16} /> Add Location</button>
+            {isSuperAdmin && (
+              <button className="kit-add-btn" onClick={() => openAdd('junction')}><Plus size={16} /> Add Location</button>
+            )}
           </div>
           <div className="kit-table-wrap">
             <table className="kit-table">
               <thead>
                 <tr>
-                  <th>Name</th><th>Type</th><th>Subdivision</th><th>Coordinates</th><th>Speed Limit</th><th>Status</th><th>Actions</th>
+                  <th>Name</th><th>Type</th><th>Subdivision</th><th>Coordinates</th><th>Road Type</th><th>Status</th>
+                  {isSuperAdmin && <th>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -236,14 +250,16 @@ export default function KitManagement() {
                     <td>{j.junctionType}</td>
                     <td>{j.subdivision?.subdivisionName || '—'}</td>
                     <td style={{ fontSize: '0.78rem' }}>{j.latitude && j.longitude ? `${Number(j.latitude).toFixed(4)}, ${Number(j.longitude).toFixed(4)}` : '—'}</td>
-                    <td>{j.speedLimit ? `${j.speedLimit} km/h` : '—'}</td>
+                    <td>{j.isOneWay ? <span className="warning-text">One Way</span> : 'Two Way'}</td>
                     <td><span className={`status-pill ${j.isActive ? 'active' : 'inactive'}`}>{j.isActive ? 'Active' : 'Inactive'}</span></td>
-                    <td>
-                      <div className="action-btns">
-                        <button className="btn-icon-edit" onClick={() => openEdit('junction', j)} title="Edit"><Pencil size={14} /></button>
-                        <button className="btn-icon-del" onClick={() => openDel('junction', j.id, j.junctionName)} title="Delete"><Trash2 size={14} /></button>
-                      </div>
-                    </td>
+                    {isSuperAdmin && (
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn-icon-edit" onClick={() => openEdit('junction', j)} title="Edit"><Pencil size={14} /></button>
+                          <button className="btn-icon-del" onClick={() => openDel('junction', j.id, j.junctionName)} title="Delete"><Trash2 size={14} /></button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {filteredJunctions.length === 0 && <tr><td colSpan={7} className="empty-state">No locations found.</td></tr>}
@@ -263,12 +279,17 @@ export default function KitManagement() {
                 <input placeholder="Search cameras…" value={search} onChange={e => setSearch(e.target.value)} />
               </div>
             </div>
-            <button className="kit-add-btn" onClick={() => openAdd('camera')}><Plus size={16} /> Add Kaaval Kit</button>
+            {isSuperAdmin && (
+              <button className="kit-add-btn" onClick={() => openAdd('camera')}><Plus size={16} /> Add Kaaval Kit</button>
+            )}
           </div>
           <div className="kit-table-wrap">
             <table className="kit-table">
               <thead>
-                <tr><th>Camera</th><th>Code</th><th>Location</th><th>IP Address</th><th>Status</th><th>Actions</th></tr>
+                <tr>
+                  <th>Camera</th><th>Code</th><th>Location</th><th>IP Address</th><th>Status</th>
+                  <th>Actions</th>
+                </tr>
               </thead>
               <tbody>
                 {filteredCameras.map(c => (
@@ -280,8 +301,13 @@ export default function KitManagement() {
                     <td><span className={`status-pill ${(c.status || '').toLowerCase()}`}>{c.status || 'OFFLINE'}</span></td>
                     <td>
                       <div className="action-btns">
-                        <button className="btn-icon-edit" onClick={() => openEdit('camera', { ...c, junctionId: c.junctionId || c.junction?.id })} title="Edit"><Pencil size={14} /></button>
-                        <button className="btn-icon-del" onClick={() => openDel('camera', c.id, c.cameraName)} title="Delete"><Trash2 size={14} /></button>
+                        <button className="btn-icon-view" onClick={() => setSelectedStream(c)} title="Live Feed"><PlayCircle size={14} style={{ color: 'var(--accent)' }} /></button>
+                        {isSuperAdmin && (
+                          <>
+                            <button className="btn-icon-edit" onClick={() => openEdit('camera', { ...c, junctionId: c.junctionId || c.junction?.id })} title="Edit"><Pencil size={14} /></button>
+                            <button className="btn-icon-del" onClick={() => openDel('camera', c.id, c.cameraName)} title="Delete"><Trash2 size={14} /></button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -303,12 +329,17 @@ export default function KitManagement() {
                 <input placeholder="Search violation types…" value={search} onChange={e => setSearch(e.target.value)} />
               </div>
             </div>
-            <button className="kit-add-btn" onClick={() => openAdd('vtype')}><Plus size={16} /> Add Violation Type</button>
+            {isSuperAdmin && (
+              <button className="kit-add-btn" onClick={() => openAdd('vtype')}><Plus size={16} /> Add Violation Type</button>
+            )}
           </div>
           <div className="kit-table-wrap">
             <table className="kit-table">
               <thead>
-                <tr><th>Name</th><th>Code</th><th>Default Fine</th><th>Severity</th><th>Status</th><th>Actions</th></tr>
+                <tr>
+                  <th>Name</th><th>Code</th><th>Default Fine</th><th>Severity</th><th>Status</th>
+                  {isSuperAdmin && <th>Actions</th>}
+                </tr>
               </thead>
               <tbody>
                 {filteredVTypes.map(v => (
@@ -323,12 +354,14 @@ export default function KitManagement() {
                     <td><span className="fine-badge">₹{Number(v.defaultFine).toLocaleString('en-IN')}</span></td>
                     <td><span className={`severity-pill ${(v.severity || '').toLowerCase()}`}>{v.severity}</span></td>
                     <td><span className={`status-pill ${v.isActive ? 'active' : 'inactive'}`}>{v.isActive ? 'Active' : 'Inactive'}</span></td>
-                    <td>
-                      <div className="action-btns">
-                        <button className="btn-icon-edit" onClick={() => openEdit('vtype', v)} title="Edit"><Pencil size={14} /></button>
-                        <button className="btn-icon-del" onClick={() => openDel('vtype', v.id, v.violationName)} title="Deactivate"><Trash2 size={14} /></button>
-                      </div>
-                    </td>
+                    {isSuperAdmin && (
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn-icon-edit" onClick={() => openEdit('vtype', v)} title="Edit"><Pencil size={14} /></button>
+                          <button className="btn-icon-del" onClick={() => openDel('vtype', v.id, v.violationName)} title="Deactivate"><Trash2 size={14} /></button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {filteredVTypes.length === 0 && <tr><td colSpan={6} className="empty-state">No violation types found.</td></tr>}
@@ -405,6 +438,44 @@ export default function KitManagement() {
           </div>
         </div>
       )}
+
+      {/* Live Stream Modal */}
+      {selectedStream && (
+        <div className="modal-backdrop" onClick={() => setSelectedStream(null)}>
+          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: '800px', width: '90%' }}>
+            <div className="modal-header">
+              <h3><Camera size={20} style={{ marginRight: '8px' }} /> Live Feed: {selectedStream.cameraName}</h3>
+              <button className="modal-close" onClick={() => setSelectedStream(null)}><XCircle size={22} /></button>
+            </div>
+            <div style={{ background: '#000', borderRadius: '8px', overflow: 'hidden', position: 'relative', marginTop: '16px' }}>
+              {selectedStream.streamUrl ? (
+                <img 
+                  src={selectedStream.streamUrl} 
+                  alt="Live Safety Feed" 
+                  style={{ width: '100%', height: 'auto', aspectRatio: '16/9', objectFit: 'cover' }}
+                  onError={(e) => {
+                    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='450'><rect width='800' height='450' fill='%23111'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='22' fill='%23666'>Stream Offline</text></svg>`;
+                    (e.target as HTMLImageElement).src = `data:image/svg+xml,${svg}`;
+                  }}
+                />
+              ) : (
+                <img 
+                  src={`data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='450'><rect width='800' height='450' fill='%23111'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='22' fill='%23666'>Camera Not Configured</text></svg>`}
+                  alt="Offline Feed" 
+                  style={{ width: '100%', height: 'auto', aspectRatio: '16/9', objectFit: 'cover' }}
+                />
+              )}
+              <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(239, 68, 68, 0.9)', color: '#fff', padding: '4px 12px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#fff' }}></span> LIVE
+              </div>
+            </div>
+            <div style={{ padding: '16px 0 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)' }}>
+              <div><strong style={{ color: 'var(--text-primary)' }}>Location:</strong> {selectedStream.junction?.junctionName || '—'}</div>
+              <div><strong style={{ color: 'var(--text-primary)' }}>IP:</strong> {selectedStream.ipAddress || '—'}</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -476,8 +547,11 @@ function JunctionModal({ data, subdivisions, saving, onChange, onSave, onClose }
             </select>
           </div>
           <div className="form-group">
-            <label>Speed Limit (km/h)</label>
-            <input type="number" value={data.speedLimit || ''} onChange={e => set('speedLimit', e.target.value)} placeholder="40" />
+            <label>Road Type</label>
+            <select value={data.isOneWay ? 'true' : 'false'} onChange={e => set('isOneWay', e.target.value === 'true')}>
+              <option value="false">Two Way</option>
+              <option value="true">One Way</option>
+            </select>
           </div>
           <div className="form-group">
             <label>Latitude</label>

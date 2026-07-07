@@ -179,14 +179,8 @@ const Layout = () => {
             roles={TECH_ROLES} />
 
           {hasRole(...CAMERA_HEALTH_ROLES) && <div className="nav-section-label">{isOpen(isSidebarOpen, 'SYSTEM')}</div>}
-          <NavItem to="/cameras" icon={<Camera size={20} />} label="Camera Health" isOpen={isSidebarOpen}
+          <NavItem to="/kit-management" icon={<MapPin size={20} />} label="Camera Network" isOpen={isSidebarOpen}
             roles={CAMERA_HEALTH_ROLES} />
-
-          <NavItem to="/camera-config" icon={<Settings size={20} />} label="Camera Config" isOpen={isSidebarOpen}
-            roles={['super_admin']} />
-
-          <NavItem to="/kit-management" icon={<MapPin size={20} />} label="Kit Management" isOpen={isSidebarOpen}
-            roles={['super_admin']} />
 
           <NavItem to="/system" icon={<Activity size={20} />} label="System Metrics" isOpen={isSidebarOpen}
             roles={TECH_ROLES} />
