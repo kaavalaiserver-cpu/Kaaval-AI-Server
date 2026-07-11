@@ -6,57 +6,35 @@ import boto3
 from botocore.exceptions import ClientError
 from botocore.config import Config
 import logging
+import os
+import urllib.parse
 from config import settings
 
 logger = logging.getLogger(__name__)
 
-# Configure boto3 to use signature version 4 and the specified region
-boto_config = Config(
-    region_name=settings.aws_region,
-    signature_version="s3v4",
-    retries={"max_attempts": 3, "mode": "standard"}
-)
-
-# Use default session (picks up IAM role or ~/.aws/credentials)
-s3_client = boto3.client("s3", config=boto_config)
-
+LOCAL_UPLOAD_DIR = os.environ.get("LOCAL_UPLOAD_DIR", os.path.abspath(os.path.join(os.getcwd(), "..", "uploads")))
 
 def generate_presigned_url(bucket_name: str, object_name: str, expiration: int = settings.presign_ttl) -> str | None:
     """
-    Generate a presigned URL to share an S3 object securely.
+    Returns the secure local URL for the image instead of an S3 presigned URL.
     """
     if not object_name:
         return None
         
-    try:
-        url = s3_client.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": bucket_name, "Key": object_name},
-            ExpiresIn=expiration
-        )
-        return url
-    except ClientError as e:
-        logger.error(f"Failed to generate presigned URL for {bucket_name}/{object_name}: {e}")
-        return None
+    API_BASE = os.environ.get('API_BASE_URL', 'http://localhost:8003')
+    return f"{API_BASE}/api/violations/image/by-key?key={urllib.parse.quote(object_name)}"
 
 
 def upload_image(bucket_name: str, object_name: str, file_bytes: bytes, content_type: str = "image/jpeg") -> bool:
     """
-    Upload an image file to S3.
+    Save an image file to local disk.
     """
     try:
-        s3_client.put_object(
-            Bucket=bucket_name,
-            Key=object_name,
-            Body=file_bytes,
-            ContentType=content_type,
-            # No ACLs needed; we use presigned URLs for access
-        )
+        full_path = os.path.join(LOCAL_UPLOAD_DIR, object_name)
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        with open(full_path, "wb") as f:
+            f.write(file_bytes)
         return True
     except Exception as e:
-        logger.error(f"Failed to upload image {object_name} to {bucket_name}: {e}")
-        if settings.database_url.startswith("sqlite"):
-            logger.warning("Bypassing S3 upload error for local SQLite development.")
-            # Optionally write to a local temp folder or mock
-            return True
+        logger.error(f"Failed to save image locally to {object_name}: {e}")
         return False

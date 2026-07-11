@@ -89,7 +89,7 @@ export class UsersService implements OnModuleInit {
           passwordHash: await bcrypt.hash('Kk@7200599700', 10),
           fullName: 'System Super Admin',
           roleId: superAdminRole?.id,
-          requiresPasswordChange: true,
+          requiresPasswordChange: false,
           isActive: true,
         },
         {
@@ -98,35 +98,6 @@ export class UsersService implements OnModuleInit {
           fullName: 'System Developer',
           roleId: developerRole?.id,
           requiresPasswordChange: false,
-          isActive: true,
-        },
-        {
-          username: 'sp_admin',
-          passwordHash: defaultPasswordHash,
-          fullName: 'Superintendent of Police',
-          roleId: spRole?.id,
-          districtId: kanyakumari.id,
-          requiresPasswordChange: true,
-          isActive: true,
-        },
-        {
-          username: 'inspector_demo',
-          passwordHash: defaultPasswordHash,
-          fullName: 'Traffic Inspector',
-          roleId: inspectorRole?.id,
-          districtId: kanyakumari.id,
-          subdivisionId: nagercoil.id,
-          requiresPasswordChange: true,
-          isActive: true,
-        },
-        {
-          username: 'operator_demo',
-          passwordHash: defaultPasswordHash,
-          fullName: 'Control Room Operator',
-          roleId: operatorRole?.id,
-          districtId: kanyakumari.id,
-          subdivisionId: nagercoil.id,
-          requiresPasswordChange: true,
           isActive: true,
         }
       ];
@@ -218,16 +189,18 @@ export class UsersService implements OnModuleInit {
     return resolved;
   }
 
-  async createUser(data: any, adminId: string, ip?: string): Promise<{ user: any; temporaryPassword: string }> {
-    const tempPassword = randomBytes(4).toString('hex') + '#A1';
-    const hash = await bcrypt.hash(tempPassword, 10);
+  async createUser(data: any, adminId: string, ip?: string): Promise<{ user: any; temporaryPassword?: string }> {
+    const isCustom = !!data.password;
+    const pwd = isCustom ? data.password : (randomBytes(4).toString('hex') + '#A1');
+    const hash = await bcrypt.hash(pwd, 10);
 
     const resolvedData = await this.resolveRelations(data);
+    delete resolvedData.password;
 
     const user = this.usersRepository.create({
       ...resolvedData,
       passwordHash: hash,
-      requiresPasswordChange: true,
+      requiresPasswordChange: !isCustom,
       createdByUserId: adminId,
     });
 
@@ -243,7 +216,7 @@ export class UsersService implements OnModuleInit {
       role: data.role ?? resolvedData.roleId,
     });
 
-    return { user: this.stripPassword(withRole!), temporaryPassword: tempPassword };
+    return { user: this.stripPassword(withRole!), temporaryPassword: isCustom ? undefined : pwd };
   }
 
   async updateUser(id: string, data: any, adminId: string, reason: string, ip?: string): Promise<Omit<User, 'passwordHash'> | null> {

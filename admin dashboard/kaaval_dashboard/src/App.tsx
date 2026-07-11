@@ -8,16 +8,16 @@ import Violations from './pages/Violations';
 import Analytics from './pages/Analytics';
 import DevAnalytics from './pages/DevAnalytics';
 import SystemStatus from './pages/SystemStatus';
-import SystemLogs from './pages/SystemLogs';
 import UsersManagement from './pages/UsersManagement';
 import SettingsPage from './pages/Settings';
 import WeeklyReports from './pages/WeeklyReports';
 import KitManagement from './pages/KitManagement';
+import WantedVehicles from './pages/WantedVehicles';
 
 const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer'];
+const MANAGEMENT_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector'];
 const ALL_EXCEPT_VIEWERS: Role[] = ['super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'developer', 'operator'];
 const TECH_ROLES: Role[] = ['super_admin', 'developer'];
-const REPORTS_ROLES: Role[] = ['super_admin', 'developer', 'sp', 'dsp'];
 const CAMERA_HEALTH_ROLES: Role[] = ['super_admin', 'developer', 'sp', 'dsp', 'inspector', 'sub_inspector', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin'];
 
 const ProtectedRoute = ({ children, roles }: { children: React.ReactNode; roles?: Role[] }) => {
@@ -43,7 +43,7 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
         <Route path="analytics" element={
-          <ProtectedRoute roles={FULL_ACCESS_ROLES}>
+          <ProtectedRoute roles={MANAGEMENT_ROLES}>
             <Analytics />
           </ProtectedRoute>
         } />
@@ -58,11 +58,6 @@ function AppRoutes() {
             <SystemStatus />
           </ProtectedRoute>
         } />
-        <Route path="logs" element={
-          <ProtectedRoute roles={TECH_ROLES}>
-            <SystemLogs />
-          </ProtectedRoute>
-        } />
         <Route path="users" element={
           <ProtectedRoute roles={['super_admin']}>
             <UsersManagement />
@@ -73,9 +68,14 @@ function AppRoutes() {
             <KitManagement />
           </ProtectedRoute>
         } />
+        <Route path="wanted-vehicles" element={
+          <ProtectedRoute roles={CAMERA_HEALTH_ROLES}>
+            <WantedVehicles />
+          </ProtectedRoute>
+        } />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="reports" element={
-          <ProtectedRoute roles={REPORTS_ROLES}>
+          <ProtectedRoute roles={MANAGEMENT_ROLES}>
             <WeeklyReports />
           </ProtectedRoute>
         } />

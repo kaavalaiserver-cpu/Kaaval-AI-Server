@@ -40,8 +40,8 @@ export class Junction {
   @Column({ name: 'junction_type', type: 'varchar', length: 50, default: 'ROUNDANA' })
   junctionType!: string; // ROUNDANA, SIGNAL, HIGHWAY, CHECKPOST
 
-  @Column({ name: 'speed_limit', type: 'int', nullable: true })
-  speedLimit!: number | null;
+  @Column({ name: 'is_one_way', type: 'boolean', default: false })
+  isOneWay!: boolean;
 
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive!: boolean;
@@ -53,7 +53,7 @@ export class Junction {
   @OneToMany(() => Camera, (c) => c.junction)
   cameras!: Camera[];
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'created_by' })
   createdBy!: User | null;
 

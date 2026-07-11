@@ -1,10 +1,15 @@
-import { Controller, Get, Post, Delete, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Query, UseGuards, Request, Headers, UnauthorizedException } from '@nestjs/common';
 import { SystemService } from './system.service.js';
+import { AuditService } from './audit.service.js';
 import { JwtAuthGuard, RolesGuard, Roles } from '../auth/index.js';
+import { Request as ExpressRequest } from 'express';
 
 @Controller('system')
 export class SystemController {
-  constructor(private readonly systemService: SystemService) {}
+  constructor(
+    private readonly systemService: SystemService,
+    private readonly auditService: AuditService,
+  ) {}
 
   @Get('logs')
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -27,11 +32,17 @@ export class SystemController {
 
   /**
    * Internal-only endpoint: AI pipeline / edge devices POST logs here.
-   * Kept unauthenticated but protected by CORS + rate limiting.
-   * In production, restrict this to the internal network via a reverse proxy.
+   * Secured by API Key for public IP deployment.
    */
   @Post('logs')
-  async addLog(@Body() body: { level: string; module: string; message: string }) {
+  async addLog(
+    @Body() body: { level: string; module: string; message: string },
+    @Headers('x-api-key') apiKey: string,
+  ) {
+    const VALID_KEY = process.env.RDK_API_KEY;
+    if (!VALID_KEY || apiKey !== VALID_KEY) {
+      throw new UnauthorizedException('Invalid API Key');
+    }
     return this.systemService.addLog(body.level, body.module, body.message);
   }
 
@@ -61,5 +72,12 @@ export class SystemController {
   @Roles('SUPER_ADMIN', 'DEVELOPER')
   getPlateApiUsage() {
     return this.systemService.getPlateApiUsage();
+  }
+
+  @Get('audit/my-last-action')
+  @UseGuards(JwtAuthGuard)
+  async getMyLastAction(@Request() req: any) {
+    if (!req.user || !req.user.id) return null;
+    return this.auditService.getLastAction(req.user.id);
   }
 }

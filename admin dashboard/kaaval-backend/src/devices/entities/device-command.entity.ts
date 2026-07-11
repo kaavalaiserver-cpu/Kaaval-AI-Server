@@ -45,7 +45,7 @@ export class DeviceCommand {
   @JoinColumn({ name: 'device_id' })
   device!: Device;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'created_by' })
   createdBy!: User | null;
 }

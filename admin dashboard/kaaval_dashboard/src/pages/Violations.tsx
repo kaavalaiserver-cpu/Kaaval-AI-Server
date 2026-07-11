@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   AlertTriangle, CheckCircle, XCircle, Eye, Download, Filter, Upload,
   Trash2, RefreshCw, ZoomIn, ZoomOut, RotateCw, Maximize2, Shield,
-  ChevronLeft, ChevronRight, Edit2, Save, X, Calendar, Clock, Target, ExternalLink
+  ChevronLeft, ChevronRight, Edit2, Save, X, Calendar, Clock, Target, ExternalLink, EyeOff
 } from 'lucide-react';
 import './Violations.css';
 
@@ -76,14 +76,16 @@ const Violations = () => {
   const [uploadResult, setUploadResult] = useState<string | null>(null);
   const [pageInput, setPageInput] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [cameras, setCameras] = useState<any[]>([]);
 
   // Review Modal
   const [selectedViolation, setSelectedViolation] = useState<ViolationItem | null>(null);
   const [reviewZoom, setReviewZoom] = useState(1);
-  const [viewMode, setViewMode] = useState<'proof' | 'plate'>('proof');
+
   const [processing, setProcessing] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editedPlate, setEditedPlate] = useState('');
+  const [showPlateText, setShowPlateText] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [hideNA, setHideNA] = useState(false);
   const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
@@ -164,6 +166,12 @@ const Violations = () => {
     return () => clearInterval(interval);
   }, [fetchViolations, selectedViolation]);
 
+  useEffect(() => {
+    axios.get(`${API_BASE}/cameras/status`).then(res => {
+      if (res.data?.cameras) setCameras(res.data.cameras);
+    }).catch(console.error);
+  }, []);
+
   const handlePageJump = () => {
     const p = parseInt(pageInput, 10);
     if (!isNaN(p) && p >= 1 && p <= totalPages) {
@@ -228,9 +236,10 @@ const Violations = () => {
   };
 
   const openReviewModal = (v: ViolationItem) => {
-    setSelectedViolation(v); setReviewZoom(1); setViewMode('proof');
+    setSelectedViolation(v); setReviewZoom(1);
     setEditMode(false); setEditedPlate(v.vehicle_number);
     setSelectedReasons([]);
+    setShowPlateText(false);
   };
 
   const handleNext = () => {
@@ -336,7 +345,7 @@ const Violations = () => {
                 <div className="evidence-canvas-modal">
                   {selectedViolation.image_url ? (
                     <img
-                      src={viewMode === 'plate' ? (selectedViolation.proof_img_url || selectedViolation.image_url) : selectedViolation.image_url}
+                      src={selectedViolation.image_url}
                       style={{ transform: `scale(${reviewZoom})` }} alt="Evidence"
                     />
                   ) : <div className="no-image">No Image</div>}
@@ -348,17 +357,12 @@ const Violations = () => {
                   <button onClick={() => setReviewZoom(Math.min(reviewZoom + 0.25, 3))} title="Zoom In" className="btn-secondary" style={{ padding: '6px' }}><ZoomIn size={16} /></button>
                   <button onClick={() => setReviewZoom(Math.max(reviewZoom - 0.25, 0.5))} title="Zoom Out" className="btn-secondary" style={{ padding: '6px' }}><ZoomOut size={16} /></button>
                   <button onClick={() => setReviewZoom(1)} title="Reset" className="btn-secondary" style={{ padding: '6px' }}><RotateCw size={16} /></button>
-                  <button onClick={() => setViewMode(viewMode === 'proof' ? 'plate' : 'proof')} className="btn-secondary" style={{ flex: 1, justifyContent: 'center' }}>
-                    {viewMode === 'proof' ? 'Show Plate' : 'Show Scene'}
-                  </button>
                   <button onClick={() => {
-                    const url = viewMode === 'plate' ? (selectedViolation.proof_img_url || selectedViolation.image_url) : selectedViolation.image_url;
-                    window.open(url, '_blank');
+                    window.open(selectedViolation.image_url, '_blank');
                   }} title="Open in New Tab" className="btn-secondary" style={{ padding: '6px' }}><ExternalLink size={16} /></button>
                   <button onClick={() => {
-                    const url = viewMode === 'plate' ? (selectedViolation.proof_img_url || selectedViolation.image_url) : selectedViolation.image_url;
                     const a = document.createElement('a');
-                    a.href = url;
+                    a.href = selectedViolation.image_url;
                     a.download = `violation-${selectedViolation?.vehicle_number || 'unknown'}.jpg`;
                     a.target = '_blank';
                     a.click();
@@ -375,15 +379,25 @@ const Violations = () => {
                         <button onClick={() => setEditMode(false)} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', padding: '6px', cursor: 'pointer', display: 'flex' }}><X size={16} /></button>
                       </div>
                     ) : (
-                      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', background: isPlateUnknown(selectedViolation.vehicle_number) ? '#374151' : '#facc15', padding: '8px 24px', borderRadius: '8px', border: '3px solid #111', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
-                        <span style={{ fontSize: isPlateUnknown(selectedViolation.vehicle_number) ? '1rem' : '1.6rem', fontWeight: '900', color: isPlateUnknown(selectedViolation.vehicle_number) ? '#9ca3af' : '#000', letterSpacing: '3px', fontFamily: 'monospace', textTransform: 'uppercase' }}>
-                          {isPlateUnknown(selectedViolation.vehicle_number) ? 'PLATE UNIDENTIFIED' : selectedViolation.vehicle_number}
-                        </span>
-                        {hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
-                          <button onClick={() => { setEditMode(true); setEditedPlate(selectedViolation.vehicle_number || ''); }}
-                            style={{ position: 'absolute', right: '-40px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: '50%', padding: '8px', cursor: 'pointer', display: 'flex', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }} title="Edit Plate">
-                            <Edit2 size={14} />
-                          </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', background: isPlateUnknown(selectedViolation.vehicle_number) ? '#374151' : '#facc15', padding: '8px 24px', borderRadius: '8px', border: '3px solid #111', boxShadow: '0 4px 12px rgba(0,0,0,0.2)' }}>
+                          <span style={{ fontSize: isPlateUnknown(selectedViolation.vehicle_number) ? '1rem' : '1.6rem', fontWeight: '900', color: isPlateUnknown(selectedViolation.vehicle_number) ? '#9ca3af' : '#000', letterSpacing: '3px', fontFamily: 'monospace', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            {showPlateText ? (isPlateUnknown(selectedViolation.vehicle_number) ? 'PLATE UNIDENTIFIED' : selectedViolation.vehicle_number) : '••••••••••'}
+                            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowPlateText(!showPlateText); }} style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '4px', color: 'inherit', opacity: 0.7 }} title={showPlateText ? 'Hide Plate' : 'Show Plate'}>
+                              {showPlateText ? <Eye size={22} color="#ef4444" /> : <Eye size={22} />}
+                            </button>
+                          </span>
+                          {hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
+                            <button onClick={() => { setEditMode(true); setEditedPlate(selectedViolation.vehicle_number || ''); setShowPlateText(true); }}
+                              style={{ position: 'absolute', right: '-40px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: '50%', padding: '8px', cursor: 'pointer', display: 'flex', transition: 'all 0.2s', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }} title="Edit Plate">
+                              <Edit2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                        {showPlateText && (
+                          <div style={{ color: '#ef4444', fontSize: '0.75rem', fontWeight: 600, textAlign: 'center', maxWidth: '320px', lineHeight: '1.4' }}>
+                            Kindly issue fine only after verifying the number plate manually. This number plate shown is just for reference.
+                          </div>
                         )}
                       </div>
                     )}
@@ -530,6 +544,16 @@ const Violations = () => {
                 <ChevronRight size={18} />
               </button>
             </div>
+            <select 
+              value={filters.cameraId} 
+              onChange={e => setFilter('cameraId', e.target.value)}
+              style={{ marginLeft: '16px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text-primary)', padding: '6px 12px', borderRadius: '6px', fontSize: '0.9rem', outline: 'none' }}
+            >
+              <option value="">All Cameras</option>
+              {cameras.map(c => (
+                <option key={c.id} value={c.id}>{c.name} {c.location ? `(${c.location})` : ''}</option>
+              ))}
+            </select>
           </h2>
         </div>
         <div className="toolbar-right">
@@ -539,11 +563,13 @@ const Violations = () => {
               <Trash2 size={16} /> Delete Selected ({selectedIds.length})
             </button>
           )}
-          {hasRole('super_admin', 'developer', 'sp') && (
+          {hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
             <>
-              <button className="btn-secondary" onClick={() => setShowUpload(!showUpload)}>
-                <Upload size={16} /> Batch Upload
-              </button>
+              {hasRole('super_admin', 'developer', 'sp') && (
+                <button className="btn-secondary" onClick={() => setShowUpload(!showUpload)}>
+                  <Upload size={16} /> Batch Upload
+                </button>
+              )}
               <button 
                 className="btn-secondary" 
                 onClick={handleDownloadDailyReport}
@@ -569,6 +595,27 @@ const Violations = () => {
             disabled={uploading} />
           {uploading && <span className="upload-status">Processing...</span>}
           {uploadResult && <span className="upload-result">{uploadResult}</span>}
+        </div>
+      )}
+
+      {/* Camera Quick-Switch Tabs */}
+      {cameras.length > 0 && (
+        <div className="camera-tabs">
+          <button
+            className={`camera-tab-btn ${!filters.cameraId ? 'active' : ''}`}
+            onClick={() => setFilter('cameraId', '')}
+          >
+            All Cameras
+          </button>
+          {cameras.map(c => (
+            <button
+              key={c.id}
+              className={`camera-tab-btn ${filters.cameraId === c.id ? 'active' : ''}`}
+              onClick={() => setFilter('cameraId', c.id)}
+            >
+              {c.name} {c.location ? `(${c.location})` : ''}
+            </button>
+          ))}
         </div>
       )}
 

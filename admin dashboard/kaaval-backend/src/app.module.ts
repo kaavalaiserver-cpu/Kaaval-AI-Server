@@ -51,17 +51,35 @@ function checkPort(host: string, port: number, timeout = 2000): Promise<boolean>
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => {
-        const dbHost = config.get<string>('DB_HOST', 'localhost');
-        const dbPort = config.get<number>('DB_PORT', 5432);
-        
-        Logger.log(`Connecting to PostgreSQL database at ${dbHost}:${dbPort}`, 'TypeORM');
-        
-        return {
-          type: 'sqlite' as const,
-          database: 'kaaval_local.db',
-          entities: [__dirname + '/**/*.entity{.ts,.js}'],
-          synchronize: process.env.NODE_ENV !== 'production',
-        };
+        const dbType = config.get<string>('DB_TYPE', 'sqlite');
+        if (dbType === 'postgres') {
+          const dbHost = config.get<string>('DB_HOST', 'postgres');
+          const dbPort = config.get<number>('DB_PORT', 5432);
+          const dbUsername = config.get<string>('DB_USERNAME', 'postgres');
+          const dbPassword = config.get<string>('DB_PASSWORD', 'postgres');
+          const dbName = config.get<string>('DB_NAME', 'kaaval_ai');
+          
+          Logger.log(`Connecting to PostgreSQL database at ${dbHost}:${dbPort}`, 'TypeORM');
+          
+          return {
+            type: 'postgres' as const,
+            host: dbHost,
+            port: dbPort,
+            username: dbUsername,
+            password: dbPassword,
+            database: dbName,
+            entities: [__dirname + '/**/*.entity{.ts,.js}'],
+            synchronize: true, // In production, consider migrations instead
+          };
+        } else {
+          Logger.log(`Connecting to local SQLite database kaaval_local.db`, 'TypeORM');
+          return {
+            type: 'sqlite' as const,
+            database: 'kaaval_local.db',
+            entities: [__dirname + '/**/*.entity{.ts,.js}'],
+            synchronize: true,
+          };
+        }
       },
     }),
 

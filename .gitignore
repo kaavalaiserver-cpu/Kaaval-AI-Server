@@ -9,3 +9,11 @@ scratch/
 .env
 .idea/
 .vscode/
+
+*.db
+backend-data/
+logs/
+uploads/
+backups/
+
+violation_backup/

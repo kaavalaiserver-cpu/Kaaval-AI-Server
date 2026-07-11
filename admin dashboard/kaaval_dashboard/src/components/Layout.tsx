@@ -22,6 +22,7 @@ import {
   Sun,
   Moon,
   MapPin,
+  ShieldAlert,
 } from 'lucide-react';
 import type { SystemStatus } from '../types';
 import NotificationPanel from './NotificationPanel';
@@ -71,7 +72,7 @@ const ROLE_LABELS: Record<Role, string> = {
 };
 
 const TECH_ROLES: Role[] = ['super_admin', 'developer'];
-const MANAGEMENT_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin'];
+const MANAGEMENT_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector'];
 const CAMERA_HEALTH_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer'];
 const Layout = () => {
   const { user, logout, hasRole } = useAuth();
@@ -85,6 +86,7 @@ const Layout = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [theme, setTheme] = useState(document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
+  const [lastAction, setLastAction] = useState<any>(null);
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
@@ -131,6 +133,19 @@ const Layout = () => {
     const interval = setInterval(fetchStatus, 60000); // 60s polling
     return () => clearInterval(interval);
   }, [user?.role]);
+
+  useEffect(() => {
+    if (!user || hasRole('super_admin', 'developer')) return;
+    const fetchLastAction = async () => {
+      try {
+        const res = await axios.get(`${API_BASE}/system/audit/my-last-action`);
+        setLastAction(res.data);
+      } catch {
+        // Ignore errors if audit not available
+      }
+    };
+    fetchLastAction();
+  }, [user, hasRole]);
 
   return (
     <div className="layout-container">
@@ -181,6 +196,9 @@ const Layout = () => {
           {hasRole(...CAMERA_HEALTH_ROLES) && <div className="nav-section-label">{isOpen(isSidebarOpen, 'SYSTEM')}</div>}
           <NavItem to="/kit-management" icon={<MapPin size={20} />} label="Camera Network" isOpen={isSidebarOpen}
             roles={CAMERA_HEALTH_ROLES} />
+            
+          <NavItem to="/wanted-vehicles" icon={<ShieldAlert size={20} />} label="Wanted Vehicles" isOpen={isSidebarOpen}
+            roles={CAMERA_HEALTH_ROLES} />
 
           <NavItem to="/system" icon={<Activity size={20} />} label="System Metrics" isOpen={isSidebarOpen}
             roles={TECH_ROLES} />
@@ -188,13 +206,18 @@ const Layout = () => {
           <NavItem to="/users" icon={<User size={20} />} label="User Management" isOpen={isSidebarOpen}
             roles={['super_admin']} />
 
-          <NavItem to="/logs" icon={<FileTerminal size={20} />} label="System Logs" isOpen={isSidebarOpen}
-            roles={TECH_ROLES} />
-
           <NavItem to="/reports" icon={<BarChart3 size={20} />} label="Reports" isOpen={isSidebarOpen}
-            roles={['super_admin', 'developer', 'sp', 'dsp']} />
+            roles={MANAGEMENT_ROLES} />
 
           <NavItem to="/settings" icon={<Settings size={20} />} label="Settings" isOpen={isSidebarOpen} />
+          
+          {!hasRole('super_admin', 'developer') && lastAction && isSidebarOpen && (
+            <div className="last-action-widget" style={{ padding: '10px 16px', margin: '15px 10px', background: 'var(--bg-card-hover)', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.75rem' }}>
+              <div style={{ color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.65rem' }}>Last Action</div>
+              <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{lastAction.action?.replace(/_/g, ' ')}</div>
+              {lastAction.createdAt && <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: '4px' }}>{new Date(lastAction.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}</div>}
+            </div>
+          )}
         </nav>
 
         <div className="sidebar-footer">

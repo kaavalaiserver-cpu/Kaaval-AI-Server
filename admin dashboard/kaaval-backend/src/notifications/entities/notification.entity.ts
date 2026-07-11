@@ -51,7 +51,7 @@ export class Notification {
   createdAt!: Date;
 
   // ── Relations ─────────────────────────────────────────────────
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'sender_id' })
   sender!: User | null;
 
@@ -63,7 +63,7 @@ export class Notification {
   @JoinColumn({ name: 'target_subdivision_id' })
   targetSubdivision!: Subdivision | null;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'target_user_id' })
   targetUser!: User | null;
 }

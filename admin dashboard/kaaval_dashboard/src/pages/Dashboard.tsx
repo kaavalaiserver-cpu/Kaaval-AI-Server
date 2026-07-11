@@ -28,10 +28,12 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const [selectedSubdivision, setSelectedSubdivision] = useState<string>('all');
+  const [selectedLocation, setSelectedLocation] = useState<string>('all');
 
   const canUseDistrictFeatures = !!user && FULL_ACCESS_ROLES.includes(user.role);
 
   const isInScope = (location?: string | null) => {
+    if (selectedLocation !== 'all' && location !== selectedLocation) return false;
     if (canUseDistrictFeatures) return true;
     if (selectedSubdivision !== 'all') {
       return (location ?? '').toLowerCase().includes(selectedSubdivision.toLowerCase());
@@ -39,6 +41,12 @@ const Dashboard = () => {
     // Very basic fallback if they are an admin
     return true;
   };
+
+  const uniqueLocations = useMemo(() => {
+    if (!cameraStatus?.cameras) return [];
+    const locs = cameraStatus.cameras.map(c => c.location).filter(Boolean);
+    return Array.from(new Set(locs));
+  }, [cameraStatus]);
 
   useEffect(() => {
     const fetchAll = async (background = false) => {
@@ -92,12 +100,12 @@ const Dashboard = () => {
   const visibleCameras = useMemo(() => {
     if (!cameraStatus?.cameras) return [];
     return cameraStatus.cameras.filter((c) => isInScope(c.location));
-  }, [cameraStatus, canUseDistrictFeatures, selectedSubdivision]);
+  }, [cameraStatus, canUseDistrictFeatures, selectedSubdivision, selectedLocation]);
 
   const visibleRecentViolations = useMemo(() => {
     const filtered = recentViolations.filter((v) => isInScope(v.location));
     return filtered.slice(0, 10);
-  }, [recentViolations, canUseDistrictFeatures, selectedSubdivision]);
+  }, [recentViolations, canUseDistrictFeatures, selectedSubdivision, selectedLocation]);
 
 
 
@@ -131,24 +139,42 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Subdivision Filter for Superadmin */}
-      {canUseDistrictFeatures && (
-        <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <label style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Filter by Subdivision:</label>
+      {/* Subdivision & Camera Filter */}
+      <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+        {canUseDistrictFeatures && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <label style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Filter by Subdivision:</label>
+            <select 
+              value={selectedSubdivision} 
+              onChange={(e) => {
+                setSelectedSubdivision(e.target.value);
+                setSelectedLocation('all');
+              }}
+              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', outline: 'none' }}
+            >
+              <option value="all">All District (Kanyakumari)</option>
+              <option value="nagercoil">Nagercoil</option>
+              <option value="colachel">Colachel</option>
+              <option value="kanyakumari">Kanyakumari</option>
+              <option value="thuckalay">Thuckalay</option>
+              <option value="marthandam">Marthandam</option>
+            </select>
+          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <label style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Filter by Camera Location:</label>
           <select 
-            value={selectedSubdivision} 
-            onChange={(e) => setSelectedSubdivision(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', outline: 'none' }}
+            value={selectedLocation} 
+            onChange={(e) => setSelectedLocation(e.target.value)}
+            style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', outline: 'none', minWidth: '200px' }}
           >
-            <option value="all">All District (Kanyakumari)</option>
-            <option value="nagercoil">Nagercoil</option>
-            <option value="colachel">Colachel</option>
-            <option value="kanyakumari">Kanyakumari</option>
-            <option value="thuckalay">Thuckalay</option>
-            <option value="marthandam">Marthandam</option>
+            <option value="all">All Locations</option>
+            {uniqueLocations.map(loc => (
+              <option key={loc} value={loc}>{loc}</option>
+            ))}
           </select>
         </div>
-      )}
+      </div>
 
       {/* Live Violation Feed */}
       <div className="dash-card live-feed-card" style={{ marginBottom: '24px' }}>

@@ -8,10 +8,11 @@ import { LoginSession } from './entities/user-session.entity.js';
 import { Role } from '../auth/entities/role.entity.js';
 import { District } from '../districts/entities/district.entity.js';
 import { Subdivision } from '../subdivisions/entities/subdivision.entity.js';
+import { Junction } from '../junctions/entities/junction.entity.js';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, LoginSession, Role, District, Subdivision]),
+    TypeOrmModule.forFeature([User, LoginSession, Role, District, Subdivision, Junction]),
     forwardRef(() => SystemModule),
   ],
   controllers: [UsersController],

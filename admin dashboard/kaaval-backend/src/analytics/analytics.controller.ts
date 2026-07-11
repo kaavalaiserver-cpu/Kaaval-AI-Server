@@ -8,7 +8,7 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get('summary')
-  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR')
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
   async getSummary(@Request() req: any, @Query('subdivisionCode') subdivisionCode?: string) {
     return this.analyticsService.getSummary(req.user, subdivisionCode);
   }

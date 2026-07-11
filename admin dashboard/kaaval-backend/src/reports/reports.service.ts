@@ -17,15 +17,26 @@ export class ReportsService {
 
   // ─── Daily Report ────────────────────────────────────────────────────────────
 
-  async getDailyReport(dateStr?: string) {
+  async getDailyReport(dateStr?: string, user?: any) {
     const date = dateStr ? new Date(dateStr) : new Date();
     const start = new Date(date);
     start.setHours(0, 0, 0, 0);
     const end = new Date(date);
     end.setHours(23, 59, 59, 999);
 
+    const query = { createdAt: Between(start, end) } as any;
+    if (user && !['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER'].includes((user.role || '').toUpperCase())) {
+      if (user.junctionId) {
+        query.camera = { junctionId: user.junctionId };
+      } else if (user.subdivisionId) {
+        query.camera = { junction: { subdivisionId: user.subdivisionId } };
+      } else {
+        return this.buildDailyStats([], date);
+      }
+    }
+
     const violations = await this.violationRepo.find({
-      where: { createdAt: Between(start, end) },
+      where: query,
       relations: ['violationType', 'camera', 'camera.junction', 'camera.junction.subdivision'],
     });
 
@@ -81,7 +92,7 @@ export class ReportsService {
 
   // ─── Weekly Report ───────────────────────────────────────────────────────────
 
-  async getWeeklyReport(startDateStr?: string, endDateStr?: string) {
+  async getWeeklyReport(startDateStr?: string, endDateStr?: string, user?: any) {
     const end = endDateStr ? new Date(endDateStr) : new Date();
     end.setHours(23, 59, 59, 999);
 
@@ -91,9 +102,24 @@ export class ReportsService {
     }
     start.setHours(0, 0, 0, 0);
 
+    const query = { createdAt: Between(start, end) } as any;
+    if (user && !['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER'].includes((user.role || '').toUpperCase())) {
+      if (user.junctionId) {
+        query.camera = { junctionId: user.junctionId };
+      } else if (user.subdivisionId) {
+        query.camera = { junction: { subdivisionId: user.subdivisionId } };
+      } else {
+        return {
+          period: { start: start.toISOString().split('T')[0], end: end.toISOString().split('T')[0] },
+          summary: this.buildDailyStats([], new Date()),
+          dailyTrend: [],
+        };
+      }
+    }
+
     const violations = await this.violationRepo.find({
-      where: { createdAt: Between(start, end) },
-      relations: ['violationType', 'camera', 'camera.junction'],
+      where: query,
+      relations: ['violationType', 'camera', 'camera.junction', 'camera.junction.subdivision'],
     });
 
     // Build day-by-day trend

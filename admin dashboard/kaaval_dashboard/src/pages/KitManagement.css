@@ -52,13 +52,13 @@
 
 .kit-tab:hover {
   color: var(--text-primary);
-  background: var(--card-bg);
+  background: var(--bg-card);
 }
 
 .kit-tab.active {
   color: var(--accent-blue, #3b82f6);
   border-bottom-color: var(--accent-blue, #3b82f6);
-  background: var(--card-bg);
+  background: var(--bg-card);
 }
 
 .tab-count {
@@ -80,7 +80,7 @@
 }
 
 .subdivision-card {
-  background: var(--card-bg);
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 14px;
   padding: 1.5rem;
@@ -189,7 +189,7 @@
 
 .search-input-wrap input {
   padding: 0.5rem 0.75rem 0.5rem 2.25rem;
-  background: var(--card-bg);
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   color: var(--text-primary);
@@ -216,7 +216,7 @@
 .kit-add-btn:hover { opacity: 0.9; }
 
 .kit-table-wrap {
-  background: var(--card-bg);
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 14px;
   overflow: hidden;
@@ -326,7 +326,7 @@
 }
 
 .modal-box {
-  background: var(--card-bg);
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 18px;
   padding: 2rem;
@@ -391,7 +391,7 @@
 .form-group input,
 .form-group select,
 .form-group textarea {
-  background: var(--input-bg, var(--card-bg));
+  background: var(--input-bg, var(--bg-card));
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 0.6rem 0.85rem;

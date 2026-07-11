@@ -60,4 +60,11 @@ export class AuditService {
       this.logger.error(`Failed to write audit log to file: ${err.message}`);
     }
   }
+
+  async getLastAction(userId: string) {
+    return this.auditRepository.findOne({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+    });
+  }
 }

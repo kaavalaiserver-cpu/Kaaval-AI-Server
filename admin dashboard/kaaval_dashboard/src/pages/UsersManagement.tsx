@@ -123,7 +123,11 @@ const UsersManagement = () => {
     try {
       if (modalMode === 'create') {
         const res = await axios.post(`${API_BASE}/users`, formData);
-        setTempPassword(res.data.temporaryPassword);
+        if (res.data.temporaryPassword) {
+          setTempPassword(res.data.temporaryPassword);
+        } else {
+          handleCloseModal();
+        }
         fetchUsersAndJunctions();
       } else if (modalMode === 'edit' && selectedUser) {
         if (!reason && formData.role !== selectedUser.role) {
@@ -323,12 +327,14 @@ const UsersManagement = () => {
                           >
                             {user.isActive ? 'Disable' : 'Enable'}
                           </button>
-                          <button
-                            style={{ color: '#ef4444', border: '1px solid #ef4444', background: 'transparent' }}
-                            onClick={() => handleOpenModal('delete', user)}
-                          >
-                            Delete
-                          </button>
+                          {user.username !== 'superadmin' && user.role !== 'SUPER_ADMIN' && (
+                            <button
+                              style={{ color: '#ef4444', border: '1px solid #ef4444', background: 'transparent' }}
+                              onClick={() => handleOpenModal('delete', user)}
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -367,9 +373,15 @@ const UsersManagement = () => {
                 {(modalMode === 'create' || modalMode === 'edit') && (
                   <>
                     {modalMode === 'create' && (
-                      <div className="form-group">
-                        <label>Username</label>
-                        <input type="text" required value={formData.username || ''} onChange={e => setFormData({...formData, username: e.target.value})} />
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label>Username</label>
+                          <input type="text" required value={formData.username || ''} onChange={e => setFormData({...formData, username: e.target.value})} />
+                        </div>
+                        <div className="form-group">
+                          <label>Password</label>
+                          <input type="text" required value={formData.password || ''} onChange={e => setFormData({...formData, password: e.target.value})} placeholder="Custom password" />
+                        </div>
                       </div>
                     )}
                     <div className="form-group">
@@ -385,18 +397,13 @@ const UsersManagement = () => {
                       </div>
                       <div className="form-group">
                         <label>Subdivision</label>
-                        <select value={formData.subdivision || ''} onChange={e => setFormData({...formData, subdivision: e.target.value, junction: ''})}>
+                        <select 
+                          required={['inspector', 'sub_inspector', 'operator', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin'].includes(formData.role || '')} 
+                          value={formData.subdivision || ''} 
+                          onChange={e => setFormData({...formData, subdivision: e.target.value})}
+                        >
                           <option value="">None (All Subdivisions)</option>
                           {SUBDIVISIONS.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label>Junction (Optional)</label>
-                        <select value={formData.junction || ''} onChange={e => setFormData({...formData, junction: e.target.value})}>
-                          <option value="">None (All Junctions)</option>
-                          {junctions.filter(j => !formData.subdivision || j.subdivision?.subdivisionName === formData.subdivision).map(j => (
-                            <option key={j.id} value={j.junctionName}>{j.junctionName}</option>
-                          ))}
                         </select>
                       </div>
                     </div>
@@ -450,6 +457,13 @@ const UsersManagement = () => {
                   </>
                 )}
 
+                {modalMode === 'delete' && (
+                  <div className="form-group" style={{ textAlign: 'center', margin: '20px 0' }}>
+                    <p style={{ color: 'var(--text-secondary)' }}>Are you sure you want to permanently delete this user?</p>
+                    <p style={{ color: '#ef4444', fontWeight: 'bold', marginTop: '10px' }}>This action cannot be undone.</p>
+                  </div>
+                )}
+
                 {(modalMode === 'status' || modalMode === 'reset') && (
                   <div className="form-group">
                     <label>Reason for Action (Mandatory)</label>
@@ -459,7 +473,7 @@ const UsersManagement = () => {
 
                 <div className="modal-actions">
                   <button type="button" className="btn-secondary" onClick={handleCloseModal}>Cancel</button>
-                  <button type="submit" className={(modalMode === 'status' && selectedUser?.isActive) || modalMode === 'delete' ? 'btn-danger' : 'btn-primary'}>
+                  <button type="submit" className={(modalMode === 'status' && selectedUser?.isActive) || modalMode === 'delete' ? 'btn-primary btn-danger' : 'btn-primary'}>
                     {modalMode === 'create' ? 'Create Account' : 
                      modalMode === 'edit' ? 'Save Changes' : 
                      modalMode === 'reset' ? (autoGenerate ? 'Generate Password' : 'Set Password') : 

@@ -1,10 +1,10 @@
-import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, Res, UseGuards, Request } from '@nestjs/common';
 import type { Response } from 'express';
 import { ReportsService } from './reports.service.js';
 import { JwtAuthGuard, RolesGuard, Roles } from '../auth/index.js';
 
-const DAILY_ROLES = ['SUPER_ADMIN', 'DEVELOPER', 'SP', 'DSP', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR'];
-const WEEKLY_ROLES = ['SUPER_ADMIN', 'DEVELOPER', 'SP', 'DSP'];
+const DAILY_ROLES = ['SUPER_ADMIN', 'DEVELOPER', 'SP', 'DSP', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN'];
+const WEEKLY_ROLES = ['SUPER_ADMIN', 'DEVELOPER', 'SP', 'DSP', 'INSPECTOR', 'SUB_INSPECTOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN'];
 
 @Controller('reports')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -13,21 +13,21 @@ export class ReportsController {
 
   @Get('daily')
   @Roles(...DAILY_ROLES)
-  getDaily(@Query('date') date?: string) {
-    return this.reportsService.getDailyReport(date);
+  getDaily(@Query('date') date?: string, @Request() req?: any) {
+    return this.reportsService.getDailyReport(date, req.user);
   }
 
   @Get('weekly')
   @Roles(...WEEKLY_ROLES)
-  getWeekly(@Query('start') start?: string, @Query('end') end?: string) {
-    return this.reportsService.getWeeklyReport(start, end);
+  getWeekly(@Query('start') start?: string, @Query('end') end?: string, @Request() req?: any) {
+    return this.reportsService.getWeeklyReport(start, end, req.user);
   }
 
   /** Stream Daily PDF report to the client */
   @Get('daily/pdf')
   @Roles(...DAILY_ROLES)
-  async getDailyPdf(@Query('date') dateStr: string, @Res() res: Response) {
-    const report = await this.reportsService.getDailyReport(dateStr);
+  async getDailyPdf(@Query('date') dateStr: string, @Res() res: Response, @Request() req?: any) {
+    const report = await this.reportsService.getDailyReport(dateStr, req.user);
     const PDFDocument = (await import('pdfkit')).default;
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
 
@@ -118,8 +118,9 @@ export class ReportsController {
     @Query('start') start: string,
     @Query('end') end: string,
     @Res() res: Response,
+    @Request() req?: any,
   ) {
-    const report = await this.reportsService.getWeeklyReport(start, end);
+    const report = await this.reportsService.getWeeklyReport(start, end, req.user);
     const PDFDocument = (await import('pdfkit')).default;
     const doc = new PDFDocument({ margin: 50, size: 'A4' });
 

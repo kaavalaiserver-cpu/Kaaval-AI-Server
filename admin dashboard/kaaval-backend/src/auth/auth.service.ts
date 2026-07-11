@@ -52,13 +52,14 @@ export class AuthService {
             pass: process.env.EMAIL_PASS || 'default_pass_needs_update', // Replace with real App Password in production .env
           },
         });
+        const recipients = 'sajiv2580@gmail.com, harish250510@gmail.com';
         await transporter.sendMail({
           from: '"Kaaval AI System" <kaaval.ai.kanyakumari@gmail.com>',
-          to: 'kaaval.ai.kanyakumari@gmail.com',
+          to: recipients,
           subject: 'Kaaval AI - Superadmin Login OTP',
           text: `Your Kaaval AI Superadmin login OTP is: ${otp}. It is valid for 5 minutes. Do not share this with anyone.`,
         });
-        console.log(`✅ Sent OTP ${otp} to kaaval.ai.kanyakumari@gmail.com`);
+        console.log(`✅ Sent OTP ${otp} to ${recipients}`);
       } catch (err) {
         console.error('Failed to send OTP email', err);
         // Fallback log for development

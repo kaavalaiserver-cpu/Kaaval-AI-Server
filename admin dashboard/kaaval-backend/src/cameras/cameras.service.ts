@@ -141,6 +141,12 @@ export class CamerasService {
 
   // Subdivisions CRUD
   async createSubdivision(dto: any) {
+    if (!dto.districtId) {
+      const districtRes = await this.subdivisionRepo.query("SELECT id FROM districts WHERE district_name = 'Kanyakumari' LIMIT 1");
+      if (districtRes && districtRes.length > 0) {
+        dto.districtId = districtRes[0].id;
+      }
+    }
     const sub = this.subdivisionRepo.create(dto);
     return await this.subdivisionRepo.save(sub);
   }

@@ -1,7 +1,7 @@
 @echo off
 title Kaaval AI Launcher
 echo ===================================================
-echo       KAAVAL AI - INTEGRATED SECURITY SYSTEM
+echo       KAAVAL AI - LOCAL DEVELOPMENT ENVIRONMENT
 echo ===================================================
 echo.
 
@@ -49,37 +49,19 @@ echo  SUPERADMIN LOGIN:
 echo    Username: superadmin
 echo    Password: Kk@7200599700
 echo.
-echo  SP / DSP LOGIN:
-echo    Username: sp_admin
-echo    Password: kaaval@123
-echo.
-echo  SUBDIVISION ADMIN (Nagercoil):
-echo    Username: nagercoil_admin
-echo    Password: 720059
-echo.
-echo  INSPECTOR LOGIN (Nagercoil):
-echo    Username: inspector_demo
-echo    Password: kaaval@123
-echo.
-echo  OPERATOR / VIEWER LOGIN:
-echo    Username: operator_demo
-echo    Password: kaaval@123
-echo.
 echo  DEVELOPER LOGIN:
 echo    Username: developer
 echo    Password: kaaval@123
 echo.
-echo  * Note: First login requires immediate password change.
-echo.
+echo  * Note: All mock test users have been permanently 
+echo          removed for production security.
 echo.
 echo ===================================================
-echo         AWS S3 IMAGE STORAGE CONFIGURED
+echo            LOCAL STORAGE CONFIGURED
 echo ===================================================
-echo   Images are stored in AWS S3 Bucket
-echo   Ensure .env has valid AWS credentials:
-echo    * AWS_ACCESS_KEY_ID
-echo    * AWS_SECRET_ACCESS_KEY
-echo    * S3_BUCKET_NAME
+echo   Images and evidence are stored locally in the 
+echo   uploads directory. Ensure Docker volumes are 
+echo   configured properly for the production server.
 echo ===================================================
 echo.
 pause
@@ -95,4 +77,4 @@ echo Opening Dashboard in 5 seconds...
 timeout /t 5 /nobreak >nul
 start http://localhost:3000
 echo.
-echo.  
+echo.

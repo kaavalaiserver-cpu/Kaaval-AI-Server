@@ -64,6 +64,12 @@ export class UsersController {
   async deleteUser(@Param('id') id: string, @Request() req: any) {
     const adminId = req.user.id;
     const ip = req.ip;
+
+    const userToDelete = await this.usersService.findById(id);
+    if (userToDelete && (userToDelete.username === 'superadmin' || userToDelete.role?.roleCode === 'SUPER_ADMIN')) {
+      throw new BadRequestException('Cannot delete superadmin accounts');
+    }
+
     const success = await this.usersService.deleteUser(id, adminId, ip);
     if (!success) {
       throw new BadRequestException('User not found or could not be deleted');

@@ -396,6 +396,28 @@
   box-shadow: 0 6px 18px rgba(59,130,246,0.35);
 }
 
+.btn-danger {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  font-size: 0.87rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+  box-shadow: 0 4px 12px rgba(239,68,68,0.25);
+  white-space: nowrap;
+}
+
+.btn-danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(239,68,68,0.35);
+}
+
 .btn-secondary {
   display: flex;
   align-items: center;

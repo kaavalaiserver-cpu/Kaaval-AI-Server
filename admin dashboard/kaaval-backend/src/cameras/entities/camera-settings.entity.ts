@@ -76,7 +76,7 @@ export class CameraSettings {
   @JoinColumn({ name: 'camera_id' })
   camera!: Camera;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'updated_by' })
   updatedBy!: User | null;
 }

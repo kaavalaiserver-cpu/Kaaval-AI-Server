@@ -71,6 +71,23 @@ const Login = () => {
     }
   };
 
+  const handleResendOTP = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const res = await login(username, password);
+      if (res?.requiresOtp) {
+        setTempToken(res.tempToken);
+        setOtp('');
+        alert('A new OTP has been sent to your email.');
+      }
+    } catch (err) {
+      setError('Failed to resend OTP. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="login-page">
       <div className="login-card">
@@ -150,9 +167,22 @@ const Login = () => {
               <Lock size={16} /> Locked — retry in {lockout}s
             </button>
           ) : (
-            <button type="submit" className="login-btn" disabled={loading}>
-              {loading ? (step === 'login' ? 'Signing in...' : 'Verifying...') : (step === 'login' ? 'Sign In' : 'Verify & Sign In')}
-            </button>
+            <>
+              <button type="submit" className="login-btn" disabled={loading}>
+                {loading ? (step === 'login' ? 'Signing in...' : 'Verifying...') : (step === 'login' ? 'Sign In' : 'Verify & Sign In')}
+              </button>
+              {step === 'otp' && (
+                <button 
+                  type="button" 
+                  className="login-btn" 
+                  onClick={handleResendOTP} 
+                  disabled={loading}
+                  style={{ marginTop: '10px', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
+                >
+                  {loading ? 'Sending...' : 'Resend OTP'}
+                </button>
+              )}
+            </>
           )}
         </form>
 

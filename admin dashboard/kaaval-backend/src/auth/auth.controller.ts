@@ -54,7 +54,7 @@ export class AuthController {
     const userAgent = req.headers['user-agent'];
     const result = await this.authService.login(body.username, body.password, ip, userAgent);
 
-    if (result.access_token) {
+    if ('access_token' in result) {
       res.cookie('kaaval_token', result.access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',

@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./kaaval_dashboard
+      dockerfile: Dockerfile
+    container_name: kaaval-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+  backend:
+    build:
+      context: ./kaaval-backend
+      dockerfile: Dockerfile
+    container_name: kaaval-backend
+    expose:
+      - "8003"
+    environment:
+      - NODE_ENV=production
+      - DB_TYPE=postgres
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=kaaval_secure_pw
+      - DB_NAME=kaaval_ai
+      - JWT_SECRET=super_secret_kaaval_jwt_key_2026_production
+      - RDK_API_KEY=kaaval_edge_secret_key_2026
+      - LOCAL_UPLOAD_DIR=/app/data/uploads
+      - LOCAL_BACKUP_DIR=/app/data/backups
+    volumes:
+      - ./backend-data/uploads:/app/data/uploads
+      - ./backend-data/logs:/usr/src/app/logs
+      - ./backend-data/backups:/app/data/backups
+    depends_on:
+      - postgres
+    restart: always
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: kaaval-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=kaaval_secure_pw
+      - POSTGRES_DB=kaaval_ai
+    ports:
+      - "5432:5432" # Optional: only expose if you want to connect from pgAdmin externally
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+
+volumes:
+  pgdata:

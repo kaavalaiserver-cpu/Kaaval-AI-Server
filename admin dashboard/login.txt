@@ -1,9 +1,0 @@
-superadmin	superadmin@123	Super Admin — full access
-trafficadmin	trafficadmin@123	Traffic Admin — violations, analytics, no system config
-devadmin	devadmin@123	Dev Admin — full access including system logs
-colacheladmin	colachel@123	Colachel Subdivision Admin — dashboard + subdivision map only
-marthandamadmin	marthandam@123	Marthandam Subdivision Admin — dashboard + subdivision map only
-nagercoiladmin	nagercoil@123	Nagercoil Subdivision Admin — dashboard + subdivision map only
-kanyakumariadmin	kanyakumari@123	Kanyakumari Subdivision Admin — dashboard + subdivision map only
-thuckalayadmin	thuckalay@123	Thuckalay Subdivision Admin — dashboard + subdivision map only
-

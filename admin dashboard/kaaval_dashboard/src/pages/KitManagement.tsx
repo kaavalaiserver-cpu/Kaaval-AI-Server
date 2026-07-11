@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
-import { MapPin, Camera, AlertTriangle, Plus, Pencil, Trash2, X, Search, Shield, PlayCircle, XCircle } from 'lucide-react';
+import { MapPin, Camera, AlertTriangle, Plus, Pencil, Trash2, X, Search, Shield, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './KitManagement.css';
 
@@ -12,7 +12,7 @@ const TABS = [
   { id: 'vtypes',      label: 'Violation Types', icon: <AlertTriangle size={16} /> },
 ];
 
-const JUNCTION_TYPES = ['ROUNDANA', 'SIGNAL', 'HIGHWAY', 'CHECKPOST'];
+const JUNCTION_TYPES = ['NORMAL ROAD', 'ROUNDANA', 'SIGNAL', 'HIGHWAY', 'CHECKPOST'];
 const SEVERITIES     = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL'];
 const CAM_STATUSES   = ['ONLINE', 'OFFLINE', 'MAINTENANCE'];
 
@@ -26,7 +26,7 @@ function emptyVType() {
   return { violationCode: '', violationName: '', description: '', defaultFine: 500, color: '#FF4B4B', severity: 'HIGH' };
 }
 function emptySubdivision() {
-  return { subdivisionCode: '', subdivisionName: '', headquarters: '', districtId: 'e8e3d3b7-7eb9-40e1-bb5c-482a5c4d0a1b' }; // Using default district
+  return { subdivisionCode: '', subdivisionName: '', headquarters: '' };
 }
 
 export default function KitManagement() {
@@ -41,7 +41,6 @@ export default function KitManagement() {
   const [editing, setEditing]       = useState<any>(null);
   const [delTarget, setDelTarget]   = useState<{ type: string; id: string; name: string } | null>(null);
   const [saving, setSaving]         = useState(false);
-  const [selectedStream, setSelectedStream] = useState<any>(null);
 
   const { hasRole } = useAuth();
   const isSuperAdmin = hasRole('super_admin');
@@ -65,7 +64,15 @@ export default function KitManagement() {
     setLoading(false);
   }
 
-  // ── CRUD helpers ────────────────────────────────────────────────
+  async function saveSubdivision(data: any) {
+    setSaving(true);
+    try {
+      if (data.id) await axios.patch(`${API_BASE}/cameras/subdivisions/${data.id}`, data);
+      else         await axios.post(`${API_BASE}/cameras/subdivisions`, data);
+      await loadAll(); closeModal();
+    } catch (e: any) { alert(e.response?.data?.message || 'Failed to save subdivision'); }
+    setSaving(false);
+  }
   async function saveJunction(data: any) {
     setSaving(true);
     try {
@@ -150,7 +157,7 @@ export default function KitManagement() {
       {/* Header */}
       <div className="kit-page-header">
         <div>
-          <h1>🗺️ Kit Management</h1>
+          <h1><MapPin size={28} style={{ color: 'var(--accent)', verticalAlign: 'middle', marginRight: '10px' }} /> Camera Network</h1>
           <p>Manage subdivisions, monitoring locations, Kaaval kits, and violation types for Kanyakumari district.</p>
         </div>
       </div>
@@ -299,17 +306,14 @@ export default function KitManagement() {
                     <td>{c.junction?.junctionName || '—'}</td>
                     <td style={{ fontSize: '0.78rem' }}>{c.ipAddress || '—'}</td>
                     <td><span className={`status-pill ${(c.status || '').toLowerCase()}`}>{c.status || 'OFFLINE'}</span></td>
-                    <td>
-                      <div className="action-btns">
-                        <button className="btn-icon-view" onClick={() => setSelectedStream(c)} title="Live Feed"><PlayCircle size={14} style={{ color: 'var(--accent)' }} /></button>
-                        {isSuperAdmin && (
-                          <>
-                            <button className="btn-icon-edit" onClick={() => openEdit('camera', { ...c, junctionId: c.junctionId || c.junction?.id })} title="Edit"><Pencil size={14} /></button>
-                            <button className="btn-icon-del" onClick={() => openDel('camera', c.id, c.cameraName)} title="Delete"><Trash2 size={14} /></button>
-                          </>
-                        )}
-                      </div>
-                    </td>
+                    {isSuperAdmin && (
+                      <td>
+                        <div className="action-btns">
+                          <button className="btn-icon-edit" onClick={() => openEdit('camera', { ...c, junctionId: c.junctionId || c.junction?.id })} title="Edit"><Pencil size={14} /></button>
+                          <button className="btn-icon-del" onClick={() => openDel('camera', c.id, c.cameraName)} title="Delete"><Trash2 size={14} /></button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
                 {filteredCameras.length === 0 && <tr><td colSpan={6} className="empty-state">No cameras found.</td></tr>}
@@ -438,44 +442,7 @@ export default function KitManagement() {
           </div>
         </div>
       )}
-
-      {/* Live Stream Modal */}
-      {selectedStream && (
-        <div className="modal-backdrop" onClick={() => setSelectedStream(null)}>
-          <div className="modal-box" onClick={e => e.stopPropagation()} style={{ maxWidth: '800px', width: '90%' }}>
-            <div className="modal-header">
-              <h3><Camera size={20} style={{ marginRight: '8px' }} /> Live Feed: {selectedStream.cameraName}</h3>
-              <button className="modal-close" onClick={() => setSelectedStream(null)}><XCircle size={22} /></button>
-            </div>
-            <div style={{ background: '#000', borderRadius: '8px', overflow: 'hidden', position: 'relative', marginTop: '16px' }}>
-              {selectedStream.streamUrl ? (
-                <img 
-                  src={selectedStream.streamUrl} 
-                  alt="Live Safety Feed" 
-                  style={{ width: '100%', height: 'auto', aspectRatio: '16/9', objectFit: 'cover' }}
-                  onError={(e) => {
-                    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='800' height='450'><rect width='800' height='450' fill='%23111'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='22' fill='%23666'>Stream Offline</text></svg>`;
-                    (e.target as HTMLImageElement).src = `data:image/svg+xml,${svg}`;
-                  }}
-                />
-              ) : (
-                <img 
-                  src={`data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='800' height='450'><rect width='800' height='450' fill='%23111'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='22' fill='%23666'>Camera Not Configured</text></svg>`}
-                  alt="Offline Feed" 
-                  style={{ width: '100%', height: 'auto', aspectRatio: '16/9', objectFit: 'cover' }}
-                />
-              )}
-              <div style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(239, 68, 68, 0.9)', color: '#fff', padding: '4px 12px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#fff' }}></span> LIVE
-              </div>
-            </div>
-            <div style={{ padding: '16px 0 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)' }}>
-              <div><strong style={{ color: 'var(--text-primary)' }}>Location:</strong> {selectedStream.junction?.junctionName || '—'}</div>
-              <div><strong style={{ color: 'var(--text-primary)' }}>IP:</strong> {selectedStream.ipAddress || '—'}</div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Removed Live Stream Modal */}
     </div>
   );
 }
@@ -487,26 +454,21 @@ function SubdivisionModal({ data, saving, onChange, onSave, onClose }: any) {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-box" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{data.id ? '✏️ Edit Subdivision' : '➕ Add Subdivision'}</h2>
+          <h2>
+            {data.id ? <Pencil size={20} style={{marginRight: 8, verticalAlign: 'middle', color: 'var(--accent)'}} /> : <Plus size={20} style={{marginRight: 8, verticalAlign: 'middle', color: 'var(--accent)'}} />}
+            {data.id ? 'Edit Subdivision' : 'Add Subdivision'}
+          </h2>
           <button className="modal-close" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="form-grid">
           <div className="form-group span2">
             <label>Subdivision Name *</label>
-            <input value={data.subdivisionName} onChange={e => set('subdivisionName', e.target.value)} placeholder="e.g. Nagercoil" />
-          </div>
-          <div className="form-group">
-            <label>Code *</label>
-            <input value={data.subdivisionCode} onChange={e => set('subdivisionCode', e.target.value)} placeholder="e.g. NGL" />
-          </div>
-          <div className="form-group">
-            <label>Headquarters *</label>
-            <input value={data.headquarters} onChange={e => set('headquarters', e.target.value)} placeholder="e.g. Nagercoil Town" />
+            <input value={data.subdivisionName || ''} onChange={e => set('subdivisionName', e.target.value)} placeholder="e.g. Nagercoil" />
           </div>
         </div>
         <div className="modal-footer">
           <button className="btn-cancel" onClick={onClose}>Cancel</button>
-          <button className="btn-save" onClick={onSave} disabled={saving || !data.subdivisionName || !data.subdivisionCode || !data.headquarters}>
+          <button className="btn-save" onClick={onSave} disabled={saving || !data.subdivisionName}>
             {saving ? 'Saving…' : data.id ? 'Update' : 'Add Subdivision'}
           </button>
         </div>
@@ -521,17 +483,16 @@ function JunctionModal({ data, subdivisions, saving, onChange, onSave, onClose }
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-box" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{data.id ? '✏️ Edit Location' : '➕ Add Monitoring Location'}</h2>
+          <h2>
+            {data.id ? <Pencil size={20} style={{marginRight: 8, verticalAlign: 'middle', color: 'var(--accent)'}} /> : <Plus size={20} style={{marginRight: 8, verticalAlign: 'middle', color: 'var(--accent)'}} />}
+            {data.id ? 'Edit Location' : 'Add Monitoring Location'}
+          </h2>
           <button className="modal-close" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="form-grid">
           <div className="form-group span2">
             <label>Location Name *</label>
             <input value={data.junctionName} onChange={e => set('junctionName', e.target.value)} placeholder="e.g. Nagercoil Roundana" />
-          </div>
-          <div className="form-group">
-            <label>Code</label>
-            <input value={data.junctionCode || ''} onChange={e => set('junctionCode', e.target.value)} placeholder="e.g. NGR-RDA-01" />
           </div>
           <div className="form-group">
             <label>Type</label>
@@ -552,14 +513,6 @@ function JunctionModal({ data, subdivisions, saving, onChange, onSave, onClose }
               <option value="false">Two Way</option>
               <option value="true">One Way</option>
             </select>
-          </div>
-          <div className="form-group">
-            <label>Latitude</label>
-            <input type="number" step="any" value={data.latitude || ''} onChange={e => set('latitude', e.target.value)} placeholder="8.1784" />
-          </div>
-          <div className="form-group">
-            <label>Longitude</label>
-            <input type="number" step="any" value={data.longitude || ''} onChange={e => set('longitude', e.target.value)} placeholder="77.4320" />
           </div>
           <div className="form-group span2">
             <label>Address</label>
@@ -590,7 +543,10 @@ function CameraModal({ data, junctions, saving, onChange, onSave, onClose }: any
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-box" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{data.id ? '✏️ Edit Kaaval Kit' : '➕ Add Kaaval Kit'}</h2>
+          <h2>
+            {data.id ? <Pencil size={20} style={{marginRight: 8, verticalAlign: 'middle', color: 'var(--accent)'}} /> : <Plus size={20} style={{marginRight: 8, verticalAlign: 'middle', color: 'var(--accent)'}} />}
+            {data.id ? 'Edit Kaaval Kit' : 'Add Kaaval Kit'}
+          </h2>
           <button className="modal-close" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="form-grid">
@@ -641,7 +597,10 @@ function VTypeModal({ data, saving, onChange, onSave, onClose }: any) {
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal-box" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{data.id ? '✏️ Edit Violation Type' : '➕ Add Violation Type'}</h2>
+          <h2>
+            {data.id ? <Pencil size={20} style={{marginRight: 8, verticalAlign: 'middle', color: 'var(--accent)'}} /> : <Plus size={20} style={{marginRight: 8, verticalAlign: 'middle', color: 'var(--accent)'}} />}
+            {data.id ? 'Edit Violation Type' : 'Add Violation Type'}
+          </h2>
           <button className="modal-close" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="form-grid">
