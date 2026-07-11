@@ -17,3 +17,6 @@ uploads/
 backups/
 
 violation_backup/
+
+export_chat.py
+previous_chat_export.txt
