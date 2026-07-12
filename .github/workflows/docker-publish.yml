@@ -74,3 +74,32 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta-evidence.outputs.tags }}
           labels: ${{ steps.meta-evidence.outputs.labels }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: self-hosted
+    if: github.event_name != 'pull_request'
+    
+    steps:
+      - name: Checkout deploy scripts
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            scripts
+            docker-compose.prod.yml
+      
+      - name: Run Deployment Script with Auto-Rollback
+        shell: powershell
+        run: |
+          $CommitSha = "${{ github.sha }}"
+          $ShortSha = $CommitSha.Substring(0, 7)
+          $Tag = "sha-$ShortSha"
+          
+          $Registry = "${{ env.REGISTRY }}"
+          $RepoLower = "${{ github.repository }}".ToLower()
+          
+          $FrontendImage = "$RepoLower-frontend"
+          $BackendImage = "$RepoLower-backend"
+          $EvidenceImage = "$RepoLower-evidence-api"
+          
+          .\scripts\deploy.ps1 -Tag $Tag -Registry $Registry -FrontendImage $FrontendImage -BackendImage $BackendImage -EvidenceImage $EvidenceImage
