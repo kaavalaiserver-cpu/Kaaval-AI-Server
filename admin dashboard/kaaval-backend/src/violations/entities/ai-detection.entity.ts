@@ -35,7 +35,7 @@ export class AiDetection {
   @Column({ type: 'float', nullable: true })
   confidence!: number | null;
 
-  @Column({ name: 'detection_time', type: 'datetime' })
+  @Column({ name: 'detection_time', type: 'timestamp' })
   detectionTime!: Date;
 
   @Column({ name: 'promoted_to_violation', type: 'boolean', default: false })

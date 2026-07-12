@@ -38,10 +38,10 @@ export class CameraStorage {
   @Column({ name: 'retention_days', type: 'int', default: 30 })
   retentionDays!: number;
 
-  @Column({ name: 'last_cleanup_at', type: 'datetime', nullable: true })
+  @Column({ name: 'last_cleanup_at', type: 'timestamp', nullable: true })
   lastCleanupAt!: Date | null;
 
-  @Column({ name: 'last_updated_at', type: 'datetime', nullable: true })
+  @Column({ name: 'last_updated_at', type: 'timestamp', nullable: true })
   lastUpdatedAt!: Date | null;
 
   @OneToOne(() => Camera, (c) => c.storage, { onDelete: 'CASCADE' })

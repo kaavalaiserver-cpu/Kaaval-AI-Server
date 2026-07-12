@@ -30,13 +30,13 @@ export class LoginSession {
   @Column({ name: 'operating_system', type: 'varchar', length: 100, nullable: true })
   operatingSystem!: string | null;
 
-  @Column({ name: 'login_time', type: 'datetime' })
+  @Column({ name: 'login_time', type: 'timestamp' })
   loginTime!: Date;
 
-  @Column({ name: 'logout_time', type: 'datetime', nullable: true })
+  @Column({ name: 'logout_time', type: 'timestamp', nullable: true })
   logoutTime!: Date | null;
 
-  @Column({ name: 'expires_at', type: 'datetime', nullable: true })
+  @Column({ name: 'expires_at', type: 'timestamp', nullable: true })
   expiresAt!: Date | null;
 
   @Column({ name: 'is_active', type: 'boolean', default: true })

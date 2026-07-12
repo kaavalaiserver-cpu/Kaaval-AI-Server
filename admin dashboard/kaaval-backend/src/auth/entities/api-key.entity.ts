@@ -40,10 +40,10 @@ export class ApiKey {
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive!: boolean;
 
-  @Column({ name: 'expires_at', type: 'datetime', nullable: true })
+  @Column({ name: 'expires_at', type: 'timestamp', nullable: true })
   expiresAt!: Date | null;
 
-  @Column({ name: 'last_used_at', type: 'datetime', nullable: true })
+  @Column({ name: 'last_used_at', type: 'timestamp', nullable: true })
   lastUsedAt!: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

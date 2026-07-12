@@ -29,7 +29,7 @@ export class NotificationRecipient {
   @Column({ name: 'is_read', type: 'boolean', default: false })
   isRead!: boolean;
 
-  @Column({ name: 'read_at', type: 'datetime', nullable: true })
+  @Column({ name: 'read_at', type: 'timestamp', nullable: true })
   readAt!: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

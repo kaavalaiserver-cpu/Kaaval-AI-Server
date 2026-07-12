@@ -32,6 +32,33 @@ import { json, urlencoded } from 'express';
 import { AppModule } from './app.module.js';
 import { GlobalHttpExceptionFilter } from './common/http-exception.filter.js';
 
+// ── Log Rotation ─────────────────────────────────────────────────────────────
+const logDirectory = process.env.LOCAL_LOG_DIR || '/usr/src/app/logs';
+try { if (!fs.existsSync(logDirectory)) fs.mkdirSync(logDirectory, { recursive: true }); } catch(e) {}
+
+function getLogFileName() {
+  const d = new Date();
+  return path.join(logDirectory, `kaaval-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}.log`);
+}
+
+const originalStdoutWrite = process.stdout.write.bind(process.stdout);
+const originalStderrWrite = process.stderr.write.bind(process.stderr);
+
+(process.stdout as any).write = (chunk: string | Uint8Array, encoding?: any, cb?: any): boolean => {
+  try { fs.appendFileSync(getLogFileName(), chunk); } catch(e) {}
+  if (typeof encoding === 'function') return (originalStdoutWrite as any)(chunk, encoding);
+  if (typeof encoding === 'string' && typeof cb === 'function') return (originalStdoutWrite as any)(chunk, encoding, cb);
+  if (typeof encoding === 'string') return (originalStdoutWrite as any)(chunk, encoding);
+  return (originalStdoutWrite as any)(chunk);
+};
+
+(process.stderr as any).write = (chunk: string | Uint8Array, encoding?: any, cb?: any): boolean => {
+  try { fs.appendFileSync(getLogFileName(), chunk); } catch(e) {}
+  if (typeof encoding === 'function') return (originalStderrWrite as any)(chunk, encoding);
+  if (typeof encoding === 'string' && typeof cb === 'function') return (originalStderrWrite as any)(chunk, encoding, cb);
+  if (typeof encoding === 'string') return (originalStderrWrite as any)(chunk, encoding);
+  return (originalStderrWrite as any)(chunk);
+};
 // Prevent DB connection failures from crashing the process
 process.on('unhandledRejection', (reason) => {
   const logger = new Logger('UnhandledRejection');

@@ -39,7 +39,7 @@ export class AiInferenceLog {
   confidenceAvg!: number | null;
 
   @Index()
-  @Column({ name: 'recorded_at', type: 'datetime' })
+  @Column({ name: 'recorded_at', type: 'timestamp' })
   recordedAt!: Date;
 
   @CreateDateColumn({ name: 'created_at' })

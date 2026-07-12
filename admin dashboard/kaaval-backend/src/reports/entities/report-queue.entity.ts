@@ -27,10 +27,10 @@ export class ReportQueue {
   @Column({ type: 'json', nullable: true })
   parameters!: any | null;
 
-  @Column({ name: 'started_at', type: 'datetime', nullable: true })
+  @Column({ name: 'started_at', type: 'timestamp', nullable: true })
   startedAt!: Date | null;
 
-  @Column({ name: 'completed_at', type: 'datetime', nullable: true })
+  @Column({ name: 'completed_at', type: 'timestamp', nullable: true })
   completedAt!: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

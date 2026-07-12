@@ -31,7 +31,7 @@ export class VehicleHistory {
   @Column({ name: 'total_fine', type: 'decimal', precision: 10, scale: 2, default: 0 })
   totalFine!: number;
 
-  @Column({ name: 'last_violation', type: 'datetime', nullable: true })
+  @Column({ name: 'last_violation', type: 'timestamp', nullable: true })
   lastViolation!: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

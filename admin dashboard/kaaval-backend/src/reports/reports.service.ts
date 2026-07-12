@@ -71,11 +71,6 @@ export class ReportsService {
         : v.camera?.cameraCode ?? 'Unknown';
       byCamera[cam] = (byCamera[cam] || 0) + 1;
     }
-
-    const avgConfidence = total
-      ? violations.reduce((s, v) => s + (v.confidence ?? 0), 0) / total
-      : 0;
-
     return {
       date: date.toISOString().split('T')[0],
       total,
@@ -83,7 +78,6 @@ export class ReportsService {
       rejected,
       pending,
       approvalRate: total ? Math.round((verified / total) * 100) : 0,
-      avgConfidence: Math.round(avgConfidence * 100) / 100,
       byType,
       bySubdivision,
       byCamera,

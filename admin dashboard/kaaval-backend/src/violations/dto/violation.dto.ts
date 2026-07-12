@@ -157,16 +157,6 @@ export class ViolationQueryDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(6)
-  minConfidence?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(6)
-  maxConfidence?: string;
-
-  @IsOptional()
-  @IsString()
   @MaxLength(50)
   subdivisionCode?: string;
 }

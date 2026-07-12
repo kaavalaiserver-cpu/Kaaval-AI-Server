@@ -30,7 +30,7 @@ export class Evidence {
   @Column({ name: 'file_size', type: 'bigint', nullable: true })
   fileSize!: number | null;
 
-  @Column({ name: 'captured_at', type: 'datetime', nullable: true })
+  @Column({ name: 'captured_at', type: 'timestamp', nullable: true })
   capturedAt!: Date | null;
 
   @CreateDateColumn({ name: 'uploaded_at' })

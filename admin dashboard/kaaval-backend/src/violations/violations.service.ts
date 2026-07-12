@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, ILike, MoreThanOrEqual, LessThanOrEqual, SelectQueryBuilder } from 'typeorm';
@@ -91,12 +91,10 @@ export class ViolationsService {
     }
 
     let vType = await this.violationTypeRepo.findOne({ where: { violationCode: dto.violationType } });
-
     const violation = this.violationRepo.create({
       cameraId: dto.cameraId,
       vehicleId: vehicle?.id,
       violationTypeId: vType?.id,
-      confidence: dto.confidenceScore ?? 0,
       status: dto.status || 'PENDING',
       violationTimestamp: new Date(),
     });
@@ -149,7 +147,10 @@ export class ViolationsService {
       qb.andWhere('vehicle.registration_number ILIKE :vn', { vn: `%${query.vehicleNumber}%` });
     }
     if (query.violationType) {
-      qb.andWhere('violationType.violation_code ILIKE :vt', { vt: `%${query.violationType}%` });
+      const types = query.violationType.split(',').map(t => t.trim()).filter(Boolean);
+      if (types.length > 0) {
+        qb.andWhere('violationType.violation_code IN (:...types)', { types });
+      }
     }
     if (query.dateFrom) {
       qb.andWhere('v.violationTimestamp >= :from', { from: new Date(query.dateFrom) });
@@ -158,12 +159,6 @@ export class ViolationsService {
       const to = new Date(query.dateTo);
       to.setHours(23, 59, 59, 999);
       qb.andWhere('v.violationTimestamp <= :to', { to });
-    }
-    if (query.minConfidence) {
-      qb.andWhere('v.confidence >= :minConf', { minConf: parseFloat(query.minConfidence) / 100 });
-    }
-    if (query.maxConfidence) {
-      qb.andWhere('v.confidence <= :maxConf', { maxConf: parseFloat(query.maxConfidence) / 100 });
     }
 
     // ── RBAC subdivision scope ────────────────────────────────────
@@ -215,7 +210,7 @@ export class ViolationsService {
     this.applySubdivisionScope(qb, user, query.subdivisionCode);
 
     const all = await qb.select([
-      'v.id', 'v.status', 'v.confidence',
+      'v.id', 'v.status',
     ]).addSelect('violationType.violation_code', 'vtCode').getRawMany();
 
     // Count by status
@@ -225,7 +220,6 @@ export class ViolationsService {
       verified: 0,
       rejected: 0,
       manual_review: 0,
-      with_confidence: 0,
       by_type: {} as Record<string, number>,
     };
 
@@ -235,8 +229,6 @@ export class ViolationsService {
       else if (['CHALLAN_ISSUED', 'VERIFIED'].includes(status)) stats.verified++;
       else if (['REJECTED', 'DUPLICATE'].includes(status)) stats.rejected++;
       else if (status === 'UNDER_REVIEW') stats.manual_review++;
-
-      if ((row.v_confidence ?? 0) > 0) stats.with_confidence++;
 
       const vt = row.vtCode || row.v_violation_type_id || 'Unknown';
       stats.by_type[vt] = (stats.by_type[vt] || 0) + 1;
@@ -305,8 +297,7 @@ export class ViolationsService {
     if (!this.canAccessViolation(user, v.camera?.junction?.subdivisionId ?? null)) {
       throw new ForbiddenException('Access denied');
     }
-    v.status = 'CANCELLED';
-    await this.violationRepo.save(v);
+    await this.violationRepo.delete(id);
     return { status: 'deleted', id };
   }
 
@@ -327,10 +318,7 @@ export class ViolationsService {
       vehicle_number: v.vehicle?.registrationNumber ?? 'UNREAD',
       location: v.camera?.junction?.junctionName ?? v.camera?.cameraName ?? 'Unknown',
       camera_id: v.camera?.cameraCode ?? v.cameraId ?? null,
-      violation_confidence: v.confidence ?? 0,
-      plate_confidence: v.confidence ?? 0,
       cam_clarity: 0.9,
-      confidence: v.confidence ?? 0,
       status: this.mapStatus(v.status),
       raw_status: v.status,
       image_url: rawImg,
@@ -362,7 +350,7 @@ export class ViolationsService {
 
   // ── Violation Type CRUD ────────────────────────────────────────
   async getViolationTypes() {
-    return this.violationTypeRepo.find({ order: { violationName: 'ASC' } });
+    return this.violationTypeRepo.find({ where: { isActive: true }, order: { violationName: 'ASC' } });
   }
 
   async createViolationType(dto: {
@@ -373,8 +361,25 @@ export class ViolationsService {
     color?: string;
     severity?: string;
   }) {
+    const formattedCode = dto.violationCode.toUpperCase().replace(/\s+/g, '_');
+    const existing = await this.violationTypeRepo.findOne({ where: { violationCode: formattedCode } });
+    if (existing) {
+      if (!existing.isActive) {
+        // Reactivate and update
+        existing.isActive = true;
+        existing.violationName = dto.violationName;
+        existing.description = dto.description ?? existing.description;
+        existing.defaultFine = dto.defaultFine ?? existing.defaultFine;
+        existing.color = dto.color ?? existing.color;
+        existing.severity = dto.severity ?? existing.severity;
+        return this.violationTypeRepo.save(existing);
+      } else {
+        throw new BadRequestException('Violation code already exists');
+      }
+    }
+
     const vt = this.violationTypeRepo.create({
-      violationCode: dto.violationCode.toUpperCase().replace(/\s+/g, '_'),
+      violationCode: formattedCode,
       violationName: dto.violationName,
       description: dto.description ?? null,
       defaultFine: dto.defaultFine ?? 500,
@@ -394,6 +399,13 @@ export class ViolationsService {
     severity: string;
     isActive: boolean;
   }>) {
+    if (dto.violationCode) {
+      dto.violationCode = dto.violationCode.toUpperCase().replace(/\s+/g, '_');
+      const existing = await this.violationTypeRepo.findOne({ where: { violationCode: dto.violationCode } });
+      if (existing && existing.id !== id) {
+        throw new BadRequestException('Violation code already exists in the system (possibly as a deleted type).');
+      }
+    }
     await this.violationTypeRepo.update(id, dto);
     return this.violationTypeRepo.findOne({ where: { id } });
   }

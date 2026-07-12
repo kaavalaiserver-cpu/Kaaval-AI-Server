@@ -21,7 +21,7 @@ export class PlatformMetric {
   labels!: any | null; // e.g. {"subdivision_id": "...", "node": "worker-1"}
 
   @Index()
-  @Column({ name: 'recorded_at', type: 'datetime' })
+  @Column({ name: 'recorded_at', type: 'timestamp' })
   recordedAt!: Date;
 
   @CreateDateColumn({ name: 'created_at' })

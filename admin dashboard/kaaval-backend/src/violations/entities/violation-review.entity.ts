@@ -32,7 +32,7 @@ export class ViolationReview {
   @Column({ type: 'text', nullable: true })
   remarks!: string | null;
 
-  @Column({ name: 'reviewed_at', type: 'datetime' })
+  @Column({ name: 'reviewed_at', type: 'timestamp' })
   reviewedAt!: Date;
 
   @CreateDateColumn({ name: 'created_at' })

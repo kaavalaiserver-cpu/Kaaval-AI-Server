@@ -38,8 +38,16 @@ export class ViolationsController {
   ) {}
 
   @Post('pipeline')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'DEVELOPER', 'SP', 'DSP')
   async createFromPipeline(@Body() createDto: CreateViolationDto, @Request() req: any) {
+    return this.violationsService.create(createDto, req.user);
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'DEVELOPER', 'SP', 'DSP')
+  async createManual(@Body() createDto: CreateViolationDto, @Request() req: any) {
     return this.violationsService.create(createDto, req.user);
   }
 
@@ -64,7 +72,8 @@ export class ViolationsController {
   }
 
   @Get('image/by-key')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'DEVELOPER', 'SP', 'DSP', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
   async getImageByKey(@Query('key') key: string, @Request() req: any, @Res() res: Response) {
     if (!key) {
       throw new BadRequestException('Image key is required');

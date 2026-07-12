@@ -53,7 +53,7 @@ export class Camera {
   @Column({ type: 'varchar', length: 20, default: 'OFFLINE' })
   status!: string; // ONLINE, OFFLINE, NO_STREAM, MAINTENANCE, ERROR, BOOTING
 
-  @Column({ name: 'last_seen', type: 'datetime', nullable: true })
+  @Column({ name: 'last_seen', type: 'timestamp', nullable: true })
   lastSeen!: Date | null;
 
   @Column({ type: 'text', nullable: true })

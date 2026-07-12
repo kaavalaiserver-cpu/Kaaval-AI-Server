@@ -4,7 +4,7 @@ import { API_BASE } from '../config';
 import type { ViolationItem, ViolationStats, PaginatedViolations } from '../types';
 import { useAuth } from '../context/AuthContext';
 import {
-  AlertTriangle, CheckCircle, XCircle, Eye, Download, Filter, Upload,
+  AlertTriangle, CheckCircle, XCircle, Eye, Download, Filter, Upload, Plus,
   Trash2, RefreshCw, ZoomIn, ZoomOut, RotateCw, Maximize2, Shield,
   ChevronLeft, ChevronRight, Edit2, Save, X, Calendar, Clock, Target, ExternalLink, EyeOff
 } from 'lucide-react';
@@ -21,8 +21,7 @@ interface Filters {
   dateTo: string;
   timeFrom: string;
   timeTo: string;
-  minConfidence: string;
-  maxConfidence: string;
+
   subdivisionCode: string;
 }
 
@@ -37,23 +36,7 @@ const getTodayString = () => {
 const EMPTY_FILTERS: Filters = {
   status: '', cameraId: '', vehicleNumber: '', violationType: '',
   dateFrom: getTodayString(), dateTo: getTodayString(), timeFrom: '', timeTo: '',
-  minConfidence: '', maxConfidence: '', subdivisionCode: '',
-};
-
-const VIOLATION_REASONS = [
-  { id: 'NO_HELMET', label: 'Riding Without Helmet' },
-  { id: 'PILLION_NO_HELMET', label: 'Pillion Without Helmet' },
-  { id: 'EXPIRED_INSURANCE', label: 'Expired Insurance' },
-  { id: 'TRIPLE_RIDING', label: 'Triple Riding' },
-  { id: 'PHONE_WHILE_DRIVING', label: 'Using Mobile Phone' }
-];
-
-const getViolationLabels = (rawStr: string) => {
-  if (!rawStr) return 'Unknown';
-  return rawStr.split(',').map(raw => {
-    const matched = VIOLATION_REASONS.find(r => r.id === raw.trim());
-    return matched ? matched.label : raw.trim();
-  }).join(', ');
+  subdivisionCode: '',
 };
 
 // Returns a displayable plate string, or null if the plate is unidentified
@@ -77,6 +60,16 @@ const Violations = () => {
   const [pageInput, setPageInput] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [cameras, setCameras] = useState<any[]>([]);
+  const [violationReasons, setViolationReasons] = useState<any[]>([]);
+  const [subdivisions, setSubdivisions] = useState<any[]>([]);
+
+  const getViolationLabels = useCallback((rawStr: string) => {
+    if (!rawStr) return 'Unknown';
+    return rawStr.split(',').map(raw => {
+      const matched = violationReasons.find(r => r.id === raw.trim() || r.violationCode === raw.trim());
+      return matched ? matched.violationName : raw.trim();
+    }).join(', ');
+  }, [violationReasons]);
 
   // Review Modal
   const [selectedViolation, setSelectedViolation] = useState<ViolationItem | null>(null);
@@ -87,8 +80,12 @@ const Violations = () => {
   const [editedPlate, setEditedPlate] = useState('');
   const [showPlateText, setShowPlateText] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [hideNA, setHideNA] = useState(false);
   const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
+
+  // Add Modal
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newViolation, setNewViolation] = useState({ cameraId: '', vehicleNumber: '', violationType: '' });
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
 
   const totalPages = Math.ceil(total / PAGE_SIZE) || 1;
 
@@ -126,17 +123,10 @@ const Violations = () => {
         }
       }
 
-      // Confidence as 0.0–1.0
-      if (filters.minConfidence) {
-        params.minConfidence = (parseFloat(filters.minConfidence) / 100).toFixed(4);
-      } else if (hideNA) {
-        params.minConfidence = '0.0001';
-      }
-      if (filters.maxConfidence) params.maxConfidence = (parseFloat(filters.maxConfidence) / 100).toFixed(4);
 
       console.log('fetchViolations API request:', `${API_BASE}/violations`, 'params:', params);
 
-      const [vRes, sRes] = await Promise.all([
+      const [vRes] = await Promise.all([
         axios.get<PaginatedViolations>(`${API_BASE}/violations`, { params, signal }),
         axios.get<ViolationStats>(`${API_BASE}/violations/stats`, { params, signal }),
       ]);
@@ -152,7 +142,7 @@ const Violations = () => {
     } finally {
       if (!background) setLoading(false);
     }
-  }, [page, filters, hideNA]);
+  }, [page, filters]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -167,8 +157,14 @@ const Violations = () => {
   }, [fetchViolations, selectedViolation]);
 
   useEffect(() => {
-    axios.get(`${API_BASE}/cameras/status`).then(res => {
-      if (res.data?.cameras) setCameras(res.data.cameras);
+    Promise.all([
+      axios.get(`${API_BASE}/cameras/status`),
+      axios.get(`${API_BASE}/violations/types`),
+      axios.get(`${API_BASE}/cameras/subdivisions`)
+    ]).then(([camRes, typesRes, subRes]) => {
+      if (camRes.data?.cameras) setCameras(camRes.data.cameras);
+      if (typesRes.data) setViolationReasons(typesRes.data);
+      if (subRes.data) setSubdivisions(subRes.data);
     }).catch(console.error);
   }, []);
 
@@ -217,6 +213,23 @@ const Violations = () => {
       fetchViolations();
     } catch { setUploadResult('Upload failed'); }
     finally { setUploading(false); }
+  };
+
+  const handleManualAdd = async () => {
+    if (!newViolation.cameraId || !newViolation.violationType) return alert('Camera and Type are required');
+    setProcessing(true);
+    try {
+      await axios.post(`${API_BASE}/violations`, {
+        cameraId: newViolation.cameraId,
+        vehicleNumber: newViolation.vehicleNumber || 'UNREAD',
+        violationType: newViolation.violationType,
+        proofImgUrl: ''
+      });
+      setShowAddModal(false);
+      setNewViolation({ cameraId: '', vehicleNumber: '', violationType: '' });
+      fetchViolations();
+    } catch { alert('Failed to add violation'); }
+    finally { setProcessing(false); }
   };
 
   const handleSelectAll = (checked: boolean) =>
@@ -296,7 +309,7 @@ const Violations = () => {
 
   const handleDownloadCsv = () => {
     if (violations.length === 0) return alert('No data to export.');
-    const headers = ['ID', 'Date', 'Time', 'Vehicle Number', 'Type', 'Location', 'Camera ID', 'Confidence', 'Status'];
+    const headers = ['ID', 'Date', 'Time', 'Vehicle Number', 'Type', 'Location', 'Camera ID', 'Status'];
     const rows = violations.map(v => {
       const d = new Date(v.timestamp);
       return [
@@ -307,7 +320,6 @@ const Violations = () => {
         `"${v.type.replace(/"/g, '""')}"`,
         `"${v.location.replace(/"/g, '""')}"`,
         v.camera_id,
-        Math.round(v.confidence * 100) + '%',
         v.status
       ].join(',');
     });
@@ -413,7 +425,7 @@ const Violations = () => {
                           <div style={{ width: '100%', marginBottom: '10px' }}>
                             <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Select Violation Reasons:</span>
                             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                              {VIOLATION_REASONS.map(reason => (
+                              {violationReasons.map(reason => (
                                 <button key={reason.id} 
                                   disabled={processing} 
                                   onClick={() => setSelectedReasons(prev => prev.includes(reason.id) ? prev.filter(r => r !== reason.id) : [...prev, reason.id])} 
@@ -425,7 +437,7 @@ const Violations = () => {
                                     border: `1px solid ${selectedReasons.includes(reason.id) ? '#3b82f6' : 'var(--border)'}`
                                   }}>
                                   {selectedReasons.includes(reason.id) && <CheckCircle size={14} />}
-                                  {reason.label}
+                                  {reason.violationName}
                                 </button>
                               ))}
                             </div>
@@ -488,7 +500,7 @@ const Violations = () => {
       {/* Stats Bar */}
       <div className="stats-bar">
         <StatChip label="Total" value={stats?.total ?? 0} color="blue" />
-        <StatChip label="With Confidence" value={stats?.with_confidence ?? 0} color="cyan" />
+
         <StatChip label="Pending" value={stats?.pending ?? 0} color="orange" />
         <StatChip label="Verified" value={stats?.verified ?? 0} color="green" />
         <StatChip label="Rejected" value={stats?.rejected ?? 0} color="red" />
@@ -566,9 +578,14 @@ const Violations = () => {
           {hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
             <>
               {hasRole('super_admin', 'developer', 'sp') && (
-                <button className="btn-secondary" onClick={() => setShowUpload(!showUpload)}>
-                  <Upload size={16} /> Batch Upload
-                </button>
+                <>
+                  <button className="btn-secondary" onClick={() => setShowAddModal(true)}>
+                    <Plus size={16} /> Add Violation
+                  </button>
+                  <button className="btn-secondary" onClick={() => setShowUpload(!showUpload)}>
+                    <Upload size={16} /> Batch Upload
+                  </button>
+                </>
               )}
               <button 
                 className="btn-secondary" 
@@ -595,6 +612,41 @@ const Violations = () => {
             disabled={uploading} />
           {uploading && <span className="upload-status">Processing...</span>}
           {uploadResult && <span className="upload-result">{uploadResult}</span>}
+        </div>
+      )}
+
+      {/* Add Modal */}
+      {showAddModal && (
+        <div className="modal-backdrop" onClick={() => setShowAddModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3><Plus size={20} /> Add Violation</h3>
+              <button className="btn-close" onClick={() => setShowAddModal(false)}><XCircle size={24} /></button>
+            </div>
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Camera ID *</label>
+                <select value={newViolation.cameraId} onChange={e => setNewViolation({ ...newViolation, cameraId: e.target.value })} style={{ width: '100%', padding: '8px' }}>
+                  <option value="">Select Camera</option>
+                  {cameras.map(c => <option key={c.id} value={c.id}>{c.name} ({c.id})</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Vehicle Number</label>
+                <input type="text" value={newViolation.vehicleNumber} onChange={e => setNewViolation({ ...newViolation, vehicleNumber: e.target.value.toUpperCase() })} style={{ width: '100%', padding: '8px' }} placeholder="e.g. TN74A1234" />
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Violation Type *</label>
+                <select value={newViolation.violationType} onChange={e => setNewViolation({ ...newViolation, violationType: e.target.value })} style={{ width: '100%', padding: '8px' }}>
+                  <option value="">Select Type</option>
+                  {violationReasons.map(r => <option key={r.id} value={r.id}>{r.violationName}</option>)}
+                </select>
+              </div>
+              <button onClick={handleManualAdd} disabled={processing} className="btn-approve" style={{ padding: '10px', marginTop: '10px' }}>
+                Save Violation
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -637,23 +689,42 @@ const Violations = () => {
         <div className="filter-row-primary">
           <Filter size={16} className="filter-icon" />
 
-          <select value={filters.violationType} onChange={e => setFilter('violationType', e.target.value)}>
-            <option value="">All Types</option>
-            <option value="NO_HELMET">No Helmet</option>
-            <option value="TRIPLE_RIDING">Triple Riding</option>
-            <option value="NO_SEATBELT">No Seatbelt</option>
-            <option value="RED_LIGHT_JUMP">Red Light Jump</option>
-            <option value="OVER_SPEEDING">Over Speeding</option>
-          </select>
+          <div style={{ position: 'relative' }}>
+            <div 
+              onClick={() => setShowTypeDropdown(!showTypeDropdown)}
+              style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', minWidth: '180px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
+              <span style={{ fontSize: '0.9rem', color: filters.violationType ? 'var(--text-primary)' : 'var(--text-dim)' }}>
+                {filters.violationType ? `${filters.violationType.split(',').length} Types Selected` : 'All Types'}
+              </span>
+              <ChevronRight size={14} style={{ transform: showTypeDropdown ? 'rotate(90deg)' : 'none', transition: '0.2s' }} />
+            </div>
+            {showTypeDropdown && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 50, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 10px 25px rgba(0,0,0,0.5)', padding: '10px', width: '250px', marginTop: '5px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {violationReasons.map(reason => {
+                  const isSelected = filters.violationType.split(',').includes(reason.id);
+                  return (
+                    <label key={reason.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem' }}>
+                      <input type="checkbox" checked={isSelected} onChange={(e) => {
+                        let selected = filters.violationType ? filters.violationType.split(',') : [];
+                        if (e.target.checked) selected.push(reason.id);
+                        else selected = selected.filter(id => id !== reason.id);
+                        setFilter('violationType', selected.join(','));
+                      }} />
+                      {reason.violationName}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
 
           {hasRole('super_admin', 'sp', 'dsp', 'developer') && (
             <select value={filters.subdivisionCode} onChange={e => setFilter('subdivisionCode', e.target.value)}>
               <option value="">All Subdivisions</option>
-              <option value="Nagercoil">Nagercoil</option>
-              <option value="Colachel">Colachel</option>
-              <option value="Kanyakumari">Kanyakumari</option>
-              <option value="Thuckalay">Thuckalay</option>
-              <option value="Marthandam">Marthandam</option>
+              {subdivisions.map((sub: any) => (
+                <option key={sub.id} value={sub.subdivisionName}>{sub.subdivisionName}</option>
+              ))}
             </select>
           )}
 
@@ -670,10 +741,6 @@ const Violations = () => {
             {hasActiveFilters && <span className="filter-dot" />}
           </button>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', cursor: 'pointer', marginLeft: 'auto' }}>
-            <input type="checkbox" checked={hideNA} onChange={(e) => setHideNA(e.target.checked)} />
-            Hide N/A Confidence
-          </label>
 
           <button className="btn-clear" onClick={clearFilters}>Clear</button>
         </div>
@@ -708,21 +775,6 @@ const Violations = () => {
               </div>
             </div>
 
-            {/* Confidence Range */}
-            <div className="filter-group">
-              <label className="filter-label"><Target size={12} /> Confidence %</label>
-              <div className="filter-group-inputs">
-                <input type="number" min={0} max={100} placeholder="Min %"
-                  value={filters.minConfidence}
-                  onChange={e => setFilter('minConfidence', e.target.value)}
-                  style={{ width: 72 }} />
-                <span className="filter-sep">—</span>
-                <input type="number" min={0} max={100} placeholder="Max %"
-                  value={filters.maxConfidence}
-                  onChange={e => setFilter('maxConfidence', e.target.value)}
-                  style={{ width: 72 }} />
-              </div>
-            </div>
           </div>
         )}
       </div>
@@ -742,7 +794,7 @@ const Violations = () => {
               <th>Violation</th>
               <th>Camera</th>
               <th>Time</th>
-              <th>Confidence</th>
+
               <th>Status</th>
               <th>Action Done By</th>
               <th>Actions</th>
@@ -790,23 +842,7 @@ const Violations = () => {
                   <br />
                   <span className="time-sub">{new Date(v.timestamp).toLocaleTimeString()}</span>
                 </td>
-                <td>
-                  {v.confidence > 0 ? (
-                    <div className="confidence-bar">
-                      <div className="confidence-fill" style={{
-                        width: `${Math.round(v.confidence * 100)}%`,
-                        background: v.confidence >= 0.8
-                          ? 'linear-gradient(90deg, #22c55e, #4ade80)'
-                          : v.confidence >= 0.5
-                          ? 'linear-gradient(90deg, #f59e0b, #fbbf24)'
-                          : 'linear-gradient(90deg, #ef4444, #f87171)'
-                      }} />
-                      <span>{Math.round(v.confidence * 100)}%</span>
-                    </div>
-                  ) : (
-                    <span className="conf-na">N/A</span>
-                  )}
-                </td>
+
                 <td>
                   <span className={`status-badge ${statusColor(v.status)}`}>{v.status}</span>
                 </td>

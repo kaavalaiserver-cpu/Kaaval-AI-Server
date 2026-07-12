@@ -23,7 +23,7 @@ export class CameraModelMapping {
   @Column({ name: 'ai_model_id', type: 'varchar' })
   aiModelId!: string;
 
-  @Column({ name: 'assigned_at', type: 'datetime' })
+  @Column({ name: 'assigned_at', type: 'timestamp' })
   assignedAt!: Date;
 
   @Column({ name: 'is_active', type: 'boolean', default: true })

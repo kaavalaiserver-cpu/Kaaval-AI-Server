@@ -36,7 +36,7 @@ export class MaintenanceSchedule {
   @Column({ name: 'assigned_to', type: 'varchar', nullable: true })
   assignedToUserId!: string | null;
 
-  @Column({ name: 'completed_at', type: 'datetime', nullable: true })
+  @Column({ name: 'completed_at', type: 'timestamp', nullable: true })
   completedAt!: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

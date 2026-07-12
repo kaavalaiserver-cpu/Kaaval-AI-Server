@@ -33,7 +33,7 @@ export class DeviceNetwork {
   @Column({ name: 'network_type', type: 'varchar', length: 20, nullable: true })
   networkType!: string | null; // LAN, ETHERNET, Wi-Fi, VPN
 
-  @Column({ name: 'last_ping', type: 'datetime', nullable: true })
+  @Column({ name: 'last_ping', type: 'timestamp', nullable: true })
   lastPing!: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

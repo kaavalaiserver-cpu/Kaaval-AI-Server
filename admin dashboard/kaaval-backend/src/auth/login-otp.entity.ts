@@ -21,10 +21,10 @@ export class LoginOtp {
   @Column({ type: 'varchar', length: 50, default: 'LOGIN' })
   purpose!: string; // LOGIN, PASSWORD_RESET, EMAIL_VERIFICATION
 
-  @Column({ name: 'expires_at', type: 'datetime' })
+  @Column({ name: 'expires_at', type: 'timestamp' })
   expiresAt!: Date;
 
-  @Column({ name: 'used_at', type: 'datetime', nullable: true })
+  @Column({ name: 'used_at', type: 'timestamp', nullable: true })
   usedAt!: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

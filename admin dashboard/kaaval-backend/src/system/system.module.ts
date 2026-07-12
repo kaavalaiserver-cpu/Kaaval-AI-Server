@@ -7,11 +7,14 @@ import { SystemController } from './system.controller.js';
 import { BackupService } from './backup.service.js';
 import { AuditLog } from './entities/audit-log.entity.js';
 import { AuditService } from './audit.service.js';
+import { DiskMonitorService } from './disk-monitor.service.js';
+import { RetentionService } from './retention.service.js';
+import { Violation } from '../violations/entities/violation.entity.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([SystemLog, Camera, AuditLog])],
+  imports: [TypeOrmModule.forFeature([SystemLog, Camera, AuditLog, Violation])],
   controllers: [SystemController],
-  providers: [SystemService, AuditService, BackupService],
+  providers: [SystemService, AuditService, BackupService, DiskMonitorService, RetentionService],
   exports: [SystemService, AuditService],
 })
 export class SystemModule {}

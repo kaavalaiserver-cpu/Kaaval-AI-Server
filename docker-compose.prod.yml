@@ -2,9 +2,7 @@ version: '3.8'
 
 services:
   frontend:
-    build:
-      context: ./admin dashboard/kaaval_dashboard
-      dockerfile: Dockerfile
+    image: ${FRONTEND_IMAGE:-ghcr.io/yourusername/kaaval-frontend:latest}
     container_name: kaaval-frontend
     ports:
       - "3000:80"
@@ -13,34 +11,18 @@ services:
     restart: unless-stopped
 
   backend:
-    build:
-      context: ./admin dashboard/kaaval-backend
-      dockerfile: Dockerfile
+    image: ${BACKEND_IMAGE:-ghcr.io/yourusername/kaaval-backend:latest}
     container_name: kaaval-backend
     expose:
       - "8003"
     ports:
       - "8003:8003"
-    environment:
-      - NODE_ENV=production
-      - DB_TYPE=postgres
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=Sj@25802580
-      - DB_NAME=kaaval_ai
-      - JWT_SECRET=super_secret_jwt_key_that_is_at_least_32_characters_long_for_kaaval
-      - RDK_API_KEY=change-me-rdk-secret
-      - EMAIL_PASS=hqjmrekwvtowgfxu
-      - LOCAL_UPLOAD_DIR=/app/data/uploads
-      - LOCAL_BACKUP_DIR=/app/data/backups
-      - LOCAL_EXPORT_DIR=/app/data/exports
+    env_file: .env
     volumes:
       - F:/kaaval ai database/uploads:/app/data/uploads
       - F:/kaaval ai database/logs:/usr/src/app/logs
       - F:/kaaval ai database/backups:/app/data/backups
       - F:/kaaval ai database/exports:/app/data/exports
-      # Mount the host path itself so disk space monitor can check the whole drive
       - F:/kaaval ai database:/host_f_drive:ro
     depends_on:
       postgres:
@@ -55,10 +37,7 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: kaaval-postgres
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=Sj@25802580
-      - POSTGRES_DB=kaaval_ai
+    env_file: .env
     ports:
       - "5432:5432"
     volumes:
@@ -71,24 +50,13 @@ services:
     restart: unless-stopped
 
   evidence_api:
-    build:
-      context: ./kaaval_api
-      dockerfile: Dockerfile
+    image: ${EVIDENCE_IMAGE:-ghcr.io/yourusername/kaaval-evidence-api:latest}
     container_name: kaaval-evidence-api
     expose:
       - "8001"
     ports:
       - "8001:8001"
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:Sj@25802580@postgres:5432/kaaval_ai
-      - RDK_API_KEY=change-me-rdk-secret
-      - JWT_SECRET=super_secret_jwt_key_that_is_at_least_32_characters_long_for_kaaval
-      - AWS_REGION=ap-south-1
-      - S3_IMAGES_BUCKET=kaaval-ai-images
-      - S3_PREVIEW_BUCKET=kaaval-ai-preview
-      - PRESIGN_TTL=300
-      - CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000","http://localhost:80","http://localhost"]
-      - AI_MODELS_DIR=/app/ai_models
+    env_file: .env
     volumes:
       - F:/kaaval ai database/ai_models:/app/ai_models
     depends_on:

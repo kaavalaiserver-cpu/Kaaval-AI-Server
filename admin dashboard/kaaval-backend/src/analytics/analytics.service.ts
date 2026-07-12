@@ -157,30 +157,12 @@ export class AnalyticsService {
     const platesExtracted = all.filter(
       (v) => v.vehicle?.registrationNumber && v.vehicle.registrationNumber !== 'UNREAD',
     );
-    const highConfidence = all.filter((v) => (v.confidence ?? 0) >= 0.7);
-    const noOcr = all.filter((v) => !v.confidence || v.confidence === 0);
 
     // Processing pipeline metrics
     const byStatus: Record<string, number> = {};
     for (const v of all) {
       byStatus[v.status] = (byStatus[v.status] || 0) + 1;
     }
-
-    // OCR confidence distribution
-    const confBuckets = { '0-30%': 0, '30-50%': 0, '50-70%': 0, '70-90%': 0, '90-100%': 0 };
-    for (const v of all) {
-      const c = (v.confidence ?? 0) * 100;
-      if (c < 30) confBuckets['0-30%']++;
-      else if (c < 50) confBuckets['30-50%']++;
-      else if (c < 70) confBuckets['50-70%']++;
-      else if (c < 90) confBuckets['70-90%']++;
-      else confBuckets['90-100%']++;
-    }
-
-    const avgConfidence =
-      all.length > 0
-        ? all.reduce((s, v) => s + (v.confidence ?? 0), 0) / all.length
-        : 0;
 
     const errorCount = byStatus['ERROR'] ?? 0;
     const pipelineStatus = errorCount > all.length * 0.1 ? 'degraded' : 'healthy';
@@ -193,13 +175,9 @@ export class AnalyticsService {
         all.length > 0
           ? parseFloat(((platesExtracted.length / all.length) * 100).toFixed(1))
           : 0,
-      ocrSuccessCount: highConfidence.length,
-      ocrFailCount: noOcr.length,
-      avgConfidence: parseFloat((avgConfidence).toFixed(4)),
       pipelineStatus,
       cameraFeedCount: all.length,
       batchUploadCount: 0,
-      confidenceDistribution: Object.entries(confBuckets).map(([bucket, count]) => ({ bucket, count })),
     };
 
     await this.cache.set('dev-analytics', result, 30000);

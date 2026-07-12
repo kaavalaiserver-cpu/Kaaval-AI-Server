@@ -27,10 +27,10 @@ export class BackupHistory {
   remarks!: string | null;
 
   @Index()
-  @Column({ name: 'started_at', type: 'datetime' })
+  @Column({ name: 'started_at', type: 'timestamp' })
   startedAt!: Date;
 
-  @Column({ name: 'completed_at', type: 'datetime', nullable: true })
+  @Column({ name: 'completed_at', type: 'timestamp', nullable: true })
   completedAt!: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

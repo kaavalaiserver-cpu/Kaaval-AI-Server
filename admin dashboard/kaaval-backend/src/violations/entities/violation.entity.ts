@@ -31,11 +31,9 @@ export class Violation {
   @Column({ name: 'violation_type_id', type: 'varchar', nullable: true })
   violationTypeId!: string | null;
 
-  @Column({ type: 'float', nullable: true })
-  confidence!: number | null;
 
   @Index()
-  @Column({ name: 'violation_timestamp', type: 'datetime' })
+  @Column({ name: 'violation_timestamp', type: 'timestamp' })
   violationTimestamp!: Date;
 
   @Column({ type: 'varchar', length: 30, default: 'PENDING' })
@@ -44,7 +42,7 @@ export class Violation {
   @Column({ name: 'reviewed_by', type: 'varchar', nullable: true })
   reviewedByUserId!: string | null;
 
-  @Column({ name: 'reviewed_at', type: 'datetime', nullable: true })
+  @Column({ name: 'reviewed_at', type: 'timestamp', nullable: true })
   reviewedAt!: Date | null;
 
   @Column({ name: 'approval_notes', type: 'text', nullable: true })

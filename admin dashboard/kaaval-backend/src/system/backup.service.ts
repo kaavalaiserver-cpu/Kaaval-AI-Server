@@ -57,13 +57,13 @@ export class BackupService {
     try {
       const files = await fs.readdir(backupDir);
       const now = new Date().getTime();
-      const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+      const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 
       for (const file of files) {
         if (!file.endsWith('.sql.gz')) continue;
         const filePath = path.join(backupDir, file);
         const stats = await fs.stat(filePath);
-        if (now - stats.mtime.getTime() > SEVEN_DAYS) {
+        if (now - stats.mtime.getTime() > THIRTY_DAYS) {
           await fs.unlink(filePath);
           this.logger.log(`Deleted old backup: ${file}`);
         }

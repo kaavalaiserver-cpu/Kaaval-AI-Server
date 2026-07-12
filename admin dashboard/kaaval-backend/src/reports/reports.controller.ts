@@ -79,7 +79,7 @@ export class ReportsController {
 
     // ── Approval Rate ───────────────────────────────────────────────────
     doc.fillColor('#e2e8f0').fontSize(11).font('Helvetica-Bold')
-       .text(`Approval Rate: ${report.approvalRate}%   |   Avg Confidence: ${(report.avgConfidence * 100).toFixed(1)}%`, 50, sectionY);
+       .text(`Approval Rate: ${report.approvalRate}%`, 50, sectionY);
 
     // ── Violation Type Breakdown ────────────────────────────────────────
     doc.moveDown(1.5);
@@ -173,7 +173,7 @@ export class ReportsController {
 
     // ── Approval Rate ───────────────────────────────────────────────────
     doc.fillColor('#e2e8f0').fontSize(11).font('Helvetica-Bold')
-       .text(`Approval Rate: ${s.approvalRate}%   |   Avg Confidence: ${(s.avgConfidence * 100).toFixed(1)}%`, 50, sectionY);
+       .text(`Approval Rate: ${s.approvalRate}%`, 50, sectionY);
 
     // ── Daily Trend Table ───────────────────────────────────────────────
     doc.moveDown(1.5);

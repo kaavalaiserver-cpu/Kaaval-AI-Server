@@ -48,7 +48,6 @@ export class SearchService {
         camera_id: v.camera?.cameraCode ?? 'Unknown',
         location: v.camera?.junction?.junctionName ?? v.camera?.cameraName ?? 'Unknown',
         status: v.status === 'CHALLAN_ISSUED' ? 'Verified' : v.status === 'REJECTED' ? 'Rejected' : 'Pending',
-        confidence: v.confidence ?? 0,
         timestamp: v.createdAt.toISOString(),
         image_url: v.evidence?.find(e => e.evidenceType === 'RAW_IMAGE')?.filePath ?? '',
         vehicle_type: '2-Wheeler',

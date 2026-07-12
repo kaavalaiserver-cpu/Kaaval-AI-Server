@@ -41,10 +41,10 @@ export class Device {
   @Column({ name: 'api_secret', type: 'varchar', length: 200, nullable: true })
   apiSecret!: string | null;
 
-  @Column({ name: 'registered_at', type: 'datetime', nullable: true })
+  @Column({ name: 'registered_at', type: 'timestamp', nullable: true })
   registeredAt!: Date | null;
 
-  @Column({ name: 'last_sync', type: 'datetime', nullable: true })
+  @Column({ name: 'last_sync', type: 'timestamp', nullable: true })
   lastSync!: Date | null;
 
   @Column({ name: 'is_registered', type: 'boolean', default: false })

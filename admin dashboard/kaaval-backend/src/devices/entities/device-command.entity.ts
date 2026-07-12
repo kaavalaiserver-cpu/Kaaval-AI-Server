@@ -28,7 +28,7 @@ export class DeviceCommand {
   @Column({ type: 'varchar', length: 20, default: 'QUEUED' })
   status!: string;
 
-  @Column({ name: 'executed_at', type: 'datetime', nullable: true })
+  @Column({ name: 'executed_at', type: 'timestamp', nullable: true })
   executedAt!: Date | null;
 
   @Column({ type: 'text', nullable: true })
