@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./admin dashboard/kaaval_dashboard
+      dockerfile: Dockerfile
+    container_name: kaaval-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+  backend:
+    build:
+      context: ./admin dashboard/kaaval-backend
+      dockerfile: Dockerfile
+    container_name: kaaval-backend
+    expose:
+      - "8003"
+    ports:
+      - "8003:8003"
+    environment:
+      - NODE_ENV=production
+      - DB_TYPE=postgres
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=kaaval_secure_pw
+      - DB_NAME=kaaval_ai
+      - JWT_SECRET=super_secret_jwt_key_that_is_at_least_32_characters_long_for_kaaval
+      - RDK_API_KEY=change-me-rdk-secret
+      - LOCAL_UPLOAD_DIR=/app/data/uploads
+      - LOCAL_BACKUP_DIR=/app/data/backups
+    volumes:
+      - ./admin dashboard/backend-data/uploads:/app/data/uploads
+      - ./admin dashboard/backend-data/logs:/usr/src/app/logs
+      - ./admin dashboard/backend-data/backups:/app/data/backups
+    depends_on:
+      - postgres
+    restart: always
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: kaaval-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=kaaval_secure_pw
+      - POSTGRES_DB=kaaval_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - F:/kaaval ai database:/var/lib/postgresql/data
+    restart: always
+
+  evidence_api:
+    build:
+      context: ./kaaval_api
+      dockerfile: Dockerfile
+    container_name: kaaval-evidence-api
+    expose:
+      - "8001"
+    ports:
+      - "8001:8001"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:kaaval_secure_pw@postgres:5432/kaaval_ai
+      - RDK_API_KEY=change-me-rdk-secret
+      - JWT_SECRET=super_secret_jwt_key_that_is_at_least_32_characters_long_for_kaaval
+      - AWS_REGION=ap-south-1
+      - S3_IMAGES_BUCKET=kaaval-ai-images
+      - S3_PREVIEW_BUCKET=kaaval-ai-preview
+      - PRESIGN_TTL=300
+      - CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000","http://localhost:80","http://localhost","http://localhost:81"]
+    depends_on:
+      - postgres
+    restart: always
+

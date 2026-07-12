@@ -1,4 +1,0 @@
-/* Fix CSS variable reference used in components */
-:root {
-  --text-muted: #64748B;
-}
