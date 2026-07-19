@@ -134,7 +134,11 @@ const UsersManagement = () => {
             alert('Reason is required for role changes');
             return;
         }
-        await axios.patch(`${API_BASE}/users/${selectedUser.id}`, { ...formData, reason });
+        const payload = { ...formData, reason };
+        if (formData.role === selectedUser.role) {
+            delete payload.role;
+        }
+        await axios.patch(`${API_BASE}/users/${selectedUser.id}`, payload);
         handleCloseModal();
         fetchUsersAndJunctions();
       } else if (modalMode === 'status' && selectedUser) {
