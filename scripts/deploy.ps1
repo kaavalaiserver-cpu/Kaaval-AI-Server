@@ -48,6 +48,7 @@ $env:FRONTEND_IMAGE = $FrontendFull
 $env:BACKEND_IMAGE = $BackendFull
 $env:EVIDENCE_IMAGE = $EvidenceFull
 
+if (-not (Test-Path .env)) { New-Item -Path .env -ItemType File -Force | Out-Null }
 Log-Message "Pulling images..."
 docker compose -f docker-compose.prod.yml pull
 
