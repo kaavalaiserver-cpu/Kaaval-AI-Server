@@ -47,6 +47,11 @@ export class UsersService implements OnModuleInit {
         { code: 'INSPECTOR', name: 'Traffic Inspector', level: 30 },
         { code: 'SUB_INSPECTOR', name: 'Sub-Inspector', level: 40 },
         { code: 'OPERATOR', name: 'Control Room Operator', level: 50 },
+        { code: 'NAGERCOIL_ADMIN', name: 'Nagercoil Sub-Admin', level: 25 },
+        { code: 'THUCKALAY_ADMIN', name: 'Thuckalay Sub-Admin', level: 25 },
+        { code: 'COLACHEL_ADMIN', name: 'Colachel Sub-Admin', level: 25 },
+        { code: 'KANYAKUMARI_ADMIN', name: 'Kanyakumari Sub-Admin', level: 25 },
+        { code: 'MARTHANDAM_ADMIN', name: 'Marthandam Sub-Admin', level: 25 },
       ];
 
       for (const rc of roleCodes) {

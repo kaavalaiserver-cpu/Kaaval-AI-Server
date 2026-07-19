@@ -9,11 +9,16 @@ import {
 } from 'lucide-react';
 import './Settings.css';
 
-const SECTIONS = ['Profile', 'Security', 'Appearance', 'Notifications', 'Session', 'Danger Zone'] as const;
-type Section = typeof SECTIONS[number];
+const ALL_SECTIONS = ['Profile', 'Security', 'Appearance', 'Notifications', 'Session', 'Danger Zone'] as const;
+const BASIC_SECTIONS = ['Profile', 'Danger Zone'] as const;
+type Section = typeof ALL_SECTIONS[number];
 
 const SettingsPage = () => {
-  const { user, logout, logoutAllDevices } = useAuth();
+  const { user, logout, logoutAllDevices, hasRole } = useAuth();
+  
+  const isTechAdmin = hasRole('super_admin', 'developer');
+  const sections = isTechAdmin ? ALL_SECTIONS : BASIC_SECTIONS;
+  
   const [activeSection, setActiveSection] = useState<Section>('Profile');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
@@ -39,7 +44,7 @@ const SettingsPage = () => {
       <div className="settings-layout">
         {/* Sidebar Nav */}
         <nav className="settings-nav">
-          {SECTIONS.map(s => (
+          {sections.map(s => (
             <button
               key={s}
               className={`settings-nav-btn ${activeSection === s ? 'active' : ''} ${s === 'Danger Zone' ? 'danger' : ''}`}

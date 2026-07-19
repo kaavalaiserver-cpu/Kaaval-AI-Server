@@ -19,6 +19,17 @@ if (-not $SkipPull) {
 }
 
 Write-Host "`n[2/3] Building & Deploying Docker Containers..." -ForegroundColor Yellow
+
+# Docker Desktop aggressively re-adds credsStore on reboot, which breaks headless builds
+$dockerConfig = "$env:USERPROFILE\.docker\config.json"
+if (Test-Path $dockerConfig) {
+    $configContent = Get-Content $dockerConfig -Raw | ConvertFrom-Json
+    if ($null -ne $configContent.credsStore) {
+        $configContent.PSObject.Properties.Remove('credsStore')
+        $configContent | ConvertTo-Json -Depth 10 | Set-Content $dockerConfig
+    }
+}
+
 # Using standard docker-compose.prod.yml now, no need for project name overrides 
 # Using default docker-compose.yml which contains all local environment variables
 docker compose up --build -d

@@ -8,25 +8,25 @@ export class CamerasController {
   constructor(private readonly camerasService: CamerasService) {}
 
   @Get()
-  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER')
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
   findAll() {
     return this.camerasService.findAll();
   }
 
   @Get('status')
-  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR')
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
   getStatus(@Request() req: any, @Query('subdivisionCode') subdivisionCode?: string) {
     return this.camerasService.getStatus(req.user, subdivisionCode);
   }
 
   @Get('junctions')
-  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER')
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
   getJunctions(@Request() req: any) {
     return this.camerasService.getJunctions(req.user);
   }
 
   @Get('subdivisions')
-  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER')
+  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
   getSubdivisions(@Request() req: any) {
     return this.camerasService.getSubdivisions(req.user);
   }
