@@ -1,10 +1,7 @@
 """
-AWS S3 integration using boto3.
-Assumes IAM role is attached to the EC2 instance, so no hardcoded credentials are used.
+Local storage integration.
+Saves images to a mapped F: drive directory and serves local URLs.
 """
-import boto3
-from botocore.exceptions import ClientError
-from botocore.config import Config
 import logging
 import os
 import urllib.parse
@@ -17,6 +14,7 @@ LOCAL_UPLOAD_DIR = os.environ.get("LOCAL_UPLOAD_DIR", os.path.abspath(os.path.jo
 def generate_presigned_url(bucket_name: str, object_name: str, expiration: int = settings.presign_ttl) -> str | None:
     """
     Returns the secure local URL for the image instead of an S3 presigned URL.
+    The bucket_name is kept for backwards compatibility in function signatures.
     """
     if not object_name:
         return None
@@ -28,6 +26,7 @@ def generate_presigned_url(bucket_name: str, object_name: str, expiration: int =
 def upload_image(bucket_name: str, object_name: str, file_bytes: bytes, content_type: str = "image/jpeg") -> bool:
     """
     Save an image file to local disk.
+    The bucket_name is kept for backwards compatibility in function signatures.
     """
     try:
         full_path = os.path.join(LOCAL_UPLOAD_DIR, object_name)

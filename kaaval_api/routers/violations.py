@@ -11,7 +11,7 @@ from database import get_db
 from models import Violation
 from schemas import ViolationOut, ViolationListOut, EvidenceOut
 from config import settings
-from s3 import generate_presigned_url
+from local_storage import generate_presigned_url
 from security import verify_jwt_token
 
 router = APIRouter(tags=["violations"], dependencies=[Depends(verify_jwt_token)])

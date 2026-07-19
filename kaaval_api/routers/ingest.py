@@ -12,7 +12,7 @@ from database import get_db, AsyncSessionLocal
 from models import Violation
 from schemas import IngestResult
 from config import settings
-from s3 import upload_image
+from local_storage import upload_image
 from security import verify_api_key
 
 from PIL import Image
