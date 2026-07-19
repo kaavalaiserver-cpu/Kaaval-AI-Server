@@ -36,6 +36,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository }}-frontend
+          tags: |
+            type=ref,event=branch
+            type=sha
 
       - name: Build and push Frontend
         uses: docker/build-push-action@v5
@@ -51,6 +54,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository }}-backend
+          tags: |
+            type=ref,event=branch
+            type=sha
 
       - name: Build and push Backend
         uses: docker/build-push-action@v5
@@ -66,6 +72,9 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository }}-evidence-api
+          tags: |
+            type=ref,event=branch
+            type=sha
 
       - name: Build and push Evidence API
         uses: docker/build-push-action@v5
