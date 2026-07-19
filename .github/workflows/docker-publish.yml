@@ -84,6 +84,7 @@ jobs:
       - name: Checkout deploy scripts
         uses: actions/checkout@v4
         with:
+          sparse-checkout-cone-mode: false
           sparse-checkout: |
             scripts
             docker-compose.prod.yml
