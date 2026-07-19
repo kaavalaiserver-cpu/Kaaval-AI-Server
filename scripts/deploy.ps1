@@ -40,9 +40,9 @@ if (Test-Path $CurrentTagFile) {
 Log-Message "Starting deployment for tag: $Tag"
 
 # Construct Image URLs
-$FrontendFull = "$Registry/$FrontendImage:$Tag"
-$BackendFull = "$Registry/$BackendImage:$Tag"
-$EvidenceFull = "$Registry/$EvidenceImage:$Tag"
+$FrontendFull = "$Registry/${FrontendImage}:$Tag"
+$BackendFull = "$Registry/${BackendImage}:$Tag"
+$EvidenceFull = "$Registry/${EvidenceImage}:$Tag"
 
 $env:FRONTEND_IMAGE = $FrontendFull
 $env:BACKEND_IMAGE = $BackendFull
@@ -97,9 +97,9 @@ if ($IsHealthy) {
     Log-Message "::error::Deployment FAILED after $MaxAttempts attempts. Backend did not become healthy."
     if ($PreviousTag) {
         Log-Message "Rolling back to previous tag: $PreviousTag"
-        $env:FRONTEND_IMAGE = "$Registry/$FrontendImage:$PreviousTag"
-        $env:BACKEND_IMAGE = "$Registry/$BackendImage:$PreviousTag"
-        $env:EVIDENCE_IMAGE = "$Registry/$EvidenceImage:$PreviousTag"
+        $env:FRONTEND_IMAGE = "$Registry/${FrontendImage}:$PreviousTag"
+        $env:BACKEND_IMAGE = "$Registry/${BackendImage}:$PreviousTag"
+        $env:EVIDENCE_IMAGE = "$Registry/${EvidenceImage}:$PreviousTag"
         
         docker compose -f docker-compose.prod.yml up -d
         Log-Message "Rollback complete."
