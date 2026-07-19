@@ -48,9 +48,17 @@ $env:FRONTEND_IMAGE = $FrontendFull
 $env:BACKEND_IMAGE = $BackendFull
 $env:EVIDENCE_IMAGE = $EvidenceFull
 
-if (-not (Test-Path .env)) { New-Item -Path .env -ItemType File -Force | Out-Null }
+$RealEnv = "F:\kaaval ai server\.env"
+if (Test-Path $RealEnv) {
+    Copy-Item $RealEnv -Destination .env -Force
+    Log-Message "Copied real .env file from F:\kaaval ai server"
+} else {
+    Log-Message "::warning::Real .env file not found at F:\kaaval ai server\.env!"
+    if (-not (Test-Path .env)) { New-Item -Path .env -ItemType File -Force | Out-Null }
+}
+
 Log-Message "Pulling images..."
-docker compose -f docker-compose.prod.yml pull
+docker compose --project-name kaavalaiserver -f docker-compose.prod.yml pull
 
 $MaxAttempts = 2
 $IsHealthy = $false
@@ -63,11 +71,11 @@ for ($Attempt = 1; $Attempt -le $MaxAttempts; $Attempt++) {
     
     if ($Attempt -gt 1) {
         Log-Message "::warning::First health check failed! Notifying user. Shutting down containers to retry..."
-        docker compose -f docker-compose.prod.yml down
+        docker compose --project-name kaavalaiserver -f docker-compose.prod.yml down
     }
 
     Log-Message "Deploying new containers..."
-    docker compose -f docker-compose.prod.yml up -d
+    docker compose --project-name kaavalaiserver -f docker-compose.prod.yml up -d
 
     Log-Message "Waiting 15 seconds for backend to start..."
     Start-Sleep -Seconds 15
@@ -102,7 +110,7 @@ if ($IsHealthy) {
         $env:BACKEND_IMAGE = "$Registry/${BackendImage}:$PreviousTag"
         $env:EVIDENCE_IMAGE = "$Registry/${EvidenceImage}:$PreviousTag"
         
-        docker compose -f docker-compose.prod.yml up -d
+        docker compose --project-name kaavalaiserver -f docker-compose.prod.yml up -d
         Log-Message "Rollback complete."
         exit 1 # Fail the GH Action
     } else {
