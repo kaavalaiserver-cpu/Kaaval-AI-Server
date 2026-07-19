@@ -13,6 +13,7 @@ import SettingsPage from './pages/Settings';
 import WeeklyReports from './pages/WeeklyReports';
 import KitManagement from './pages/KitManagement';
 import WantedVehicles from './pages/WantedVehicles';
+import AuditLog from './pages/AuditLog';
 
 const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer'];
 const MANAGEMENT_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector'];
@@ -61,6 +62,11 @@ function AppRoutes() {
         <Route path="users" element={
           <ProtectedRoute roles={['super_admin']}>
             <UsersManagement />
+          </ProtectedRoute>
+        } />
+        <Route path="audit-log" element={
+          <ProtectedRoute roles={['super_admin']}>
+            <AuditLog />
           </ProtectedRoute>
         } />
         <Route path="kit-management" element={

@@ -23,6 +23,7 @@ import {
   Moon,
   MapPin,
   ShieldAlert,
+  ShieldCheck,
 } from 'lucide-react';
 import type { SystemStatus } from '../types';
 import NotificationPanel from './NotificationPanel';
@@ -204,6 +205,9 @@ const Layout = () => {
             roles={TECH_ROLES} />
 
           <NavItem to="/users" icon={<User size={20} />} label="User Management" isOpen={isSidebarOpen}
+            roles={['super_admin']} />
+
+          <NavItem to="/audit-log" icon={<ShieldCheck size={20} />} label="Audit Log" isOpen={isSidebarOpen}
             roles={['super_admin']} />
 
           <NavItem to="/reports" icon={<BarChart3 size={20} />} label="Reports" isOpen={isSidebarOpen}
