@@ -120,7 +120,10 @@ const Layout = () => {
 
   useEffect(() => {
     // Only developer and super_admin has access to /system/status endpoint
-    if (!user || !TECH_ROLES.includes(user.role)) return;
+    if (!user || !TECH_ROLES.includes(user.role)) {
+      setStatus({ status: 'online', uptime: 0, memory: { used: 0, total: 0 }, cpu: 0, database: 'connected', version: '1.0' });
+      return;
+    }
 
     const fetchStatus = async () => {
       try {

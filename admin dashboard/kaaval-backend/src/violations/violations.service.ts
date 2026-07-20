@@ -137,6 +137,8 @@ export class ViolationsService {
       .skip(offset);
 
     // ── Filters ──────────────────────────────────────────────────
+    qb.andWhere('violationType.is_active = true');
+
     if (query.status && query.status !== '') {
       qb.andWhere('v.status = :status', { status: query.status });
     }
@@ -196,7 +198,8 @@ export class ViolationsService {
     const qb = this.violationRepo.createQueryBuilder('v')
       .leftJoin('v.camera', 'camera')
       .leftJoin('camera.junction', 'junction')
-      .leftJoin('v.violationType', 'violationType');
+      .leftJoin('v.violationType', 'violationType')
+      .where('violationType.is_active = true');
 
     if (query.dateFrom) {
       qb.andWhere('v.violationTimestamp >= :from', { from: new Date(query.dateFrom) });

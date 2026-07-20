@@ -372,12 +372,23 @@ const Violations = () => {
                   <button onClick={() => {
                     window.open(selectedViolation.image_url, '_blank');
                   }} title="Open in New Tab" className="btn-secondary" style={{ padding: '6px' }}><ExternalLink size={16} /></button>
-                  <button onClick={() => {
-                    const a = document.createElement('a');
-                    a.href = selectedViolation.image_url;
-                    a.download = `violation-${selectedViolation?.vehicle_number || 'unknown'}.jpg`;
-                    a.target = '_blank';
-                    a.click();
+                  <button onClick={async () => {
+                    try {
+                      const res = await fetch(selectedViolation.image_url);
+                      if (!res.ok) throw new Error('Network response was not ok');
+                      const blob = await res.blob();
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `violation-${selectedViolation?.vehicle_number || 'unknown'}.jpg`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      window.URL.revokeObjectURL(url);
+                    } catch (err) {
+                      console.error('Download failed, opening in new tab', err);
+                      window.open(selectedViolation.image_url, '_blank');
+                    }
                   }} title="Download" className="btn-secondary" style={{ padding: '6px' }}><Download size={16} /></button>
                   <div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: '15px 0' }}>
                     {editMode ? (

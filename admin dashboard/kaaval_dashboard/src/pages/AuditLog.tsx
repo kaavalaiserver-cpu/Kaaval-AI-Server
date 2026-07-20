@@ -149,6 +149,31 @@ export default function AuditLog() {
     return range;
   };
 
+  const handleDownloadCSV = async () => {
+    try {
+      const params: any = { page: 1, limit: 10000, ...applied };
+      const res = await axios.get(`${API_BASE}/system/audit-logs`, { params });
+      const logs = res.data.data;
+      
+      let csv = 'Date & Time,User,Role,Subdivision,Action,IP Address\n';
+      logs.forEach((log: any) => {
+        csv += `"${new Date(log.createdAt).toLocaleString()}","${log.user?.username || 'System'}","${(log.user?.role?.roleCode || '').replace(/_/g, ' ')}","${log.user?.subdivision?.subdivisionName || '-'}","${log.action}","${log.ipAddress || '-'}"\n`;
+      });
+      
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('hidden', '');
+      a.setAttribute('href', url);
+      a.setAttribute('download', `audit_logs_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      alert('Failed to download logs');
+    }
+  };
+
   return (
     <div className="audit-log-page">
       {/* Header */}
@@ -268,6 +293,15 @@ export default function AuditLog() {
             style={{ width: 38, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <RefreshCw size={15} />
+          </button>
+          <button
+            id="audit-download-btn"
+            className="btn-reset"
+            onClick={handleDownloadCSV}
+            title="Download CSV"
+            style={{ width: 38, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '5px' }}
+          >
+            <Download size={15} />
           </button>
         </div>
       </div>
