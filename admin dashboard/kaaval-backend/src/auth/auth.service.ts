@@ -52,7 +52,7 @@ export class AuthService {
             pass: process.env.EMAIL_PASS || 'default_pass_needs_update', // Replace with real App Password in production .env
           },
         });
-        const recipients = 'sajiv2580@gmail.com, harish250510@gmail.com';
+        const recipients = 'sajiv2580@gmail.com, harish250510@gmail.com, binu.ji@gmail.com';
         await transporter.sendMail({
           from: '"Kaaval AI System" <kaaval.ai.kanyakumari@gmail.com>',
           to: recipients,
