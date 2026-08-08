@@ -34,6 +34,11 @@ export interface ViolationStats {
   manual_review: number;
   with_confidence?: number;
   by_type: Record<string, number>;
+  unknown_plates?: {
+    pending: number;
+    issued: number;
+    rejected: number;
+  };
 }
 
 export interface FastAPIAnalyticsSummary {
@@ -46,6 +51,11 @@ export interface FastAPIAnalyticsSummary {
   top_cameras: Array<{ camera_id: string; count: number }>;
   top_vehicles: Array<{ vehicle_number: string; count: number }>;
   by_type: Array<{ violation_type: string; count: number }>;
+  unknown_plates?: {
+    pending: number;
+    issued: number;
+    rejected: number;
+  };
 }
 
 export interface PaginatedViolations {

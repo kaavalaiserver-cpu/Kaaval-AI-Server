@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
+import { formatIST } from '../utils/dateIST';
 import {
   ShieldCheck, Filter, RefreshCw, LogIn, LogOut,
   Eye, Trash2, FileEdit, Download, ChevronLeft, ChevronRight,
@@ -62,12 +63,7 @@ function formatAction(action: string) {
 }
 
 function formatDateTime(dt: string) {
-  const d = new Date(dt);
-  return d.toLocaleString('en-IN', {
-    day: '2-digit', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hour12: true,
-  });
+  return formatIST(dt);
 }
 
 const LIMIT = 25;
@@ -157,7 +153,7 @@ export default function AuditLog() {
       
       let csv = 'Date & Time,User,Role,Subdivision,Action,IP Address\n';
       logs.forEach((log: any) => {
-        csv += `"${new Date(log.createdAt).toLocaleString()}","${log.user?.username || 'System'}","${(log.user?.role?.roleCode || '').replace(/_/g, ' ')}","${log.user?.subdivision?.subdivisionName || '-'}","${log.action}","${log.ipAddress || '-'}"\n`;
+        csv += `"${formatIST(log.createdAt)}","${log.user?.username || 'System'}","${(log.user?.role?.roleCode || '').replace(/_/g, ' ')}","${log.user?.subdivision?.subdivisionName || '-'}","${log.action}","${log.ipAddress || '-'}"\n`;
       });
       
       const blob = new Blob([csv], { type: 'text/csv' });

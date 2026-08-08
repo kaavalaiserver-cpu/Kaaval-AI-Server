@@ -22,50 +22,43 @@ export class RetentionService {
     const now = new Date();
 
     try {
-      // 1. Pending: Delete after 24 hours (Hard delete)
-      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      // 1. Pending: Delete after 1 week (Hard delete)
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const pendingViolations = await this.violationsRepository.find({
-        where: { status: 'PENDING', createdAt: LessThan(twentyFourHoursAgo) },
+        where: { status: 'PENDING', createdAt: LessThan(sevenDaysAgo) },
         relations: ['evidence'],
       });
       
       for (const violation of pendingViolations) {
         this.deleteAssociatedFiles(violation);
         await this.violationsRepository.remove(violation);
-        this.logger.log(`Deleted PENDING violation ${violation.id} (older than 24h)`);
+        this.logger.log(`Deleted PENDING violation ${violation.id} (older than 7d)`);
       }
 
-      // 2. Rejected: Delete after 2 hours (Hard delete)
-      const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+      // 2. Rejected: Delete after 2 days (Hard delete)
+      const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
       const rejectedViolations = await this.violationsRepository.find({
-        where: { status: 'REJECTED', updatedAt: LessThan(twoHoursAgo) },
+        where: { status: 'REJECTED', updatedAt: LessThan(twoDaysAgo) },
         relations: ['evidence'],
       });
 
       for (const violation of rejectedViolations) {
         this.deleteAssociatedFiles(violation);
         await this.violationsRepository.remove(violation);
-        this.logger.log(`Deleted REJECTED violation ${violation.id} (older than 2h)`);
+        this.logger.log(`Deleted REJECTED violation ${violation.id} (older than 2d)`);
       }
 
-      // 3. Issued (APPROVED): Delete physical files after 15 days, keep DB metadata
+      // 3. Issued: Delete after 15 days (Hard delete)
       const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
       const issuedViolations = await this.violationsRepository.find({
-        where: { status: 'APPROVED', updatedAt: LessThan(fifteenDaysAgo) },
+        where: { status: 'ISSUED', updatedAt: LessThan(fifteenDaysAgo) },
         relations: ['evidence'],
       });
 
       for (const violation of issuedViolations) {
-        if (violation.evidence && violation.evidence.length > 0) {
-          this.deleteAssociatedFiles(violation);
-          // Assuming you want to keep the evidence DB records but set their file_path to null,
-          // or just delete the file from disk but keep the path for audit. Let's delete files.
-          // TypeORM CASCADE doesn't automatically fire on relations unless specifically updated.
-          // Since physical files are gone, we clear them from the DB relation array:
-          violation.evidence = [];
-          await this.violationsRepository.save(violation);
-          this.logger.log(`Cleared physical files for APPROVED/ISSUED violation ${violation.id} (older than 15d)`);
-        }
+        this.deleteAssociatedFiles(violation);
+        await this.violationsRepository.remove(violation);
+        this.logger.log(`Deleted ISSUED violation ${violation.id} (older than 15d)`);
       }
 
     } catch (error: any) {

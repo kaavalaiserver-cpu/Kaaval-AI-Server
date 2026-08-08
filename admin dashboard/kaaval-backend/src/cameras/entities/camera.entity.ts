@@ -56,6 +56,12 @@ export class Camera {
   @Column({ name: 'last_seen', type: 'timestamp', nullable: true })
   lastSeen!: Date | null;
 
+  @Column({ name: 'operating_start_time', type: 'varchar', length: 5, nullable: true })
+  operatingStartTime!: string | null;
+
+  @Column({ name: 'operating_end_time', type: 'varchar', length: 5, nullable: true })
+  operatingEndTime!: string | null;
+
   @Column({ type: 'text', nullable: true })
   remarks!: string | null;
 

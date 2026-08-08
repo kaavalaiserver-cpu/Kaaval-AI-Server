@@ -16,6 +16,7 @@ import {
   XCircle,
   AlertTriangle
 } from 'lucide-react';
+import { formatDateIST, formatTimeIST } from '../utils/dateIST';
 import './UsersManagement.css';
 
 const ROLES = [
@@ -314,10 +315,10 @@ const UsersManagement = () => {
                       <td>
                         <div className="td-stack">
                           <span className="td-main" style={{ fontSize: '0.82rem' }}>
-                            {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+                            {user.lastLogin ? formatDateIST(user.lastLogin) : 'Never'}
                           </span>
                           <span className="td-sub">
-                            {user.lastLogin ? new Date(user.lastLogin).toLocaleTimeString() : ''}
+                            {user.lastLogin ? formatTimeIST(user.lastLogin) : ''}
                           </span>
                         </div>
                       </td>

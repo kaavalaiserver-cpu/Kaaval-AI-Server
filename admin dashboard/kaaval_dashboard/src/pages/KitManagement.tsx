@@ -93,6 +93,15 @@ export default function KitManagement() {
     setSaving(false);
   }
 
+  async function updateCameraTime(camera: any, field: string, value: string) {
+    try {
+      await axios.patch(`${API_BASE}/cameras/${camera.id}`, { [field]: value || null });
+      await loadAll(); // refresh data
+    } catch (e: any) {
+      alert('Failed to update time: ' + (e.response?.data?.message || e.message));
+    }
+  }
+
   async function saveVType(data: any) {
     setSaving(true);
     try {
@@ -294,7 +303,7 @@ export default function KitManagement() {
             <table className="kit-table">
               <thead>
                 <tr>
-                  <th>Camera</th><th>Code</th><th>Location</th><th>IP Address</th><th>Status</th>
+                  <th>Camera</th><th>Code</th><th>Location</th><th>IP Address</th><th>Operating Time</th><th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -305,6 +314,17 @@ export default function KitManagement() {
                     <td><code style={{ fontSize: '0.78rem', background: 'var(--border-color)', padding: '2px 6px', borderRadius: 4 }}>{c.cameraCode}</code></td>
                     <td>{c.junction?.junctionName || '—'}</td>
                     <td style={{ fontSize: '0.78rem' }}>{c.ipAddress || '—'}</td>
+                    <td style={{ fontSize: '0.78rem' }}>
+                      {isSuperAdmin ? (
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                          <input type="time" title="Start Time" style={{ padding: '2px', fontSize: '0.75rem', width: '75px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px' }} value={c.operatingStartTime || ''} onChange={e => updateCameraTime(c, 'operatingStartTime', e.target.value)} />
+                          <span>-</span>
+                          <input type="time" title="End Time" style={{ padding: '2px', fontSize: '0.75rem', width: '75px', background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: '4px' }} value={c.operatingEndTime || ''} onChange={e => updateCameraTime(c, 'operatingEndTime', e.target.value)} />
+                        </div>
+                      ) : (
+                        c.operatingStartTime && c.operatingEndTime ? `${c.operatingStartTime} - ${c.operatingEndTime}` : <span style={{color: 'var(--text-secondary)'}}>24/7</span>
+                      )}
+                    </td>
                     <td><span className={`status-pill ${(c.status || '').toLowerCase()}`}>{c.status || 'OFFLINE'}</span></td>
                     {isSuperAdmin && (
                       <td>
@@ -407,6 +427,7 @@ export default function KitManagement() {
           onChange={setEditing}
           onSave={() => saveCamera(editing)}
           onClose={closeModal}
+          hasRole={hasRole}
         />
       )}
 
@@ -537,7 +558,7 @@ function JunctionModal({ data, subdivisions, saving, onChange, onSave, onClose }
   );
 }
 
-function CameraModal({ data, junctions, saving, onChange, onSave, onClose }: any) {
+function CameraModal({ data, junctions, saving, onChange, onSave, onClose, hasRole }: any) {
   const set = (k: string, v: any) => onChange({ ...data, [k]: v });
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -579,6 +600,18 @@ function CameraModal({ data, junctions, saving, onChange, onSave, onClose }: any
             <label>Stream URL</label>
             <input value={data.streamUrl || ''} onChange={e => set('streamUrl', e.target.value)} placeholder="rtsp://..." />
           </div>
+          {hasRole && hasRole('SUPER_ADMIN') && (
+            <>
+              <div className="form-group">
+                <label>Operating Start Time</label>
+                <input type="time" value={data.operatingStartTime || ''} onChange={e => set('operatingStartTime', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label>Operating End Time</label>
+                <input type="time" value={data.operatingEndTime || ''} onChange={e => set('operatingEndTime', e.target.value)} />
+              </div>
+            </>
+          )}
         </div>
         <div className="modal-footer">
           <button className="btn-cancel" onClick={onClose}>Cancel</button>

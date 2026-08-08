@@ -28,7 +28,8 @@ export class AnalyticsService {
       .leftJoinAndSelect('camera.junction', 'junction')
       .leftJoinAndSelect('junction.subdivision', 'subdivision')
       .leftJoinAndSelect('v.vehicle', 'vehicle')
-      .where('v.createdAt >= :date', { date: thirtyDaysAgo });
+      .where('v.createdAt >= :date', { date: thirtyDaysAgo })
+      .andWhere("v.status != 'CANCELLED'");
 
     // Enforce role-based access
     const role = (user.role || '').toUpperCase();
@@ -51,21 +52,22 @@ export class AnalyticsService {
     const countQb = this.violationRepo.createQueryBuilder('v')
       .leftJoin('v.camera', 'camera')
       .leftJoin('camera.junction', 'junction')
-      .leftJoin('junction.subdivision', 'subdivision');
+      .leftJoin('junction.subdivision', 'subdivision')
+      .where("v.status != 'CANCELLED'");
       
     if (!['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER'].includes(role)) {
-      if (user.junctionId) countQb.where('junction.id = :jId', { jId: user.junctionId });
-      else if (user.subdivisionId) countQb.where('subdivision.id = :subId', { subId: user.subdivisionId });
-      else countQb.where('1=0');
+      if (user.junctionId) countQb.andWhere('junction.id = :jId', { jId: user.junctionId });
+      else if (user.subdivisionId) countQb.andWhere('subdivision.id = :subId', { subId: user.subdivisionId });
+      else countQb.andWhere('1=0');
     } else if (requestedSubdivisionCode && requestedSubdivisionCode.toLowerCase() !== 'all') {
-      countQb.where('LOWER(subdivision.subdivision_name) = LOWER(:code)', { code: requestedSubdivisionCode });
+      countQb.andWhere('LOWER(subdivision.subdivision_name) = LOWER(:code)', { code: requestedSubdivisionCode });
     }
     
     const allCount = await countQb.getCount();
     const pendingReview = violations30.filter(v =>
       ['PENDING', 'READY', 'UNDER_REVIEW'].includes(v.status),
     ).length;
-    const challansIssued = violations30.filter(v => v.status === 'CHALLAN_ISSUED').length;
+    const challansIssued = violations30.filter(v => v.status === 'VERIFIED' || v.status === 'APPROVED').length;
 
     // daily_last_30
     const dailyMap: Record<string, number> = {};
@@ -73,12 +75,13 @@ export class AnalyticsService {
     const typeMap: Record<string, number> = {};
     const vehicleMap: Record<string, number> = {};
     const camMap: Record<string, number> = {};
+    const unknownPlates = { pending: 0, issued: 0, rejected: 0 };
 
     for (const v of violations30) {
       const dateKey = v.createdAt.toISOString().slice(0, 10);
       dailyMap[dateKey] = (dailyMap[dateKey] || 0) + 1;
 
-      if (v.status === 'CHALLAN_ISSUED') {
+      if (v.status === 'VERIFIED' || v.status === 'APPROVED') {
         finesMap[dateKey] = (finesMap[dateKey] || 0) + 1;
       }
 
@@ -88,6 +91,11 @@ export class AnalyticsService {
       const vn = (v.vehicle as any)?.registrationNumber ?? null;
       if (vn && vn !== 'UNREAD' && vn !== 'UNKNOWN') {
         vehicleMap[vn] = (vehicleMap[vn] || 0) + 1;
+      } else if (vn === 'UNREAD' || vn === 'UNKNOWN') {
+        const status = (v.status || 'PENDING').toUpperCase();
+        if (['PENDING', 'READY', 'UNDER_REVIEW'].includes(status)) unknownPlates.pending++;
+        else if (status === 'VERIFIED' || status === 'APPROVED' || status === 'ISSUED') unknownPlates.issued++;
+        else if (status === 'REJECTED' || status === 'AUTO_REJECTED') unknownPlates.rejected++;
       }
 
       const cam = v.camera?.cameraCode || 'Unknown';
@@ -131,9 +139,10 @@ export class AnalyticsService {
       by_type,
       top_vehicles,
       top_cameras,
+      unknown_plates: unknownPlates
     };
 
-    await this.cache.set(cacheKey, summary, 60000);
+    await this.cache.set(cacheKey, summary, 300000);
     return summary;
   }
 

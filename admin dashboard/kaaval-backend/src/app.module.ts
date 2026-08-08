@@ -106,6 +106,7 @@ function checkPort(host: string, port: number, timeout = 2000): Promise<boolean>
       },
     }),
 
+    ScheduleModule.forRoot(),
     AuthModule,
     ViolationsModule,
     AnalyticsModule,

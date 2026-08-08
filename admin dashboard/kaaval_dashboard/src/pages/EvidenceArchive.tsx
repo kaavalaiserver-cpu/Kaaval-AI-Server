@@ -10,6 +10,7 @@ import {
   Calendar,
   Filter,
 } from 'lucide-react';
+import { formatDateIST, formatTimeIST } from '../utils/dateIST';
 import './EvidenceArchive.css';
 
 const EvidenceArchive = () => {
@@ -146,9 +147,9 @@ const EvidenceArchive = () => {
                       <span className="arch-cam-id">{v.camera_id}</span>
                     </td>
                     <td className="arch-time">
-                      {new Date(v.timestamp).toLocaleDateString()}
+                      {formatDateIST(v.timestamp)}
                       <br />
-                      <span>{new Date(v.timestamp).toLocaleTimeString()}</span>
+                      <span>{formatTimeIST(v.timestamp)}</span>
                     </td>
                     <td>{v.confidence != null ? `${Math.round(v.confidence * 100)}%` : 'N/A'}</td>
                     <td>

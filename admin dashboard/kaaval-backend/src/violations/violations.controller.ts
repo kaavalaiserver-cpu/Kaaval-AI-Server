@@ -160,7 +160,7 @@ export class ViolationsController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN', 'DEVELOPER', 'SP', 'DSP', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
+  @Roles('SUPER_ADMIN', 'DEVELOPER', 'SP', 'DSP')
   remove(@Param('id') id: string, @Request() req: any) {
     return this.violationsService.remove(id, req.user);
   }

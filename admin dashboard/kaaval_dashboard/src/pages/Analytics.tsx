@@ -357,6 +357,30 @@ const Analytics = () => {
         />
       </div>
 
+      {/* Unknown Plate Analysis (30 days) */}
+      {data.unknown_plates && (
+        <div style={{ marginBottom: '30px', padding: '20px', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontSize: '1.1rem' }}>
+            <Eye size={20} color="var(--accent)" />
+            Unknown Plate Breakdown (Last 30 Days)
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+            <div style={{ padding: '15px', background: 'rgba(234, 179, 8, 0.1)', borderRadius: '8px', borderLeft: '4px solid #eab308' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>PENDING REVIEW</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{data.unknown_plates.pending}</div>
+            </div>
+            <div style={{ padding: '15px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px', borderLeft: '4px solid #22c55e' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>FINES ISSUED</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{data.unknown_plates.issued}</div>
+            </div>
+            <div style={{ padding: '15px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', borderLeft: '4px solid #ef4444' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>REJECTED</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{data.unknown_plates.rejected}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Trend Chart (full width) ───────────────────────── */}
       <div className="chart-card full-card">
         <div className="chart-card-header">

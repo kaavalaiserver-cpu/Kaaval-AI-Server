@@ -15,6 +15,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import type { Role } from '../context/AuthContext';
+import { formatTimeIST } from '../utils/dateIST';
 import './Dashboard.css';
 
 const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer'];
@@ -83,20 +84,11 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, [selectedSubdivision]);
 
-  const todayCount = stats?.total_violations ?? 0;
-  const pendingCount = stats?.pending_review ?? 0;
-  const finesCount = stats?.challans_issued ?? 0;
+  const todayCount = violationStats?.total ?? stats?.total_violations ?? 0;
+  const pendingCount = violationStats?.pending ?? 0;
+  const finesCount = violationStats?.verified ?? 0;
   const withConfidenceCount = violationStats?.with_confidence ?? 0;
   
-  const noHelmetCount = useMemo(() => {
-    if (!stats?.by_type) return 0;
-    const match = stats.by_type.find(t => {
-      const norm = t.violation_type.toLowerCase();
-      return norm.includes('helmet') || norm.includes('no_helmet') || norm === 'nohelmet';
-    });
-    return match ? match.count : 0;
-  }, [stats]);
-
   const visibleCameras = useMemo(() => {
     if (!cameraStatus?.cameras) return [];
     return cameraStatus.cameras.filter((c) => isInScope(c.location));
@@ -138,6 +130,30 @@ const Dashboard = () => {
           color="green"
         />
       </div>
+
+      {/* Unknown Plates Overview */}
+      {violationStats?.unknown_plates && (
+        <div style={{ marginBottom: '30px', padding: '20px', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontSize: '1.1rem' }}>
+            <Eye size={20} color="var(--accent)" />
+            Unknown Plate Analysis (All-time)
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+            <div style={{ padding: '15px', background: 'rgba(234, 179, 8, 0.1)', borderRadius: '8px', borderLeft: '4px solid #eab308' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>PENDING REVIEW</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{violationStats.unknown_plates.pending}</div>
+            </div>
+            <div style={{ padding: '15px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px', borderLeft: '4px solid #22c55e' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>FINES ISSUED</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{violationStats.unknown_plates.issued}</div>
+            </div>
+            <div style={{ padding: '15px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', borderLeft: '4px solid #ef4444' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>REJECTED</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{violationStats.unknown_plates.rejected}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Subdivision & Camera Filter */}
       <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
@@ -258,7 +274,7 @@ const Dashboard = () => {
                     <span className="alert-type">{v.type}</span>
                     <span className="alert-plate">{v.vehicle_number}</span>
                     <span className="alert-meta">
-                      {v.location} &bull; {new Date(v.timestamp).toLocaleTimeString()}
+                       {v.location} &bull; {formatTimeIST(v.timestamp)}
                     </span>
                   </div>
                   {canUseDistrictFeatures && (
@@ -281,38 +297,26 @@ const Dashboard = () => {
             <h3><TrendingUp size={18} /> Violation Breakdown</h3>
           </div>
           <div className="type-breakdown">
-            <div className="type-row active-row">
-              <span className="type-label">No Helmet</span>
-              <div className="type-bar-container">
-                <div
-                  className="type-bar"
-                  style={{
-                    width: `${Math.min((noHelmetCount / Math.max(todayCount, 1)) * 100, 100)}%`,
-                  }}
-                />
+            {stats?.by_type && stats.by_type.length > 0 ? (
+              stats.by_type.map((type, idx) => (
+                <div className="type-row active-row" key={idx}>
+                  <span className="type-label">{type.violation_type}</span>
+                  <div className="type-bar-container">
+                    <div
+                      className="type-bar"
+                      style={{
+                        width: `${Math.min((type.count / Math.max(stats.total_violations, 1)) * 100, 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="type-count">{type.count}</span>
+                </div>
+              ))
+            ) : (
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'center', padding: '20px 0' }}>
+                No violation data available
               </div>
-              <span className="type-count">{noHelmetCount}</span>
-            </div>
-
-            <div className="type-row coming-soon-row">
-              <span className="type-label disabled-label">Triple Riding</span>
-              <span className="coming-soon-badge">Coming Soon</span>
-            </div>
-
-            <div className="type-row coming-soon-row">
-              <span className="type-label disabled-label">Red Light Jump</span>
-              <span className="coming-soon-badge">Coming Soon</span>
-            </div>
-
-            <div className="type-row coming-soon-row">
-              <span className="type-label disabled-label">Over Speeding</span>
-              <span className="coming-soon-badge">Coming Soon</span>
-            </div>
-
-            <div className="type-row coming-soon-row">
-              <span className="type-label disabled-label">No Seatbelt</span>
-              <span className="coming-soon-badge">Coming Soon</span>
-            </div>
+            )}
           </div>
         </div>
 

@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, ILike, MoreThanOrEqual, LessThanOrEqual, SelectQueryBuilder } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
@@ -51,6 +52,28 @@ export class ViolationsService {
     if (['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER'].includes(role)) return true;
     if (!user.subdivisionId) return false;
     return subdivisionId === user.subdivisionId;
+  }
+
+  private applyOperatingTimeFilter(qb: SelectQueryBuilder<Violation>) {
+    qb.andWhere(`(
+      v.status != 'PENDING'
+      OR
+      (camera.operating_start_time IS NULL OR camera.operating_end_time IS NULL)
+      OR
+      (
+        camera.operating_start_time <= camera.operating_end_time AND
+        (v.violation_timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::time >= camera.operating_start_time::time AND
+        (v.violation_timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::time <= camera.operating_end_time::time
+      )
+      OR
+      (
+        camera.operating_start_time > camera.operating_end_time AND
+        (
+          (v.violation_timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::time >= camera.operating_start_time::time OR
+          (v.violation_timestamp AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Kolkata')::time <= camera.operating_end_time::time
+        )
+      )
+    )`);
   }
 
   private applySubdivisionScope(qb: SelectQueryBuilder<Violation>, user: any, requestedSubdivisionCode?: string) {
@@ -132,6 +155,7 @@ export class ViolationsService {
       .leftJoinAndSelect('camera.junction', 'junction')
       .leftJoinAndSelect('junction.subdivision', 'subdivision')
       .leftJoinAndSelect('v.evidence', 'evidence')
+      .leftJoinAndSelect('v.reviewedBy', 'reviewer')
       .orderBy('v.violationTimestamp', 'DESC')
       .take(limit)
       .skip(offset);
@@ -141,6 +165,9 @@ export class ViolationsService {
 
     if (query.status && query.status !== '') {
       qb.andWhere('v.status = :status', { status: query.status });
+    } else {
+      // Exclude cancelled items from the default 'ALL' view so they appear "deleted"
+      qb.andWhere("v.status != 'CANCELLED'");
     }
     if (query.cameraId) {
       qb.andWhere('camera.camera_code = :cameraId', { cameraId: query.cameraId });
@@ -151,7 +178,10 @@ export class ViolationsService {
     if (query.violationType) {
       const types = query.violationType.split(',').map(t => t.trim()).filter(Boolean);
       if (types.length > 0) {
-        qb.andWhere('violationType.violation_code IN (:...types)', { types });
+        qb.andWhere('violationType.id IN (:...types)', { types });
+        console.log("Applied violationType filter! Types:", types);
+        console.log("SQL:", qb.getSql());
+        console.log("Params:", qb.getParameters());
       }
     }
     if (query.dateFrom) {
@@ -163,8 +193,12 @@ export class ViolationsService {
       qb.andWhere('v.violationTimestamp <= :to', { to });
     }
 
+    this.applyOperatingTimeFilter(qb);
+
     // ── RBAC subdivision scope ────────────────────────────────────
     this.applySubdivisionScope(qb, user, query.subdivisionCode);
+
+    console.log("findAll SQL:", qb.getSql(), qb.getParameters());
 
     const [violations, total] = await qb.getManyAndCount();
 
@@ -173,19 +207,25 @@ export class ViolationsService {
   }
 
   async trackVehicle(vehicleNumber: string) {
-    const violations = await this.violationRepo.find({
-      where: { vehicle: { registrationNumber: ILike(`%${vehicleNumber}%`) } },
-      relations: ['vehicle', 'violationType', 'camera', 'camera.junction'],
-      order: { violationTimestamp: 'DESC' },
-      take: 50,
-    });
+    const qb = this.violationRepo.createQueryBuilder('v')
+      .leftJoinAndSelect('v.vehicle', 'vehicle')
+      .leftJoinAndSelect('v.violationType', 'violationType')
+      .leftJoinAndSelect('v.camera', 'camera')
+      .leftJoinAndSelect('camera.junction', 'junction')
+      .where('vehicle.registration_number ILIKE :vn', { vn: `%${vehicleNumber}%` })
+      .orderBy('v.violationTimestamp', 'DESC')
+      .take(50);
+
+    this.applyOperatingTimeFilter(qb);
+
+    const violations = await qb.getMany();
     return violations.map(v => this.formatViolation(v));
   }
 
   async findOne(id: string, user?: any) {
     const v = await this.violationRepo.findOne({
       where: { id },
-      relations: ['vehicle', 'camera', 'camera.junction', 'evidence', 'violationType'],
+      relations: ['vehicle', 'camera', 'camera.junction', 'evidence', 'violationType', 'reviewedBy'],
     });
     if (!v) throw new NotFoundException('Violation not found');
     if (!this.canAccessViolation(user, v.camera?.junction?.subdivisionId ?? null)) {
@@ -199,7 +239,9 @@ export class ViolationsService {
       .leftJoin('v.camera', 'camera')
       .leftJoin('camera.junction', 'junction')
       .leftJoin('v.violationType', 'violationType')
-      .where('violationType.is_active = true');
+      .leftJoin('v.vehicle', 'vehicle')
+      .where('violationType.is_active = true')
+      .andWhere("v.status != 'CANCELLED'");
 
     if (query.dateFrom) {
       qb.andWhere('v.violationTimestamp >= :from', { from: new Date(query.dateFrom) });
@@ -210,10 +252,12 @@ export class ViolationsService {
       qb.andWhere('v.violationTimestamp <= :to', { to });
     }
 
+    this.applyOperatingTimeFilter(qb);
+
     this.applySubdivisionScope(qb, user, query.subdivisionCode);
 
     const all = await qb.select([
-      'v.id', 'v.status',
+      'v.id', 'v.status', 'vehicle.registration_number AS vn'
     ]).addSelect('violationType.violation_code', 'vtCode').getRawMany();
 
     // Count by status
@@ -222,19 +266,26 @@ export class ViolationsService {
       pending: 0,
       verified: 0,
       rejected: 0,
-      manual_review: 0,
       by_type: {} as Record<string, number>,
+      unknown_plates: { pending: 0, issued: 0, rejected: 0 }
     };
 
     for (const row of all) {
-      const status = (row.v_status || '').toUpperCase();
-      if (['PENDING', 'READY'].includes(status)) stats.pending++;
-      else if (['CHALLAN_ISSUED', 'VERIFIED'].includes(status)) stats.verified++;
-      else if (['REJECTED', 'DUPLICATE'].includes(status)) stats.rejected++;
-      else if (status === 'UNDER_REVIEW') stats.manual_review++;
+      const status = (row.status || row.v_status || 'PENDING').toUpperCase();
+      
+      if (['PENDING', 'READY', 'UNDER_REVIEW'].includes(status)) stats.pending++;
+      else if (status === 'ISSUED' || status === 'VERIFIED' || status === 'APPROVED') stats.verified++;
+      else if (status === 'REJECTED' || status === 'AUTO_REJECTED') stats.rejected++;
 
       const vt = row.vtCode || row.v_violation_type_id || 'Unknown';
       stats.by_type[vt] = (stats.by_type[vt] || 0) + 1;
+
+      const vn = row.vn || row.vehicle_registration_number || '';
+      if (vn === 'UNKNOWN' || vn === 'UNREAD') {
+        if (['PENDING', 'READY', 'UNDER_REVIEW'].includes(status)) stats.unknown_plates.pending++;
+        else if (status === 'ISSUED' || status === 'VERIFIED' || status === 'APPROVED') stats.unknown_plates.issued++;
+        else if (status === 'REJECTED' || status === 'AUTO_REJECTED') stats.unknown_plates.rejected++;
+      }
     }
 
     return stats;
@@ -243,7 +294,7 @@ export class ViolationsService {
   async verify(id: string, dto: VerifyViolationDto, user?: any) {
     const v = await this.violationRepo.findOne({
       where: { id },
-      relations: ['camera', 'camera.junction'],
+      relations: ['camera', 'camera.junction', 'evidence'],
     });
     if (!v) throw new NotFoundException('Violation not found');
     if (!this.canAccessViolation(user, v.camera?.junction?.subdivisionId ?? null)) {
@@ -252,13 +303,38 @@ export class ViolationsService {
 
     const oldStatus = v.status;
     const newStatus = dto.action === 'approve'
-      ? 'CHALLAN_ISSUED'
-      : dto.action === 'reject' ? 'REJECTED' : 'UNDER_REVIEW';
+      ? 'ISSUED'
+      : dto.action === 'reject' ? 'REJECTED' : 'PENDING';
     v.status = newStatus;
     v.reviewedByUserId = user?.id;
     v.reviewedAt = new Date();
     if (dto.reviewNotes) v.approvalNotes = dto.reviewNotes;
-    if (newStatus === 'CHALLAN_ISSUED') v.challanStatus = 'GENERATED';
+
+    if (newStatus === 'ISSUED' || newStatus === 'REJECTED') {
+      const folderName = newStatus === 'ISSUED' ? 'issued' : 'rejected';
+      const uploadDir = this.configService.get<string>('LOCAL_UPLOAD_DIR', path.join(process.cwd(), '..', '..', 'uploads'));
+      
+      for (const ev of v.evidence || []) {
+        if (ev.filePath && !ev.filePath.startsWith('http')) {
+          const oldPath = path.resolve(uploadDir, ev.filePath);
+          if (fs.existsSync(oldPath)) {
+            const parsed = path.parse(ev.filePath);
+            const newRelativeDir = path.join(parsed.dir, folderName).replace(/\\/g, '/');
+            const newRelativePath = path.posix.join(newRelativeDir, parsed.base);
+            const newAbsDir = path.resolve(uploadDir, newRelativeDir);
+            const newAbsPath = path.resolve(uploadDir, newRelativePath);
+            
+            if (!fs.existsSync(newAbsDir)) {
+              fs.mkdirSync(newAbsDir, { recursive: true });
+            }
+            fs.renameSync(oldPath, newAbsPath);
+            
+            ev.filePath = newRelativePath;
+            await this.evidenceRepo.save(ev);
+          }
+        }
+      }
+    }
 
     await this.violationRepo.save(v);
 
@@ -300,7 +376,9 @@ export class ViolationsService {
     if (!this.canAccessViolation(user, v.camera?.junction?.subdivisionId ?? null)) {
       throw new ForbiddenException('Access denied');
     }
-    await this.violationRepo.delete(id);
+    // Soft-delete: preserve audit trail for police system
+    v.status = 'CANCELLED';
+    await this.violationRepo.save(v);
     return { status: 'deleted', id };
   }
 
@@ -308,29 +386,27 @@ export class ViolationsService {
     return { uploaded: 0, errors: 0, files: [], error_details: null };
   }
 
-  /** Serialize a Violation entity into the flat shape the frontend expects */
   private formatViolation(v: Violation): any {
-    const rawImg = v.evidence?.find(e => e.evidenceType === 'RAW_IMAGE')?.filePath ?? null;
-    const proofImg = v.evidence?.find(e => e.evidenceType === 'CROPPED_PLATE')?.filePath ?? null;
+    const fullImg = v.evidence?.find(e => e.evidenceType === 'FULL_IMAGE')?.filePath ?? null;
 
     return {
       id: v.id,
       timestamp: (v.violationTimestamp ?? v.createdAt)?.toISOString() ?? null,
       type: v.violationType?.violationCode ?? 'UNKNOWN',
-      vehicle_type: 'Two-Wheeler',
+      vehicle_type: v.vehicle?.vehicleType ?? 'Two-Wheeler',
       vehicle_number: v.vehicle?.registrationNumber ?? 'UNREAD',
       location: v.camera?.junction?.junctionName ?? v.camera?.cameraName ?? 'Unknown',
       camera_id: v.camera?.cameraCode ?? v.cameraId ?? null,
       cam_clarity: 0.9,
       status: this.mapStatus(v.status),
       raw_status: v.status,
-      image_url: rawImg,
-      proof_img_url: proofImg,
+      image_url: fullImg ? (fullImg.startsWith('http') ? fullImg : `/api/violations/image/by-key?key=${encodeURIComponent(fullImg)}`) : null,
+      proof_img_url: null,
       gps_lat: v.camera?.junction?.latitude ?? null,
       gps_lng: v.camera?.junction?.longitude ?? null,
       challan_amount: null,
       challan_issued_at: null,
-      reviewed_by: v.reviewedByUserId ?? null,
+      reviewed_by: (v.reviewedBy as any)?.username ?? (v.reviewedBy as any)?.fullName ?? v.reviewedByUserId ?? null,
       reviewed_at: v.reviewedAt?.toISOString() ?? null,
       review_notes: v.approvalNotes ?? null,
       metadata: null,
@@ -338,17 +414,14 @@ export class ViolationsService {
   }
 
   private mapStatus(raw: string): string {
-    const map: Record<string, string> = {
-      PENDING: 'Pending Review',
-      READY: 'Pending Review',
-      UNDER_REVIEW: 'Under Review',
-      CHALLAN_ISSUED: 'Challan Issued',
-      VERIFIED: 'Verified',
+    const statusMap: Record<string, string> = {
+      PENDING: 'Pending',
+      ISSUED: 'Issued',
       REJECTED: 'Rejected',
       DUPLICATE: 'Duplicate',
       CANCELLED: 'Cancelled',
     };
-    return map[raw] ?? raw;
+    return statusMap[raw] ?? raw;
   }
 
   // ── Violation Type CRUD ────────────────────────────────────────
@@ -419,5 +492,48 @@ export class ViolationsService {
     // Soft-delete: mark as inactive rather than hard delete (protects historical data)
     await this.violationTypeRepo.update(id, { isActive: false });
     return { status: 'deactivated', id };
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async cleanupOldEvidenceFiles() {
+    Logger.log('Running daily cleanup of old evidence files...');
+    const uploadDir = this.configService.get<string>('LOCAL_UPLOAD_DIR', path.join(process.cwd(), '..', '..', 'uploads'));
+
+    // Reject older than 2 days
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+    // Verified/Issued older than 15 days
+    const fifteenDaysAgo = new Date();
+    fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
+
+    const oldViolations = await this.violationRepo.find({
+      where: [
+        { status: 'REJECTED', reviewedAt: LessThanOrEqual(twoDaysAgo) },
+        { status: 'ISSUED', reviewedAt: LessThanOrEqual(fifteenDaysAgo) },
+      ],
+      relations: ['evidence'],
+    });
+
+    let deletedCount = 0;
+    for (const v of oldViolations) {
+      for (const ev of v.evidence || []) {
+        if (ev.filePath && !ev.filePath.startsWith('http')) {
+          const absPath = path.resolve(uploadDir, ev.filePath);
+          if (fs.existsSync(absPath)) {
+            try {
+              fs.unlinkSync(absPath);
+              deletedCount++;
+              // Nullify the file path in DB so dashboard doesn't try to load it
+              ev.filePath = '';
+              await this.evidenceRepo.save(ev);
+            } catch (err) {
+              Logger.error(`Failed to delete old file: ${absPath}`, err);
+            }
+          }
+        }
+      }
+    }
+    Logger.log(`Cleanup complete. Deleted ${deletedCount} old physical evidence files.`);
   }
 }

@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import type { SystemStatus } from '../types';
 import NotificationPanel from './NotificationPanel';
+import { formatIST } from '../utils/dateIST';
 import './Layout.css';
 
 interface NavItemProps {
@@ -222,7 +223,7 @@ const Layout = () => {
             <div className="last-action-widget" style={{ padding: '10px 16px', margin: '15px 10px', background: 'var(--bg-card-hover)', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.75rem' }}>
               <div style={{ color: 'var(--text-secondary)', fontWeight: 600, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.65rem' }}>Last Action</div>
               <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{lastAction.action?.replace(/_/g, ' ')}</div>
-              {lastAction.createdAt && <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: '4px' }}>{new Date(lastAction.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}</div>}
+              {lastAction.createdAt && <div style={{ color: 'var(--text-muted)', fontSize: '0.7rem', marginTop: '4px' }}>{formatIST(lastAction.createdAt)}</div>}
             </div>
           )}
         </nav>

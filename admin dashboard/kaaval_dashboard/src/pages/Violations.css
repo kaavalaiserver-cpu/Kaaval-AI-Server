@@ -954,16 +954,25 @@
 .camera-tabs {
   display: flex;
   gap: 10px;
-  padding: 0 16px 8px 16px;
+  padding: 0 16px 10px 16px;
   margin-bottom: 12px;
   overflow-x: auto;
   scroll-behavior: smooth;
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
 }
 
 .camera-tabs::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
+  height: 4px;
+}
+
+.camera-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.camera-tabs::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 4px;
 }
 
 .camera-tab-btn {

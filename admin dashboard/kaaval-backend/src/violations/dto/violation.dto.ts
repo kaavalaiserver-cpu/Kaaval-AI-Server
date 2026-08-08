@@ -115,7 +115,7 @@ export class DetectDto {
 export class ViolationQueryDto {
   @IsOptional()
   @IsString()
-  @IsIn(['PENDING', 'READY', 'MANUAL_REVIEW', 'CHALLAN_ISSUED', 'VERIFIED', 'REJECTED', ''],
+  @IsIn(['PENDING', 'ISSUED', 'REJECTED', ''],
     { message: 'Invalid status filter' })
   status?: string;
 
@@ -152,7 +152,7 @@ export class ViolationQueryDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(100)
+  @MaxLength(2000)
   violationType?: string;
 
   @IsOptional()

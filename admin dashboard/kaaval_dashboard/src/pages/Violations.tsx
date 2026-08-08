@@ -26,15 +26,17 @@ interface Filters {
 }
 
 const getTodayString = () => {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
+  const d = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+  const dateObj = new Date(d);
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
 
 const EMPTY_FILTERS: Filters = {
-  status: '', cameraId: '', vehicleNumber: '', violationType: '',
+  status: '', cameraId: '', vehicleNumber: '', 
+  violationType: '915cabf2-5ac3-4652-99ce-7e8600e364a4,702d7b3b-7e37-4801-b4e7-d15655c7391b,988b9941-f3ef-4716-8549-bf999cc94e31,aefd901f-df56-42ef-ae70-51147d4a380c',
   dateFrom: getTodayString(), dateTo: getTodayString(), timeFrom: '', timeTo: '',
   subdivisionCode: '',
 };
@@ -111,22 +113,19 @@ const Violations = () => {
       if (filters.violationType) params.violationType = filters.violationType;
       if (filters.subdivisionCode) params.subdivisionCode = filters.subdivisionCode;
 
-      // Combine date + time into ISO strings (only if not searching by vehicle plate)
+      // Combine date + time into ISO strings using IST offset (+05:30)
       if (!filters.vehicleNumber) {
         if (filters.dateFrom) {
           const t = filters.timeFrom || '00:00';
-          params.dateFrom = new Date(`${filters.dateFrom}T${t}:00`).toISOString();
+          params.dateFrom = new Date(`${filters.dateFrom}T${t}:00+05:30`).toISOString();
         }
         if (filters.dateTo) {
           const t = filters.timeTo || '23:59';
-          params.dateTo = new Date(`${filters.dateTo}T${t}:59`).toISOString();
+          params.dateTo = new Date(`${filters.dateTo}T${t}:59+05:30`).toISOString();
         }
       }
 
-
-      console.log('fetchViolations API request:', `${API_BASE}/violations`, 'params:', params);
-
-      const [vRes] = await Promise.all([
+      const [vRes, sRes] = await Promise.all([
         axios.get<PaginatedViolations>(`${API_BASE}/violations`, { params, signal }),
         axios.get<ViolationStats>(`${API_BASE}/violations/stats`, { params, signal }),
       ]);
@@ -280,8 +279,8 @@ const Violations = () => {
   };
 
   const statusColor = (status: string) => {
-    if (status === 'Pending' || status === 'Pending Review') return 'orange';
-    if (status === 'Verified' || status === 'Challan Issued') return 'green';
+    if (status === 'Pending') return 'orange';
+    if (status === 'Issued') return 'green';
     if (status === 'Rejected') return 'red';
     return 'gray';
   };
@@ -314,8 +313,8 @@ const Violations = () => {
       const d = new Date(v.timestamp);
       return [
         v.id,
-        d.toLocaleDateString(),
-        d.toLocaleTimeString(),
+        d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }),
+        d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false }),
         v.vehicle_number,
         `"${v.type.replace(/"/g, '""')}"`,
         `"${v.location.replace(/"/g, '""')}"`,
@@ -431,7 +430,7 @@ const Violations = () => {
                   {/* Issue Fine (Approve) — all except developer and viewer */}
                   {hasRole('super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'operator') && (
                     <>
-                      {selectedViolation.status === 'Pending' || selectedViolation.status === 'Pending Review' ? (
+                      {selectedViolation.status === 'Pending' ? (
                         <>
                           <div style={{ width: '100%', marginBottom: '10px' }}>
                             <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Select Violation Reasons:</span>
@@ -478,8 +477,8 @@ const Violations = () => {
                       ) : null}
                     </>
                   )}
-                  {/* Delete — all except operator and viewer */}
-                  {hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
+                  {/* Delete — only super_admin, developer, sp, dsp */}
+                  {hasRole('super_admin', 'developer', 'sp', 'dsp') && (
                     <button className="btn-delete" disabled={processing} onClick={() => handleDelete(selectedViolation.id)}>
                       <Trash2 size={16} /> Delete
                     </button>
@@ -494,8 +493,8 @@ const Violations = () => {
                 <div className="detail-row">
                   <span className="label">Time:</span>
                   <span className="value" style={{ fontSize: '0.95rem' }}>
-                    {new Date(selectedViolation.timestamp).toLocaleDateString()}{' '}
-                    {new Date(selectedViolation.timestamp).toLocaleTimeString()}
+                    {new Date(selectedViolation.timestamp).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}{' '}
+                    {new Date(selectedViolation.timestamp).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false })}
                   </span>
                 </div>
                 <div className="detail-row">
@@ -574,7 +573,7 @@ const Violations = () => {
             >
               <option value="">All Cameras</option>
               {cameras.map(c => (
-                <option key={c.id} value={c.id}>{c.name} {c.location ? `(${c.location})` : ''}</option>
+                <option key={c.id} value={c.camera_id}>{c.camera_id} {c.location ? `(${c.location})` : ''}</option>
               ))}
             </select>
           </h2>
@@ -673,10 +672,10 @@ const Violations = () => {
           {cameras.map(c => (
             <button
               key={c.id}
-              className={`camera-tab-btn ${filters.cameraId === c.id ? 'active' : ''}`}
-              onClick={() => setFilter('cameraId', c.id)}
+              className={`camera-tab-btn ${filters.cameraId === c.camera_id ? 'active' : ''}`}
+              onClick={() => setFilter('cameraId', c.camera_id)}
             >
-              {c.name} {c.location ? `(${c.location})` : ''}
+              {c.name || c.camera_id} {c.location ? `(${c.location})` : ''}
             </button>
           ))}
         </div>
@@ -684,13 +683,13 @@ const Violations = () => {
 
       {/* Category Tabs */}
       <div className="category-tabs">
-        {['ALL', 'PENDING', 'CHALLAN_ISSUED', 'REJECTED'].map((status) => (
+        {['ALL', 'PENDING', 'ISSUED', 'REJECTED'].map((status) => (
           <button
             key={status}
             className={`tab-btn ${filters.status === status || (status === 'ALL' && !filters.status) ? 'active' : ''}`}
             onClick={() => setFilter('status', status === 'ALL' ? '' : status)}
           >
-            {status === 'CHALLAN_ISSUED' ? 'ISSUED' : status}
+            {status}
           </button>
         ))}
       </div>
@@ -849,9 +848,10 @@ const Violations = () => {
                   <span className="camera-id">{v.camera_id}</span>
                 </td>
                 <td className="time-cell">
-                  {new Date(v.timestamp).toLocaleDateString()}
-                  <br />
-                  <span className="time-sub">{new Date(v.timestamp).toLocaleTimeString()}</span>
+                  {new Date(v.timestamp).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                  <div>
+                    <span className="time-sub">{new Date(v.timestamp).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false })}</span>
+                  </div>
                 </td>
 
                 <td>
@@ -862,7 +862,7 @@ const Violations = () => {
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                       {v.status === 'Verified' || v.status === 'Challan Issued' ? 'Fine Issued by ' : v.status === 'Rejected' ? 'Violation rejected by ' : 'Reviewed by '}
                       <strong>{v.reviewed_by}</strong><br/>
-                      at {new Date(v.reviewed_at!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      at {new Date(v.reviewed_at!).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false })}
                     </div>
                   ) : (
                     <span style={{ color: 'var(--text-muted)' }}>—</span>
@@ -870,7 +870,7 @@ const Violations = () => {
                 </td>
                 <td>
                   <div className="action-btns">
-                    {(v.status === 'Pending' || v.status === 'Pending Review') && hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
+                    {v.status === 'Pending' && hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
                       <>
                         <button className="act-btn approve" title="Approve Fine" onClick={() => handleVerify(v.id, 'approve')}>
                           <CheckCircle size={14} />

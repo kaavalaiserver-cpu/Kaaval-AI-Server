@@ -62,8 +62,10 @@ export class AuthService {
         console.log(`✅ Sent OTP ${otp} to ${recipients}`);
       } catch (err) {
         console.error('Failed to send OTP email', err);
-        // Fallback log for development
-        console.log(`[DEV ONLY] OTP is ${otp}`);
+        // Only log OTP in non-production environments
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`[DEV ONLY] OTP is ${otp}`);
+        }
       }
 
       const tempToken = this.jwtService.sign({ sub: user.id, temp: true }, { expiresIn: '5m' });

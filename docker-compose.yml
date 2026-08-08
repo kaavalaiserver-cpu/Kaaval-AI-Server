@@ -7,7 +7,8 @@ services:
       dockerfile: Dockerfile
     container_name: kaaval-frontend
     ports:
-      - "3000:80"
+      - "80:80"
+      - "443:443"
     depends_on:
       - backend
     restart: unless-stopped
@@ -80,7 +81,7 @@ services:
     ports:
       - "8001:8001"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:Sj@25802580@postgres:5432/kaaval_ai
+      - DATABASE_URL=postgresql+asyncpg://postgres:Sj%4025802580@postgres:5432/kaaval_ai
       - RDK_API_KEY=change-me-rdk-secret
       - JWT_SECRET=super_secret_jwt_key_that_is_at_least_32_characters_long_for_kaaval
       - AWS_REGION=ap-south-1
@@ -89,8 +90,10 @@ services:
       - PRESIGN_TTL=300
       - CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000","http://localhost:80","http://localhost"]
       - AI_MODELS_DIR=/app/ai_models
+      - LOCAL_UPLOAD_DIR=/app/data/uploads
     volumes:
       - F:/kaaval ai database/ai_models:/app/ai_models
+      - F:/kaaval ai database/uploads:/app/data/uploads
     depends_on:
       postgres:
         condition: service_healthy

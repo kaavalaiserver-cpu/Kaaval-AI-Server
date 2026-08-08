@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
 import { Search, Plus, ShieldAlert, Trash2, X, AlertTriangle, Crosshair } from 'lucide-react';
+import { formatDateIST } from '../utils/dateIST';
 import './WantedVehicles.css';
 
 export default function WantedVehicles() {
@@ -122,7 +123,7 @@ export default function WantedVehicles() {
                     </span>
                   </td>
                   <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    {new Date(w.createdAt).toLocaleDateString()}
+                    {formatDateIST(w.createdAt)}
                   </td>
                   <td>
                     <button className="btn-remove" onClick={() => removeVehicle(w.id, w.vehicleNumber)}>

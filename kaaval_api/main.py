@@ -8,9 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import time
 import logging
+from contextlib import asynccontextmanager
 
 from config import settings
 from routers import violations, analytics, ingest
+import pipeline
 
 # ── Logging ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -19,11 +21,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger("kaaval_api")
 
+# ── Lifespan ──────────────────────────────────────────────────────────────────
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    logger.info("Starting ingestion pipeline...")
+    await pipeline.start_pipeline()
+    yield
+    # Shutdown
+    logger.info("Stopping ingestion pipeline...")
+    await pipeline.stop_pipeline()
+
 # ── App factory ───────────────────────────────────────────────────────────────
 app = FastAPI(
     title="Kaaval AI Evidence API",
     description="Evidence retrieval, analytics, and metadata ingestion for Kaaval AI",
     version="1.0.0",
+    lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
     # In production, disable docs:
@@ -65,4 +79,9 @@ app.include_router(ingest.router, prefix="/api")
 # ── Health check ──────────────────────────────────────────────────────────────
 @app.get("/health", tags=["health"])
 async def health():
-    return {"status": "ok", "service": "kaaval-evidence-api", "version": "1.0.0"}
+    return {
+        "status": "ok", 
+        "service": "kaaval-evidence-api", 
+        "version": "1.0.0",
+        "pipeline": pipeline.queue_stats()
+    }
