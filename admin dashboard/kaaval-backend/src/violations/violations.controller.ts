@@ -72,8 +72,6 @@ export class ViolationsController {
   }
 
   @Get('image/by-key')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'DEVELOPER', 'SP', 'DSP', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
   async getImageByKey(@Query('key') key: string, @Request() req: any, @Res() res: Response) {
     if (!key) {
       throw new BadRequestException('Image key is required');
