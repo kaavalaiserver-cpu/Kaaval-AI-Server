@@ -15,7 +15,7 @@ import { KnownVehiclesService } from './known-vehicles.service.js';
 const SUPER_ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH'];
 const VIEW_ONLY_ROLES = ['ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH'];
 
-@Controller('api/known-vehicles')
+@Controller('known-vehicles')
 @UseGuards(JwtAuthGuard)
 export class KnownVehiclesController {
   constructor(private readonly kvService: KnownVehiclesService) {}

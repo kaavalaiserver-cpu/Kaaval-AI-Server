@@ -49,7 +49,7 @@ export class ViolationsService {
   private canAccessViolation(user: any, subdivisionId?: string | null): boolean {
     if (!user) return false;
     const role = (user.role || '').toUpperCase();
-    if (['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER'].includes(role)) return true;
+    if (['SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DSP', 'DEVELOPER'].includes(role)) return true;
     if (!user.subdivisionId) return false;
     return subdivisionId === user.subdivisionId;
   }
@@ -78,7 +78,7 @@ export class ViolationsService {
 
   private applySubdivisionScope(qb: SelectQueryBuilder<Violation>, user: any, requestedSubdivisionCode?: string) {
     const role = (user?.role || '').toUpperCase();
-    if (!['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER'].includes(role)) {
+    if (!['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'COMMISSIONER', 'ADG'].includes(role)) {
       if (user.junctionId) {
         qb.andWhere('junction.id = :jId', { jId: user.junctionId });
       } else if (user.subdivisionId) {

@@ -8,25 +8,25 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get('summary')
-  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
   async getSummary(@Request() req: any, @Query('subdivisionCode') subdivisionCode?: string) {
     return this.analyticsService.getSummary(req.user, subdivisionCode);
   }
 
   @Get('peak-hours')
-  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DSP', 'DEVELOPER')
   async getPeakHours() {
     return this.analyticsService.getPeakHours(30);
   }
 
   @Get('camera-efficiency')
-  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DSP', 'DEVELOPER')
   async getCameraEfficiency() {
     return this.analyticsService.getCameraEfficiency(30);
   }
 
   @Get('heatmap')
-  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DSP', 'DEVELOPER')
   async getHeatmap() {
     return this.analyticsService.getHeatmapData(30);
   }

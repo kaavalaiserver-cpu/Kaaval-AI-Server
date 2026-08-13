@@ -8,7 +8,7 @@ export class SearchController {
   constructor(private readonly searchService: SearchService) {}
 
   @Get()
-  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DSP', 'DEVELOPER')
   search(
     @Query('query') query: string,
     @Query('dateFrom') dateFrom?: string,

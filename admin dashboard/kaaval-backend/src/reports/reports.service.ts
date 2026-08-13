@@ -25,7 +25,7 @@ export class ReportsService {
     end.setHours(23, 59, 59, 999);
 
     const query = { createdAt: Between(start, end) } as any;
-    if (user && !['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER'].includes((user.role || '').toUpperCase())) {
+    if (user && !['SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DSP', 'DEVELOPER'].includes((user.role || '').toUpperCase())) {
       if (user.junctionId) {
         query.camera = { junctionId: user.junctionId };
       } else if (user.subdivisionId) {
@@ -97,7 +97,7 @@ export class ReportsService {
     start.setHours(0, 0, 0, 0);
 
     const query = { createdAt: Between(start, end) } as any;
-    if (user && !['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER'].includes((user.role || '').toUpperCase())) {
+    if (user && !['SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DSP', 'DEVELOPER'].includes((user.role || '').toUpperCase())) {
       if (user.junctionId) {
         query.camera = { junctionId: user.junctionId };
       } else if (user.subdivisionId) {

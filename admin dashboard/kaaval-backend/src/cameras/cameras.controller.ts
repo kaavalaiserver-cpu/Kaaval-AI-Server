@@ -8,25 +8,25 @@ export class CamerasController {
   constructor(private readonly camerasService: CamerasService) {}
 
   @Get()
-  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
   findAll() {
     return this.camerasService.findAll();
   }
 
   @Get('status')
-  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
   getStatus(@Request() req: any, @Query('subdivisionCode') subdivisionCode?: string) {
     return this.camerasService.getStatus(req.user, subdivisionCode);
   }
 
   @Get('junctions')
-  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
   getJunctions(@Request() req: any) {
     return this.camerasService.getJunctions(req.user);
   }
 
   @Get('subdivisions')
-  @Roles('SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DSP', 'DEVELOPER', 'INSPECTOR', 'SUB_INSPECTOR', 'OPERATOR', 'NAGERCOIL_ADMIN', 'THUCKALAY_ADMIN', 'COLACHEL_ADMIN', 'KANYAKUMARI_ADMIN', 'MARTHANDAM_ADMIN')
   getSubdivisions(@Request() req: any) {
     return this.camerasService.getSubdivisions(req.user);
   }
@@ -50,7 +50,7 @@ export class CamerasController {
   }
 
   @Get('geocode')
-  @Roles('SUPER_ADMIN', 'SP', 'DEVELOPER')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DEVELOPER')
   async geocode(@Query('q') query: string) {
     return this.camerasService.geocode(query);
   }
@@ -74,19 +74,19 @@ export class CamerasController {
   }
 
   @Post()
-  @Roles('SUPER_ADMIN', 'SP', 'DEVELOPER')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DEVELOPER')
   create(@Body() dto: any) {
     return this.camerasService.create(dto);
   }
 
   @Patch(':id')
-  @Roles('SUPER_ADMIN', 'SP', 'DEVELOPER')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DEVELOPER')
   update(@Param('id') id: string, @Body() dto: any) {
     return this.camerasService.update(id, dto);
   }
 
   @Delete(':id')
-  @Roles('SUPER_ADMIN', 'SP', 'DEVELOPER')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DEVELOPER')
   remove(@Param('id') id: string) {
     return this.camerasService.remove(id);
   }

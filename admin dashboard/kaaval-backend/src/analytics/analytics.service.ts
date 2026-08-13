@@ -33,7 +33,7 @@ export class AnalyticsService {
 
     // Enforce role-based access
     const role = (user.role || '').toUpperCase();
-    if (!['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER'].includes(role)) {
+    if (!['SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DSP', 'DEVELOPER'].includes(role)) {
       if (user.junctionId) {
         qb.andWhere('junction.id = :jId', { jId: user.junctionId });
       } else if (user.subdivisionId) {
@@ -55,7 +55,7 @@ export class AnalyticsService {
       .leftJoin('junction.subdivision', 'subdivision')
       .where("v.status != 'CANCELLED'");
       
-    if (!['SUPER_ADMIN', 'SP', 'DSP', 'DEVELOPER'].includes(role)) {
+    if (!['SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'SP', 'DSP', 'DEVELOPER'].includes(role)) {
       if (user.junctionId) countQb.andWhere('junction.id = :jId', { jId: user.junctionId });
       else if (user.subdivisionId) countQb.andWhere('subdivision.id = :subId', { subId: user.subdivisionId });
       else countQb.andWhere('1=0');
