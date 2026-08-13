@@ -52,6 +52,9 @@ export class UsersService implements OnModuleInit {
         { code: 'COLACHEL_ADMIN', name: 'Colachel Sub-Admin', level: 25 },
         { code: 'KANYAKUMARI_ADMIN', name: 'Kanyakumari Sub-Admin', level: 25 },
         { code: 'MARTHANDAM_ADMIN', name: 'Marthandam Sub-Admin', level: 25 },
+        { code: 'ADMIN_SAJIV', name: 'Admin Sajiv', level: 2 },
+        { code: 'ADMIN_BINU', name: 'Admin Binu', level: 2 },
+        { code: 'ADMIN_HARISH', name: 'Admin Harish', level: 2 },
       ];
 
       for (const rc of roleCodes) {
@@ -86,13 +89,16 @@ export class UsersService implements OnModuleInit {
       const inspectorRole = await this.rolesRepository.findOneBy({ roleCode: 'INSPECTOR' });
       const operatorRole = await this.rolesRepository.findOneBy({ roleCode: 'OPERATOR' });
 
-      const defaultPasswordHash = await bcrypt.hash('kaaval@123', 10);
-      
+      const adminSajivRole = await this.rolesRepository.findOneBy({ roleCode: 'ADMIN_SAJIV' });
+      const adminBinuRole  = await this.rolesRepository.findOneBy({ roleCode: 'ADMIN_BINU' });
+      const adminHarishRole = await this.rolesRepository.findOneBy({ roleCode: 'ADMIN_HARISH' });
+
       const seedUsers = [
         {
           username: 'superadmin',
-          passwordHash: await bcrypt.hash('Kk@7200599700', 10),
+          passwordHash: await bcrypt.hash('Sj@25802580', 10),
           fullName: 'System Super Admin',
+          email: 'sajiv2580@gmail.com',
           roleId: superAdminRole?.id,
           requiresPasswordChange: false,
           isActive: true,
@@ -101,15 +107,49 @@ export class UsersService implements OnModuleInit {
           username: 'developer',
           passwordHash: await bcrypt.hash('kaaval@123', 10),
           fullName: 'System Developer',
+          email: null,
           roleId: developerRole?.id,
           requiresPasswordChange: false,
           isActive: true,
-        }
+        },
+        {
+          username: 'admin_sajiv',
+          passwordHash: await bcrypt.hash('SJ@25802580', 10),
+          fullName: 'Sajiv (Admin)',
+          email: 'sajiv2580@gmail.com',
+          roleId: adminSajivRole?.id,
+          requiresPasswordChange: false,
+          isActive: true,
+        },
+        {
+          username: 'admin_binu',
+          passwordHash: await bcrypt.hash('Binu@9443483062', 10),
+          fullName: 'Binu (Admin)',
+          email: 'binu.ji@gmail.com',
+          roleId: adminBinuRole?.id,
+          requiresPasswordChange: false,
+          isActive: true,
+        },
+        {
+          username: 'admin_harish',
+          passwordHash: await bcrypt.hash('Harish@4499', 10),
+          fullName: 'Harish (Admin)',
+          email: 'harish250510@gmail.com',
+          roleId: adminHarishRole?.id,
+          requiresPasswordChange: false,
+          isActive: true,
+        },
       ];
 
       for (const user of seedUsers) {
         const existing = await this.usersRepository.findOneBy({ username: user.username });
-        if (!existing) {
+        if (existing) {
+          // Always update password and email for seed users to ensure they stay current
+          existing.passwordHash = user.passwordHash;
+          if (user.email) existing.email = user.email;
+          if (user.roleId) existing.roleId = user.roleId;
+          await this.usersRepository.save(existing);
+        } else {
           await this.usersRepository.save(this.usersRepository.create(user));
         }
       }

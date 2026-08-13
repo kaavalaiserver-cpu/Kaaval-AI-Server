@@ -4,6 +4,9 @@ import { API_BASE } from '../config';
 
 export type Role =
   | 'super_admin'
+  | 'admin_sajiv'
+  | 'admin_binu'
+  | 'admin_harish'
   | 'sp'
   | 'dsp'
   | 'nagercoil_admin'

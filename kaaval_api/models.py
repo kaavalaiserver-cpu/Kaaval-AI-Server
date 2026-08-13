@@ -69,3 +69,24 @@ class Evidence(Base):
     file_size: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
     captured_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+class KnownVehicle(Base):
+    __tablename__ = "known_vehicles"
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True)
+    vehicle_number: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
+    reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    added_by_user_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+class KnownVehicleHit(Base):
+    __tablename__ = "known_vehicle_hits"
+    id: Mapped[str] = mapped_column(Uuid(as_uuid=False), primary_key=True)
+    known_vehicle_id: Mapped[str] = mapped_column(Uuid(as_uuid=False), ForeignKey("known_vehicles.id", ondelete="CASCADE"))
+    vehicle_number: Mapped[str] = mapped_column(String(20), nullable=False)
+    violation_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    camera_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    camera_name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    location: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    hit_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

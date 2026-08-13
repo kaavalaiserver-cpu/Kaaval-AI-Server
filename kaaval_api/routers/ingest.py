@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, File, UploadFile, Form, HTTPException, B
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db, AsyncSessionLocal
-from models import Violation, Camera, Vehicle, ViolationType, Evidence
+from models import Violation, Camera, Vehicle, ViolationType, Evidence, KnownVehicle, KnownVehicleHit
 from schemas import IngestResult
 from sqlalchemy import select
 from config import settings
@@ -189,12 +189,17 @@ async def ingest_violation(
         
     meta_dict["violation_type"] = violation_type
 
-    # ── Validate camera_id and violation_type BEFORE queuing ──────────────────
-    # This ensures the hardware gets a real error immediately if IDs are wrong
+    violation_id = meta_dict.get("violation_id") or str(uuid.uuid4())
+    vehicle_number = meta_dict.get("vehicle_number")
+
+    # ── Validate camera_id, violation_type, and check Known Vehicles ───────
+    # This ensures the hardware gets a real error immediately if IDs are wrong,
+    # and we can suppress known vehicles efficiently.
     async with AsyncSessionLocal() as session:
         cam_stmt = select(Camera).where(Camera.camera_code == camera_id)
         cam_result = await session.execute(cam_stmt)
-        if not cam_result.scalars().first():
+        camera = cam_result.scalars().first()
+        if not camera:
             raise HTTPException(
                 status_code=422,
                 detail=f"Unknown camera_id '{camera_id}'. Valid IDs are KAI1–KAI11."
@@ -204,6 +209,45 @@ async def ingest_violation(
         vtype_result = await session.execute(vtype_stmt)
         if not vtype_result.scalars().first():
             meta_dict["violation_type"] = "NO_HELMET"
+
+        # Check if the vehicle is known (suppressed)
+        if vehicle_number:
+            normalized_plate = vehicle_number.strip().upper().replace(" ", "")
+            kv_stmt = select(KnownVehicle).where(KnownVehicle.vehicle_number == normalized_plate)
+            kv_result = await session.execute(kv_stmt)
+            known_vehicle = kv_result.scalars().first()
+            if known_vehicle:
+                # Record a hit in history instead of processing the violation
+                confidence = meta_dict.get("confidence")
+                
+                timestamp_str = meta_dict.get("timestamp")
+                if timestamp_str:
+                    try:
+                        dt = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
+                    except ValueError:
+                        dt = datetime.now()
+                else:
+                    dt = datetime.now()
+                    
+                hit = KnownVehicleHit(
+                    id=str(uuid.uuid4()),
+                    known_vehicle_id=known_vehicle.id,
+                    vehicle_number=normalized_plate,
+                    violation_type=violation_type,
+                    camera_id=camera.id,
+                    camera_name=camera.camera_name,
+                    location=None, # Location might not be in camera model, or we can leave it null
+                    confidence=float(confidence) if confidence is not None else None,
+                    hit_timestamp=dt
+                )
+                session.add(hit)
+                await session.commit()
+                logger.info(f"[{violation_id}] Suppressed known vehicle {normalized_plate}. Recorded in history.")
+                return IngestResult(
+                    status="queued", # Pretend it was queued successfully to satisfy RDK
+                    violation_id=violation_id,
+                    uploaded=True
+                )
     # ─────────────────────────────────────────────────────────────────────────
 
     violation_id = meta_dict.get("violation_id") or str(uuid.uuid4())

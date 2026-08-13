@@ -24,6 +24,7 @@ import {
   MapPin,
   ShieldAlert,
   ShieldCheck,
+  EyeOff,
 } from 'lucide-react';
 import type { SystemStatus } from '../types';
 import NotificationPanel from './NotificationPanel';
@@ -59,6 +60,9 @@ const NavItem = ({ to, icon, label, isOpen, badge, roles }: NavItemProps) => {
 
 const ROLE_LABELS: Record<Role, string> = {
   super_admin: 'Super Admin',
+  admin_sajiv: 'Admin (Sajiv)',
+  admin_binu: 'Admin (Binu)',
+  admin_harish: 'Admin (Harish)',
   sp: 'Superintendent of Police',
   dsp: 'Deputy Superintendent',
   nagercoil_admin: 'Nagercoil Admin',
@@ -74,8 +78,9 @@ const ROLE_LABELS: Record<Role, string> = {
 };
 
 const TECH_ROLES: Role[] = ['super_admin', 'developer'];
-const MANAGEMENT_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector'];
-const CAMERA_HEALTH_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer'];
+const MANAGEMENT_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'admin_sajiv', 'admin_binu', 'admin_harish'];
+const CAMERA_HEALTH_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer', 'admin_sajiv', 'admin_binu', 'admin_harish'];
+const KNOWN_VEHICLES_ROLES: Role[] = ['super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish'];
 const Layout = () => {
   const { user, logout, hasRole } = useAuth();
   const location = useLocation();
@@ -204,6 +209,9 @@ const Layout = () => {
             
           <NavItem to="/wanted-vehicles" icon={<ShieldAlert size={20} />} label="Wanted Vehicles" isOpen={isSidebarOpen}
             roles={CAMERA_HEALTH_ROLES} />
+
+          <NavItem to="/known-vehicles" icon={<EyeOff size={20} />} label="Known Vehicles" isOpen={isSidebarOpen}
+            roles={KNOWN_VEHICLES_ROLES} />
 
           <NavItem to="/system" icon={<Activity size={20} />} label="System Metrics" isOpen={isSidebarOpen}
             roles={TECH_ROLES} />

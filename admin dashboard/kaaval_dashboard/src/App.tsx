@@ -13,13 +13,15 @@ import SettingsPage from './pages/Settings';
 import WeeklyReports from './pages/WeeklyReports';
 import KitManagement from './pages/KitManagement';
 import WantedVehicles from './pages/WantedVehicles';
+import KnownVehicles from './pages/KnownVehicles';
 import AuditLog from './pages/AuditLog';
 
-const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer'];
-const MANAGEMENT_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector'];
-const ALL_EXCEPT_VIEWERS: Role[] = ['super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'developer', 'operator'];
+const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer', 'admin_sajiv', 'admin_binu', 'admin_harish'];
+const MANAGEMENT_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'admin_sajiv', 'admin_binu', 'admin_harish'];
+const ALL_EXCEPT_VIEWERS: Role[] = ['super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'developer', 'operator', 'admin_sajiv', 'admin_binu', 'admin_harish'];
 const TECH_ROLES: Role[] = ['super_admin', 'developer'];
-const CAMERA_HEALTH_ROLES: Role[] = ['super_admin', 'developer', 'sp', 'dsp', 'inspector', 'sub_inspector', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin'];
+const CAMERA_HEALTH_ROLES: Role[] = ['super_admin', 'developer', 'sp', 'dsp', 'inspector', 'sub_inspector', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'admin_sajiv', 'admin_binu', 'admin_harish'];
+const KNOWN_VEHICLES_ROLES: Role[] = ['super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish'];
 
 const ProtectedRoute = ({ children, roles }: { children: React.ReactNode; roles?: Role[] }) => {
   const { user, loading } = useAuth();
@@ -77,6 +79,11 @@ function AppRoutes() {
         <Route path="wanted-vehicles" element={
           <ProtectedRoute roles={CAMERA_HEALTH_ROLES}>
             <WantedVehicles />
+          </ProtectedRoute>
+        } />
+        <Route path="known-vehicles" element={
+          <ProtectedRoute roles={KNOWN_VEHICLES_ROLES}>
+            <KnownVehicles />
           </ProtectedRoute>
         } />
         <Route path="settings" element={<SettingsPage />} />

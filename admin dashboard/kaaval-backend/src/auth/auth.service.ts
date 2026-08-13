@@ -38,33 +38,46 @@ export class AuthService {
     // Reset failed logins on success
     await this.usersService.resetFailedLogins(user.id);
 
-    // OTP for Superadmin
-    if (user.role?.roleCode === 'SUPER_ADMIN') {
+    // OTP for privileged roles (super admin + 3 named admins)
+    const OTP_ROLES = ['SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH'];
+    if (user.role?.roleCode && OTP_ROLES.includes(user.role.roleCode)) {
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       await this.cache.set(`otp_${user.id}`, otp, 300000); // 5 minutes
 
-      // Send OTP via email
-      try {
-        const transporter = nodemailer.createTransport({
-          service: 'gmail',
-          auth: {
-            user: 'kaaval.ai.kanyakumari@gmail.com',
-            pass: process.env.EMAIL_PASS || 'default_pass_needs_update', // Replace with real App Password in production .env
-          },
-        });
-        const recipients = 'sajiv2580@gmail.com, harish250510@gmail.com, binu.ji@gmail.com';
-        await transporter.sendMail({
-          from: '"Kaaval AI System" <kaaval.ai.kanyakumari@gmail.com>',
-          to: recipients,
-          subject: 'Kaaval AI - Superadmin Login OTP',
-          text: `Your Kaaval AI Superadmin login OTP is: ${otp}. It is valid for 5 minutes. Do not share this with anyone.`,
-        });
-        console.log(`✅ Sent OTP ${otp} to ${recipients}`);
-      } catch (err) {
-        console.error('Failed to send OTP email', err);
-        // Only log OTP in non-production environments
+      // Send OTP only to this user's own email
+      const recipientEmail = user.email;
+      if (recipientEmail) {
+        try {
+          const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+              user: 'kaaval.ai.kanyakumari@gmail.com',
+              pass: process.env.EMAIL_PASS || 'hqjmrekwvtowgfxu',
+            },
+          });
+          await transporter.sendMail({
+            from: '"Kaaval AI System" <kaaval.ai.kanyakumari@gmail.com>',
+            to: recipientEmail,
+            subject: 'Kaaval AI — Admin Login OTP',
+            text: `Your Kaaval AI login OTP is: ${otp}. It is valid for 5 minutes. Do not share this with anyone.`,
+            html: `<div style="font-family:Arial,sans-serif;max-width:400px;padding:24px;background:#0c1522;border-radius:12px;border:1px solid #1a2638">
+              <h2 style="color:#60a5fa;margin:0 0 8px">Kaaval AI</h2>
+              <p style="color:#8fa3c0;font-size:14px">Your admin login OTP is:</p>
+              <div style="font-size:36px;font-weight:900;letter-spacing:8px;color:#f0f6ff;margin:16px 0;font-family:monospace">${otp}</div>
+              <p style="color:#8fa3c0;font-size:12px">Valid for <strong>5 minutes</strong>. Do not share this with anyone.</p>
+            </div>`,
+          });
+          console.log(`✅ Sent OTP to ${recipientEmail} for user ${user.username}`);
+        } catch (err) {
+          console.error('Failed to send OTP email', err);
+          if (process.env.NODE_ENV !== 'production') {
+            console.log(`[DEV ONLY] OTP for ${user.username}: ${otp}`);
+          }
+        }
+      } else {
+        console.warn(`User ${user.username} has no email set — OTP not sent`);
         if (process.env.NODE_ENV !== 'production') {
-          console.log(`[DEV ONLY] OTP is ${otp}`);
+          console.log(`[DEV ONLY] OTP for ${user.username}: ${otp}`);
         }
       }
 
