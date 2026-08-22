@@ -32,17 +32,17 @@ export class RetentionService {
     const now = new Date();
 
     try {
-      // 1. Pending: Archive after 3 days
-      const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
-      await this.archiveViolations('PENDING', threeDaysAgo);
+      // 1. Pending: Archive after 7 days
+      const pendingCutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      await this.archiveViolations('PENDING', pendingCutoff);
 
       // 2. Rejected: Archive after 7 days
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       await this.archiveViolations('REJECTED', sevenDaysAgo);
 
-      // 3. Issued: Archive after 15 days
-      const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000);
-      await this.archiveViolations('ISSUED', fifteenDaysAgo);
+      // 3. Issued: Archive after 18 days
+      const eighteenDaysAgo = new Date(now.getTime() - 18 * 24 * 60 * 60 * 1000);
+      await this.archiveViolations('ISSUED', eighteenDaysAgo);
 
     } catch (error: any) {
       this.logger.error(`Retention cleanup failed: ${error.message}`);

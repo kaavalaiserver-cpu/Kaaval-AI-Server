@@ -20,7 +20,7 @@ export class CleanupService {
     private readonly configService: ConfigService,
   ) {}
 
-  @Cron(CronExpression.EVERY_HOUR)
+  // @Cron(CronExpression.EVERY_HOUR)
   async handleCron() {
     this.logger.log('Running automated evidence cleanup job...');
     
@@ -28,10 +28,11 @@ export class CleanupService {
     
     // Retention Policy Definitions
     const policies = [
-      { status: 'PENDING', hours: 24, field: 'createdAt' },
-      { status: 'APPROVED', hours: 15 * 24, field: 'updatedAt' },
-      { status: 'REJECTED', hours: 2, field: 'updatedAt' },
-      { status: 'AUTO_REJECTED', hours: 2, field: 'updatedAt' },
+      { status: 'PENDING', hours: 7 * 24, field: 'createdAt' },
+      { status: 'APPROVED', hours: 18 * 24, field: 'updatedAt' },
+      { status: 'ISSUED', hours: 18 * 24, field: 'updatedAt' },
+      { status: 'REJECTED', hours: 7 * 24, field: 'updatedAt' },
+      { status: 'AUTO_REJECTED', hours: 7 * 24, field: 'updatedAt' },
     ];
 
     let filesDeleted = 0;
@@ -80,7 +81,7 @@ export class CleanupService {
   }
 
   // Delete orphaned files at 2:00 AM daily
-  @Cron(CronExpression.EVERY_DAY_AT_2AM)
+  // @Cron(CronExpression.EVERY_DAY_AT_2AM)
   private async deleteOrphanedFiles() {
     this.logger.log('Scanning for orphaned media files...');
     const uploadDir = this.configService.get<string>('LOCAL_UPLOAD_DIR', path.join(process.cwd(), '..', '..', 'uploads'));
