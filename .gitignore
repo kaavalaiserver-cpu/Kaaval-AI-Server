@@ -1,22 +1,85 @@
+# ============================================================
+# KAAVAL AI — .gitignore
+# This file prevents sensitive and build artifacts from
+# being accidentally committed to any git repository.
+# ============================================================
+
+# ── Dependencies ──
 node_modules/
-dist/
-build/
 .venv/
 venv/
 __pycache__/
-*.zip
-scratch/
-.env
-.idea/
-.vscode/
+*.pyc
+*.pyo
 
+# ── Build outputs ──
+dist/
+build/
+.next/
+out/
+
+# ── Environment & Secrets (NEVER COMMIT) ──
+.env
+.env.*
+!.env.example
+*.env
+*.env.local
+*.env.production
+*.env.development
+*.env.staging
+
+# ── Docker secrets ──
+docker-compose.override.yml
+
+# ── Database files ──
 *.db
+*.sqlite
+*.sqlite3
+postgres-data/
 backend-data/
+
+# ── Seed files with real data (IPs, credentials) ──
+seed_kits.sql
+reset_pwd.sql
+patch_roles.js
+find_rejected.js
+
+# ── Credentials & Keys ──
+*.key
+*.pem
+*.crt
+*.p12
+*.pfx
+cert.crt
+cert.key
+
+# ── Logs ──
 logs/
+*.log
+npm-debug.log*
+
+# ── Uploads & Media ──
 uploads/
 backups/
-
+exports/
 violation_backup/
+ai_models/
 
+# ── IDE ──
+.idea/
+.vscode/
+*.suo
+*.user
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Temp & Scratch ──
+scratch/
+*.zip
+*.tar.gz
 export_chat.py
 previous_chat_export.txt
+trigger.txt

@@ -27,21 +27,20 @@ services:
       - DB_TYPE=postgres
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=Sj@25802580
-      - DB_NAME=kaaval_ai
-      - JWT_SECRET=super_secret_jwt_key_that_is_at_least_32_characters_long_for_kaaval
-      - RDK_API_KEY=change-me-rdk-secret
-      - EMAIL_PASS=hqjmrekwvtowgfxu
-      - LOCAL_UPLOAD_DIR=/app/data/uploads
-      - LOCAL_BACKUP_DIR=/app/data/backups
-      - LOCAL_EXPORT_DIR=/app/data/exports
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - JWT_SECRET=${JWT_SECRET}
+      - RDK_API_KEY=${RDK_API_KEY}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - LOCAL_UPLOAD_DIR=${LOCAL_UPLOAD_DIR}
+      - LOCAL_BACKUP_DIR=${LOCAL_BACKUP_DIR}
+      - LOCAL_EXPORT_DIR=${LOCAL_EXPORT_DIR}
     volumes:
       - F:/kaaval ai database/uploads:/app/data/uploads
       - F:/kaaval ai database/logs:/usr/src/app/logs
       - F:/kaaval ai database/backups:/app/data/backups
       - F:/kaaval ai database/exports:/app/data/exports
-      # Mount the host path itself so disk space monitor can check the whole drive
       - F:/kaaval ai database:/host_f_drive:ro
     depends_on:
       postgres:
@@ -57,9 +56,9 @@ services:
     image: postgres:15-alpine
     container_name: kaaval-postgres
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=Sj@25802580
-      - POSTGRES_DB=kaaval_ai
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
@@ -81,16 +80,16 @@ services:
     ports:
       - "8001:8001"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:Sj%4025802580@postgres:5432/kaaval_ai
-      - RDK_API_KEY=change-me-rdk-secret
-      - JWT_SECRET=super_secret_jwt_key_that_is_at_least_32_characters_long_for_kaaval
-      - AWS_REGION=ap-south-1
-      - S3_IMAGES_BUCKET=kaaval-ai-images
-      - S3_PREVIEW_BUCKET=kaaval-ai-preview
-      - PRESIGN_TTL=300
+      - DATABASE_URL=${DATABASE_URL}
+      - RDK_API_KEY=${RDK_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - AWS_REGION=${AWS_REGION}
+      - S3_IMAGES_BUCKET=${S3_IMAGES_BUCKET}
+      - S3_PREVIEW_BUCKET=${S3_PREVIEW_BUCKET}
+      - PRESIGN_TTL=${PRESIGN_TTL}
       - CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000","http://localhost:80","http://localhost"]
-      - AI_MODELS_DIR=/app/ai_models
-      - LOCAL_UPLOAD_DIR=/app/data/uploads
+      - AI_MODELS_DIR=${AI_MODELS_DIR}
+      - LOCAL_UPLOAD_DIR=${LOCAL_UPLOAD_DIR}
     volumes:
       - F:/kaaval ai database/ai_models:/app/ai_models
       - F:/kaaval ai database/uploads:/app/data/uploads
@@ -102,4 +101,39 @@ services:
       interval: 60s
       timeout: 10s
       retries: 3
+    restart: unless-stopped
+
+  rdk-monitor-backend:
+    build:
+      context: ../Kaaval AI Tech Dashboard/backend
+      dockerfile: Dockerfile
+    container_name: rdk-monitor-backend
+    expose:
+      - "8011"
+    ports:
+      - "8011:8011"
+    environment:
+      - NODE_ENV=production
+      - DB_TYPE=postgres
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - JWT_SECRET=${JWT_MONITOR_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  rdk-monitor-frontend:
+    build:
+      context: ../Kaaval AI Tech Dashboard/frontend
+      dockerfile: Dockerfile
+    container_name: rdk-monitor-frontend
+    ports:
+      - "8010:80"
+    depends_on:
+      - rdk-monitor-backend
     restart: unless-stopped
