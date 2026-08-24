@@ -21,7 +21,8 @@ services:
     expose:
       - "8003"
     ports:
-      - "8003:8003"
+      # SECURITY: Bind to localhost only — nginx proxies /api/ internally
+      - "127.0.0.1:8003:8003"
     environment:
       - NODE_ENV=production
       - DB_TYPE=postgres
@@ -59,8 +60,9 @@ services:
       - POSTGRES_USER=${DB_USERNAME}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${DB_NAME}
-    ports:
-      - "5432:5432"
+    # SECURITY: No public port — DB only accessible inside Docker network
+    expose:
+      - "5432"
     volumes:
       - F:/kaaval ai database/postgres:/var/lib/postgresql/data
     healthcheck:
@@ -78,6 +80,7 @@ services:
     expose:
       - "8001"
     ports:
+      # RDK kits push violation data here from LAN — must remain accessible on local network
       - "8001:8001"
     environment:
       - DATABASE_URL=${DATABASE_URL}
@@ -111,7 +114,8 @@ services:
     expose:
       - "8011"
     ports:
-      - "8011:8011"
+      # SECURITY: Bind to localhost only — proxied through nginx /tech-api/
+      - "127.0.0.1:8011:8011"
     environment:
       - NODE_ENV=production
       - DB_TYPE=postgres
