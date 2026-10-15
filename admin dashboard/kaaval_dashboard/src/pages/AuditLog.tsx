@@ -86,6 +86,7 @@ export default function AuditLog() {
     username: '',
   });
   const [applied, setApplied] = useState(filters);
+  const [subdivisionsList, setSubdivisionsList] = useState<string[]>(SUBDIVISIONS);
 
   const fetchLogs = useCallback(async (p: number, f: typeof filters) => {
     setLoading(true);
@@ -114,6 +115,14 @@ export default function AuditLog() {
 
   useEffect(() => {
     axios.get<string[]>(`${API_BASE}/audit-logs/actions`).then((r) => setActions(r.data)).catch(() => {});
+    axios.get(`${API_BASE}/cameras/subdivisions`)
+      .then((r) => {
+        if (Array.isArray(r.data)) {
+          const names = r.data.map((s: any) => s.subdivisionName).filter(Boolean);
+          setSubdivisionsList(Array.from(new Set([...names, ...SUBDIVISIONS])));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleApply = () => {
@@ -248,7 +257,7 @@ export default function AuditLog() {
             onChange={(e) => setFilters((f) => ({ ...f, subdivision: e.target.value }))}
           >
             <option value="">All Subdivisions</option>
-            {SUBDIVISIONS.map((s) => (
+            {subdivisionsList.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>

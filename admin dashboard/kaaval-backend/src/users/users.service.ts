@@ -66,6 +66,9 @@ export class UsersService implements OnModuleInit {
         }
       }
 
+      // Sync any custom subdivision admin roles
+      await this.syncSubdivisionRoles();
+
       // 2. Seed District
       let kanyakumari = await this.districtsRepository.findOneBy({ districtName: 'Kanyakumari' });
       if (!kanyakumari) {
@@ -180,11 +183,17 @@ export class UsersService implements OnModuleInit {
     return this.sessionsRepository.save(session);
   }
 
+  async invalidateSession(sessionId: string): Promise<void> {
+    await this.sessionsRepository.update(sessionId, { logoutTime: new Date() });
+  }
+
   async invalidateAllSessions(userId: string): Promise<void> {
-    await this.sessionsRepository.update(
-      { userId, logoutTime: null as any },
-      { logoutTime: new Date() }
-    );
+    await this.sessionsRepository
+      .createQueryBuilder()
+      .update(LoginSession)
+      .set({ logoutTime: new Date() })
+      .where('user_id = :userId AND logout_time IS NULL', { userId })
+      .execute();
   }
 
   async isSessionValid(sessionId: string): Promise<boolean> {
@@ -200,17 +209,86 @@ export class UsersService implements OnModuleInit {
     return users.map(user => this.stripPassword(user));
   }
 
+  async syncSubdivisionRoles() {
+    try {
+      const subdivisions = await this.subdivisionsRepository.find();
+      for (const sub of subdivisions) {
+        const cleanName = sub.subdivisionName.trim();
+        const baseCode = cleanName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
+        const roleCode = `${baseCode}_ADMIN`;
+        const displayName = `${cleanName} Admin`;
+
+        const existing = await this.rolesRepository.findOne({
+          where: { roleCode }
+        });
+        if (!existing) {
+          await this.rolesRepository.save(
+            this.rolesRepository.create({
+              roleCode,
+              displayName,
+              hierarchyLevel: 25,
+              description: `Administrator for ${cleanName} subdivision`,
+              isSystemRole: false
+            })
+          );
+          this.logger.log(`Created automatic subdivision role: ${roleCode}`);
+        }
+      }
+    } catch (err: any) {
+      this.logger.error(`Error syncing subdivision roles: ${err.message}`);
+    }
+  }
+
+  async getRoles() {
+    await this.syncSubdivisionRoles();
+    return this.rolesRepository.find({
+      order: { hierarchyLevel: 'ASC', roleCode: 'ASC' }
+    });
+  }
+
   private async resolveRelations(data: any): Promise<any> {
     const resolved = { ...data };
     
     if (resolved.role) {
-      const roleEntity = await this.rolesRepository.findOneBy({ roleCode: resolved.role.toUpperCase() });
-      if (roleEntity) resolved.roleId = roleEntity.id;
+      const roleStr = String(resolved.role).toUpperCase();
+      let roleEntity = await this.rolesRepository.findOneBy({ roleCode: roleStr });
+      if (!roleEntity) {
+        roleEntity = await this.rolesRepository
+          .createQueryBuilder('r')
+          .where('UPPER(r.role_code) = :rc', { rc: roleStr })
+          .getOne();
+      }
+      if (roleEntity) {
+        resolved.roleId = roleEntity.id;
+        // Auto-link subdivision if selecting a subdivision admin role and subdivision is not explicitly specified
+        if (!resolved.subdivision && !resolved.subdivisionId && roleStr.endsWith('_ADMIN') && roleStr !== 'SUPER_ADMIN') {
+          const subNameGuess = roleStr.replace(/_ADMIN$/, '');
+          const matchedSub = await this.subdivisionsRepository
+            .createQueryBuilder('s')
+            .where('REPLACE(UPPER(s.subdivision_name), \' \', \'_\') = :sn', { sn: subNameGuess })
+            .orWhere('UPPER(s.subdivision_name) = :sn2', { sn2: subNameGuess })
+            .orWhere('LOWER(s.subdivision_name) ILIKE :sn3', { sn3: `%${subNameGuess.replace(/_/g, '%')}%` })
+            .getOne();
+          if (matchedSub) {
+            resolved.subdivisionId = matchedSub.id;
+            resolved.districtId = matchedSub.districtId;
+          }
+        }
+      }
       delete resolved.role;
     }
     
     if (resolved.subdivision) {
-      const sub = await this.subdivisionsRepository.findOneBy({ subdivisionName: resolved.subdivision });
+      let sub = await this.subdivisionsRepository.findOneBy({ id: resolved.subdivision });
+      if (!sub) {
+        sub = await this.subdivisionsRepository.findOneBy({ subdivisionName: resolved.subdivision });
+      }
+      if (!sub) {
+        sub = await this.subdivisionsRepository
+          .createQueryBuilder('s')
+          .where('LOWER(s.subdivision_name) = LOWER(:name)', { name: resolved.subdivision })
+          .getOne();
+      }
       if (sub) {
         resolved.subdivisionId = sub.id;
         resolved.districtId = sub.districtId;
@@ -219,7 +297,16 @@ export class UsersService implements OnModuleInit {
     }
     
     if (resolved.junction) {
-      const junc = await this.junctionsRepository.findOneBy({ junctionName: resolved.junction });
+      let junc = await this.junctionsRepository.findOneBy({ id: resolved.junction });
+      if (!junc) {
+        junc = await this.junctionsRepository.findOneBy({ junctionName: resolved.junction });
+      }
+      if (!junc) {
+        junc = await this.junctionsRepository
+          .createQueryBuilder('j')
+          .where('LOWER(j.junction_name) = LOWER(:name)', { name: resolved.junction })
+          .getOne();
+      }
       if (junc) {
         resolved.junctionId = junc.id;
         resolved.subdivisionId = junc.subdivisionId;

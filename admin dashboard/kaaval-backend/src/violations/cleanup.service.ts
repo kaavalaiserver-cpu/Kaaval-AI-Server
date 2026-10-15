@@ -26,6 +26,17 @@ export class CleanupService {
     
     const now = new Date();
     
+    // ── MODEL TRAINING FREEZE WINDOW ─────────────────────────────────────────
+    // Keep ALL images (rejected, issued, pending) from 16 Oct 2026 to 16 Nov 2026
+    // for model training. Auto-delete resumes after 16 Nov 2026.
+    const FREEZE_START = new Date('2026-10-16T00:00:00.000Z');
+    const FREEZE_END   = new Date('2026-11-16T23:59:59.999Z');
+    if (now >= FREEZE_START && now <= FREEZE_END) {
+      this.logger.log('CLEANUP SKIPPED — Model training freeze window active (16 Oct – 16 Nov 2026). All images retained.');
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+    
     // Retention Policy Definitions
     const policies = [
       { status: 'PENDING', hours: 7 * 24, field: 'createdAt' },
@@ -84,6 +95,14 @@ export class CleanupService {
   // @Cron(CronExpression.EVERY_DAY_AT_2AM)
   private async deleteOrphanedFiles() {
     this.logger.log('Scanning for orphaned media files...');
+    
+    const now = new Date();
+    const FREEZE_START = new Date('2026-10-16T00:00:00.000Z');
+    const FREEZE_END   = new Date('2026-11-16T23:59:59.999Z');
+    if (now >= FREEZE_START && now <= FREEZE_END) {
+      this.logger.log('CLEANUP SKIPPED — Model training freeze window active (16 Oct – 16 Nov 2026). Orphaned file deletion suspended.');
+      return;
+    }
     const uploadDir = this.configService.get<string>('LOCAL_UPLOAD_DIR', path.join(process.cwd(), '..', '..', 'uploads'));
     
     try {

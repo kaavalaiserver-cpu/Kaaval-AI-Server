@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
 import type { UserAccount } from '../types';
@@ -63,19 +63,125 @@ const UsersManagement = () => {
   const [customPassword, setCustomPassword] = useState('');
   const [autoGenerate, setAutoGenerate] = useState(true);
 
+  const [subdivisions, setSubdivisions] = useState<Array<{ id: string; subdivisionName: string }>>([]);
+  const [rolesList, setRolesList] = useState<Array<{ id?: string; roleCode: string; displayName?: string }>>([]);
+  const [isAddingSubdivision, setIsAddingSubdivision] = useState(false);
+  const [newSubName, setNewSubName] = useState('');
+  const [addingSubLoading, setAddingSubLoading] = useState(false);
+
   const fetchUsersAndJunctions = async () => {
     setLoading(true);
     try {
-      const [usersRes, juncRes] = await Promise.all([
+      const [usersRes, juncRes, subsRes, rolesRes] = await Promise.allSettled([
         axios.get(`${API_BASE}/users`),
-        axios.get(`${API_BASE}/cameras/junctions`)
+        axios.get(`${API_BASE}/cameras/junctions`),
+        axios.get(`${API_BASE}/cameras/subdivisions`),
+        axios.get(`${API_BASE}/users/roles`),
       ]);
-      setUsers(usersRes.data);
-      setJunctions(juncRes.data);
+      if (usersRes.status === 'fulfilled') setUsers(usersRes.value.data);
+      if (juncRes.status === 'fulfilled') setJunctions(juncRes.value.data);
+      if (subsRes.status === 'fulfilled' && Array.isArray(subsRes.value.data)) {
+        setSubdivisions(subsRes.value.data);
+      }
+      if (rolesRes.status === 'fulfilled' && Array.isArray(rolesRes.value.data)) {
+        setRolesList(rolesRes.value.data);
+      }
     } catch (err) {
-      console.error('Failed to fetch users or junctions', err);
+      console.error('Failed to fetch users or metadata', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const allSubdivisionNames = useMemo(() => {
+    const fromApi = subdivisions.map(s => s.subdivisionName).filter(Boolean);
+    return Array.from(new Set([...fromApi, ...SUBDIVISIONS]));
+  }, [subdivisions]);
+
+  const allRoles = useMemo(() => {
+    const list: Array<{ code: string; name: string }> = [];
+    const seen = new Set<string>();
+
+    if (rolesList && rolesList.length > 0) {
+      rolesList.forEach(r => {
+        const codeUpper = (r.roleCode || '').toUpperCase();
+        if (codeUpper && !seen.has(codeUpper)) {
+          seen.add(codeUpper);
+          list.push({ code: codeUpper, name: r.displayName || codeUpper.replace(/_/g, ' ') });
+        }
+      });
+    }
+
+    allSubdivisionNames.forEach(sub => {
+      const code = `${sub.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}_ADMIN`;
+      if (!seen.has(code)) {
+        seen.add(code);
+        list.push({ code, name: `${sub} Admin` });
+      }
+    });
+
+    ROLES.forEach(r => {
+      const code = r.toUpperCase();
+      if (!seen.has(code)) {
+        seen.add(code);
+        list.push({ code, name: r.replace(/_/g, ' ').toUpperCase() });
+      }
+    });
+
+    return list;
+  }, [rolesList, allSubdivisionNames]);
+
+  const handleRoleChange = (selectedRole: string) => {
+    const upperRole = (selectedRole || '').toUpperCase();
+    const updated: any = { ...formData, role: selectedRole };
+    if (upperRole.endsWith('_ADMIN') && upperRole !== 'SUPER_ADMIN') {
+      const subGuess = upperRole.replace(/_ADMIN$/, '');
+      const matched = subdivisions.find(s => 
+        s.subdivisionName.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase() === subGuess ||
+        s.subdivisionName.toUpperCase().includes(subGuess) ||
+        subGuess.includes(s.subdivisionName.toUpperCase())
+      );
+      if (matched) {
+        updated.subdivision = matched.subdivisionName;
+      }
+    }
+    setFormData(updated);
+  };
+
+  const handleSubdivisionChange = (selectedSub: string) => {
+    const updated: any = { ...formData, subdivision: selectedSub };
+    if (selectedSub) {
+      const roleGuess = `${selectedSub.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}_ADMIN`;
+      const currentUpper = (formData.role || '').toUpperCase();
+      if (!formData.role || currentUpper === 'VIEWER' || (currentUpper.endsWith('_ADMIN') && currentUpper !== 'SUPER_ADMIN')) {
+        updated.role = roleGuess;
+      }
+    }
+    setFormData(updated);
+  };
+
+  const handleCreateSubdivision = async () => {
+    if (!newSubName.trim()) return;
+    setAddingSubLoading(true);
+    try {
+      const clean = newSubName.trim();
+      await axios.post(`${API_BASE}/cameras/subdivisions`, {
+        subdivisionName: clean,
+      });
+      await fetchUsersAndJunctions();
+      const roleCode = `${clean.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase()}_ADMIN`;
+      setFormData(prev => ({
+        ...prev,
+        subdivision: clean,
+        role: roleCode,
+      }));
+      setNewSubName('');
+      setIsAddingSubdivision(false);
+      alert(`Subdivision "${clean}" and role "${roleCode}" created successfully!`);
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to create subdivision');
+    } finally {
+      setAddingSubLoading(false);
     }
   };
 
@@ -234,11 +340,11 @@ const UsersManagement = () => {
         <div className="filter-selects">
           <select className="filter-select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
             <option value="">All Roles</option>
-            {ROLES.map(r => <option key={r} value={r}>{r.replace(/_/g, ' ').toUpperCase()}</option>)}
+            {allRoles.map(r => <option key={r.code} value={r.code}>{r.name || r.code}</option>)}
           </select>
           <select className="filter-select" value={subFilter} onChange={(e) => setSubFilter(e.target.value)}>
             <option value="">All Subdivisions</option>
-            {SUBDIVISIONS.map(s => <option key={s} value={s}>{s}</option>)}
+            {allSubdivisionNames.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
           <select className="filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All Statuses</option>
@@ -396,19 +502,47 @@ const UsersManagement = () => {
                     <div className="form-row">
                       <div className="form-group">
                         <label>Role</label>
-                        <select required value={formData.role || ''} onChange={e => setFormData({...formData, role: e.target.value})}>
-                          {ROLES.map(r => <option key={r} value={r}>{r.toUpperCase()}</option>)}
+                        <select required value={formData.role || ''} onChange={e => handleRoleChange(e.target.value)}>
+                          {allRoles.map(r => <option key={r.code} value={r.code}>{r.name || r.code}</option>)}
                         </select>
                       </div>
                       <div className="form-group">
-                        <label>Subdivision</label>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <label style={{ margin: 0 }}>Subdivision</label>
+                          <button 
+                            type="button" 
+                            onClick={() => setIsAddingSubdivision(!isAddingSubdivision)}
+                            style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '0.78rem', cursor: 'pointer', padding: '0 2px', textDecoration: 'underline' }}
+                          >
+                            {isAddingSubdivision ? 'Close' : '+ New Subdivision'}
+                          </button>
+                        </div>
+                        {isAddingSubdivision && (
+                          <div style={{ display: 'flex', gap: '6px', margin: '6px 0' }}>
+                            <input 
+                              type="text" 
+                              placeholder="e.g. crimebranch_Colachel" 
+                              value={newSubName} 
+                              onChange={e => setNewSubName(e.target.value)}
+                              style={{ padding: '6px 8px', fontSize: '0.8rem', flex: 1 }}
+                            />
+                            <button 
+                              type="button" 
+                              disabled={addingSubLoading || !newSubName.trim()} 
+                              onClick={handleCreateSubdivision}
+                              style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '4px', padding: '6px 10px', fontSize: '0.78rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            >
+                              {addingSubLoading ? 'Saving...' : 'Add'}
+                            </button>
+                          </div>
+                        )}
                         <select 
-                          required={['inspector', 'sub_inspector', 'operator', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin'].includes(formData.role || '')} 
+                          required={['inspector', 'sub_inspector', 'operator'].includes((formData.role || '').toLowerCase()) || ((formData.role || '').toLowerCase().endsWith('_admin') && (formData.role || '').toLowerCase() !== 'super_admin')} 
                           value={formData.subdivision || ''} 
-                          onChange={e => setFormData({...formData, subdivision: e.target.value})}
+                          onChange={e => handleSubdivisionChange(e.target.value)}
                         >
                           <option value="">None (All Subdivisions)</option>
-                          {SUBDIVISIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                          {allSubdivisionNames.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
                       </div>
                     </div>

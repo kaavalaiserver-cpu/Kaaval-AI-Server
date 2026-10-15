@@ -30,16 +30,26 @@ const Dashboard = () => {
 
   const [selectedSubdivision, setSelectedSubdivision] = useState<string>('all');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
+  const [subdivisions, setSubdivisions] = useState<Array<{ id: string; subdivisionName: string }>>([]);
 
   const canUseDistrictFeatures = !!user && FULL_ACCESS_ROLES.includes(user.role);
 
-  const isInScope = (location?: string | null) => {
+  useEffect(() => {
+    axios.get(`${API_BASE}/cameras/subdivisions`)
+      .then(res => {
+        if (Array.isArray(res.data)) {
+          setSubdivisions(res.data);
+        }
+      })
+      .catch(err => console.error('Failed to load subdivisions', err));
+  }, []);
+
+  const isInScope = (location?: string | null, camSubdivision?: string | null) => {
     if (selectedLocation !== 'all' && location !== selectedLocation) return false;
-    if (canUseDistrictFeatures) return true;
     if (selectedSubdivision !== 'all') {
+      if (camSubdivision && camSubdivision.toLowerCase() === selectedSubdivision.toLowerCase()) return true;
       return (location ?? '').toLowerCase().includes(selectedSubdivision.toLowerCase());
     }
-    // Very basic fallback if they are an admin
     return true;
   };
 
@@ -85,23 +95,21 @@ const Dashboard = () => {
   }, [selectedSubdivision]);
 
   const todayCount = violationStats?.total ?? stats?.total_violations ?? 0;
-  const pendingCount = violationStats?.pending ?? 0;
-  const finesCount = violationStats?.verified ?? 0;
+  const pendingCount = violationStats?.pending ?? stats?.pending_review ?? 0;
+  const finesCount = violationStats?.verified ?? stats?.challans_issued ?? 0;
   const withConfidenceCount = violationStats?.with_confidence ?? 0;
   
   const visibleCameras = useMemo(() => {
     if (!cameraStatus?.cameras) return [];
-    return cameraStatus.cameras.filter((c) => isInScope(c.location));
-  }, [cameraStatus, canUseDistrictFeatures, selectedSubdivision, selectedLocation]);
+    return cameraStatus.cameras.filter((c) => isInScope(c.location, c.subdivision));
+  }, [cameraStatus, selectedSubdivision, selectedLocation]);
 
   const visibleRecentViolations = useMemo(() => {
     const filtered = recentViolations.filter((v) => isInScope(v.location));
     return filtered.slice(0, 10);
-  }, [recentViolations, canUseDistrictFeatures, selectedSubdivision, selectedLocation]);
+  }, [recentViolations, selectedSubdivision, selectedLocation]);
 
-
-
-  const visibleOnline = visibleCameras.filter((c) => c.status === 'online').length;
+  const visibleOnline = visibleCameras.filter((c) => c.status?.toUpperCase() === 'ONLINE').length;
   const visibleOffline = Math.max(0, visibleCameras.length - visibleOnline);
 
   return (
@@ -132,7 +140,7 @@ const Dashboard = () => {
       </div>
 
       {/* Unknown Plates Overview */}
-      {violationStats?.unknown_plates && (
+      {(violationStats?.unknown_plates || stats?.unknown_plates) && (
         <div style={{ marginBottom: '30px', padding: '20px', borderRadius: '12px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
           <h3 style={{ marginTop: 0, marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontSize: '1.1rem' }}>
             <Eye size={20} color="var(--accent)" />
@@ -141,15 +149,15 @@ const Dashboard = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
             <div style={{ padding: '15px', background: 'rgba(234, 179, 8, 0.1)', borderRadius: '8px', borderLeft: '4px solid #eab308' }}>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>PENDING REVIEW</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{violationStats.unknown_plates.pending}</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{violationStats?.unknown_plates?.pending ?? stats?.unknown_plates?.pending ?? 0}</div>
             </div>
             <div style={{ padding: '15px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: '8px', borderLeft: '4px solid #22c55e' }}>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>FINES ISSUED</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{violationStats.unknown_plates.issued}</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{violationStats?.unknown_plates?.issued ?? stats?.unknown_plates?.issued ?? 0}</div>
             </div>
             <div style={{ padding: '15px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', borderLeft: '4px solid #ef4444' }}>
               <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '5px' }}>REJECTED</div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{violationStats.unknown_plates.rejected}</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{violationStats?.unknown_plates?.rejected ?? stats?.unknown_plates?.rejected ?? 0}</div>
             </div>
           </div>
         </div>
@@ -169,11 +177,20 @@ const Dashboard = () => {
               style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', outline: 'none' }}
             >
               <option value="all">All District (Kanyakumari)</option>
-              <option value="nagercoil">Nagercoil</option>
-              <option value="colachel">Colachel</option>
-              <option value="kanyakumari">Kanyakumari</option>
-              <option value="thuckalay">Thuckalay</option>
-              <option value="marthandam">Marthandam</option>
+              {subdivisions.length > 0 ? (
+                subdivisions.map(s => (
+                  <option key={s.id} value={s.subdivisionName}>{s.subdivisionName}</option>
+                ))
+              ) : (
+                <>
+                  <option value="nagercoil">Nagercoil</option>
+                  <option value="colachel">Colachel</option>
+                  <option value="kanyakumari">Kanyakumari</option>
+                  <option value="thuckalay">Thuckalay</option>
+                  <option value="marthandam">Marthandam</option>
+                  <option value="crimebranch_Colachel">crimebranch_Colachel</option>
+                </>
+              )}
             </select>
           </div>
         )}
@@ -332,11 +349,11 @@ const Dashboard = () => {
           </div>
           <div className="camera-summary">
             <div className="cam-stat online-premium">
-              <span className="cam-num-premium">{canUseDistrictFeatures ? (cameraStatus?.online ?? 0) : visibleOnline}</span>
+              <span className="cam-num-premium">{canUseDistrictFeatures && selectedSubdivision === 'all' && selectedLocation === 'all' ? (cameraStatus?.online ?? 0) : visibleOnline}</span>
               <span className="cam-label-premium">Online</span>
             </div>
             <div className="cam-stat offline-premium">
-              <span className="cam-num-premium">{canUseDistrictFeatures ? (cameraStatus?.offline ?? 0) : visibleOffline}</span>
+              <span className="cam-num-premium">{canUseDistrictFeatures && selectedSubdivision === 'all' && selectedLocation === 'all' ? (cameraStatus?.offline ?? 0) : visibleOffline}</span>
               <span className="cam-label-premium">Offline</span>
             </div>
           </div>

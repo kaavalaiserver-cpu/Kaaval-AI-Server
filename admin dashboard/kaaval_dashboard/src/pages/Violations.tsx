@@ -501,6 +501,12 @@ const Violations = () => {
                   <span className="label">Camera:</span>
                   <span className="value" style={{ fontSize: '0.95rem' }}>{selectedViolation.location} <span style={{ color: 'var(--text-dim)', fontSize: '0.8em' }}>({selectedViolation.camera_id})</span></span>
                 </div>
+                {selectedViolation.confidential_level && hasRole('super_admin', 'admin_binu', 'admin_harish') && (
+                  <div className="detail-row" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', padding: '4px 8px', borderRadius: '4px', marginTop: '8px' }}>
+                    <span className="label" style={{ color: '#ef4444' }}>Confidence Score:</span>
+                    <span className="value" style={{ fontWeight: 'bold', color: '#ef4444' }}>{selectedViolation.confidential_level}%</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -835,6 +841,11 @@ const Violations = () => {
                     <span className="plate-number">{v.vehicle_number}</span>
                   )}
                   <span className="vehicle-type">{v.vehicle_type}</span>
+                  {v.confidential_level && hasRole('super_admin', 'admin_binu', 'admin_harish') && (
+                    <div style={{ marginTop: '4px', fontSize: '0.75rem', fontWeight: 600, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 6px', borderRadius: '4px', display: 'inline-block' }}>
+                      Confidence Score: {v.confidential_level}%
+                    </div>
+                  )}
                 </td>
                 <td>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>

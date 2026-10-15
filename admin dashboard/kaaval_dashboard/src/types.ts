@@ -24,6 +24,7 @@ export interface ViolationItem {
   review_notes: string | null;
   metadata: Record<string, unknown> | null;
   speed?: number | null;
+  confidential_level?: string | null;
 }
 
 export interface ViolationStats {
@@ -92,6 +93,8 @@ export interface CameraItem {
   camera_id?: string;
   location: string;
   status: string;
+  subdivision?: string | null;
+  subdivision_id?: string | null;
   streamUrl?: string | null;
   lastActive?: string | null;
   last_active?: string | null;

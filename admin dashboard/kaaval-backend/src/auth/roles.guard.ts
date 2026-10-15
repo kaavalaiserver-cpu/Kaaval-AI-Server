@@ -21,6 +21,20 @@ export class RolesGuard implements CanActivate {
     if (!user || !user.role) return false;
     const normalizedUserRole = user.role.toUpperCase();
     const normalizedRequiredRoles = requiredRoles.map(r => r.toUpperCase());
-    return normalizedRequiredRoles.includes(normalizedUserRole);
+    
+    if (normalizedRequiredRoles.includes(normalizedUserRole)) {
+      return true;
+    }
+
+    // Dynamic Subdivision Admin match:
+    // If the endpoint allows ANY subdivision admin (*_ADMIN), grant access to any subdivision admin
+    const hasSubdivisionAdminReq = normalizedRequiredRoles.some(
+      r => r.endsWith('_ADMIN') && r !== 'SUPER_ADMIN'
+    );
+    if (hasSubdivisionAdminReq && normalizedUserRole.endsWith('_ADMIN') && normalizedUserRole !== 'SUPER_ADMIN') {
+      return true;
+    }
+
+    return false;
   }
 }

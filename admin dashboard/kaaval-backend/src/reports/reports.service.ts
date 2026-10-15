@@ -45,7 +45,7 @@ export class ReportsService {
 
   private buildDailyStats(violations: Violation[], date: Date) {
     const total     = violations.length;
-    const verified  = violations.filter(v => ['CHALLAN_ISSUED', 'VERIFIED'].includes(v.status)).length;
+    const verified  = violations.filter(v => ['ISSUED', 'CHALLAN_ISSUED', 'VERIFIED', 'APPROVED'].includes(v.status)).length;
     const rejected  = violations.filter(v => ['REJECTED', 'DUPLICATE'].includes(v.status)).length;
     const pending   = violations.filter(v => ['PENDING', 'READY', 'UNDER_REVIEW'].includes(v.status)).length;
 
@@ -132,7 +132,7 @@ export class ReportsService {
       dailyTrend.push({
         date: key,
         total: dayViolations.length,
-        verified: dayViolations.filter(v => ['CHALLAN_ISSUED', 'VERIFIED'].includes(v.status)).length,
+        verified: dayViolations.filter(v => ['ISSUED', 'CHALLAN_ISSUED', 'VERIFIED', 'APPROVED'].includes(v.status)).length,
         rejected: dayViolations.filter(v => ['REJECTED', 'DUPLICATE'].includes(v.status)).length,
       });
       cursor.setDate(cursor.getDate() + 1);

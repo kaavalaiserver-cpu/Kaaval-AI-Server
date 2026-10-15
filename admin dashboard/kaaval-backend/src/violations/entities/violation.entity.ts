@@ -57,6 +57,9 @@ export class Violation {
   @Column({ name: 'challan_reference', type: 'varchar', length: 100, nullable: true })
   challanReference!: string | null;
 
+  @Column({ name: 'confidential_level', type: 'varchar', length: 50, nullable: true })
+  confidentialLevel!: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt!: Date;
 

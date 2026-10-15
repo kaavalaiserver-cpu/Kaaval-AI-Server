@@ -17,7 +17,7 @@ const SEVERITIES     = ['LOW', 'MODERATE', 'HIGH', 'CRITICAL'];
 const CAM_STATUSES   = ['ONLINE', 'OFFLINE', 'MAINTENANCE'];
 
 function emptyJunction() {
-  return { junctionName: '', junctionCode: '', address: '', latitude: '', longitude: '', junctionType: 'SIGNAL', isOneWay: false, subdivisionId: '', isActive: true };
+  return { junctionName: '', junctionCode: '', address: '', latitude: null, longitude: null, junctionType: 'SIGNAL', isOneWay: false, subdivisionId: '', isActive: true };
 }
 function emptyCamera() {
   return { cameraName: '', cameraCode: '', junctionId: '', streamUrl: '', ipAddress: '', status: 'OFFLINE' };
@@ -76,8 +76,13 @@ export default function KitManagement() {
   async function saveJunction(data: any) {
     setSaving(true);
     try {
-      if (data.id) await axios.patch(`${API_BASE}/cameras/junctions/${data.id}`, data);
-      else         await axios.post(`${API_BASE}/cameras/junctions`, data);
+      const payload = {
+        ...data,
+        latitude: data.latitude !== '' && data.latitude != null ? Number(data.latitude) : null,
+        longitude: data.longitude !== '' && data.longitude != null ? Number(data.longitude) : null,
+      };
+      if (data.id) await axios.patch(`${API_BASE}/cameras/junctions/${data.id}`, payload);
+      else         await axios.post(`${API_BASE}/cameras/junctions`, payload);
       await loadAll(); closeModal();
     } catch (e: any) { alert(e.response?.data?.message || 'Failed to save'); }
     setSaving(false);
@@ -86,8 +91,13 @@ export default function KitManagement() {
   async function saveCamera(data: any) {
     setSaving(true);
     try {
-      if (data.id) await axios.patch(`${API_BASE}/cameras/${data.id}`, data);
-      else         await axios.post(`${API_BASE}/cameras`, data);
+      const payload = {
+        ...data,
+        forwardedPort: data.forwardedPort ? Number(data.forwardedPort) : null,
+        installationHeight: data.installationHeight ? Number(data.installationHeight) : null,
+      };
+      if (data.id) await axios.patch(`${API_BASE}/cameras/${data.id}`, payload);
+      else         await axios.post(`${API_BASE}/cameras`, payload);
       await loadAll(); closeModal();
     } catch (e: any) { alert(e.response?.data?.message || 'Failed to save'); }
     setSaving(false);

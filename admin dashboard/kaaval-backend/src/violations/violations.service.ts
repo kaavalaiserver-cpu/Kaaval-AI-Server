@@ -202,7 +202,7 @@ export class ViolationsService {
 
     const [violations, total] = await qb.getManyAndCount();
 
-    const data = violations.map(v => this.formatViolation(v));
+    const data = violations.map(v => this.formatViolation(v, user));
     return { data, total, page, limit };
   }
 
@@ -231,60 +231,109 @@ export class ViolationsService {
     if (!this.canAccessViolation(user, v.camera?.junction?.subdivisionId ?? null)) {
       throw new ForbiddenException('You do not have access to this violation');
     }
-    return this.formatViolation(v);
+    return this.formatViolation(v, user);
   }
 
   async getStats(query: ViolationQueryDto, user?: any) {
-    const qb = this.violationRepo.createQueryBuilder('v')
+    const baseQb = this.violationRepo.createQueryBuilder('v')
       .leftJoin('v.camera', 'camera')
       .leftJoin('camera.junction', 'junction')
+      .leftJoin('junction.subdivision', 'subdivision')
       .leftJoin('v.violationType', 'violationType')
       .leftJoin('v.vehicle', 'vehicle')
       .where('violationType.is_active = true')
       .andWhere("v.status != 'CANCELLED'");
 
+    if (query.status && query.status !== '' && query.status !== 'ALL') {
+      baseQb.andWhere('v.status = :status', { status: query.status });
+    }
+    if (query.cameraId) {
+      baseQb.andWhere('camera.camera_code = :cameraId', { cameraId: query.cameraId });
+    }
+    if (query.vehicleNumber) {
+      baseQb.andWhere('vehicle.registration_number ILIKE :vn', { vn: `%${query.vehicleNumber}%` });
+    }
+    if (query.violationType) {
+      const types = query.violationType.split(',').map(t => t.trim()).filter(Boolean);
+      if (types.length > 0) {
+        baseQb.andWhere('violationType.id IN (:...types)', { types });
+      }
+    }
     if (query.dateFrom) {
-      qb.andWhere('v.violationTimestamp >= :from', { from: new Date(query.dateFrom) });
+      baseQb.andWhere('v.violationTimestamp >= :from', { from: new Date(query.dateFrom) });
     }
     if (query.dateTo) {
       const to = new Date(query.dateTo);
       to.setHours(23, 59, 59, 999);
-      qb.andWhere('v.violationTimestamp <= :to', { to });
+      baseQb.andWhere('v.violationTimestamp <= :to', { to });
     }
 
-    this.applyOperatingTimeFilter(qb);
+    this.applyOperatingTimeFilter(baseQb);
+    this.applySubdivisionScope(baseQb, user, query.subdivisionCode);
 
-    this.applySubdivisionScope(qb, user, query.subdivisionCode);
+    // Fast database aggregation queries instead of loading tens of thousands of rows into JS heap
+    const [statusRows, typeRows, unknownRows, withConfidenceCount] = await Promise.all([
+      baseQb.clone()
+        .select('UPPER(v.status)', 'status')
+        .addSelect('COUNT(*)', 'count')
+        .groupBy('UPPER(v.status)')
+        .getRawMany(),
 
-    const all = await qb.select([
-      'v.id', 'v.status', 'vehicle.registration_number AS vn'
-    ]).addSelect('violationType.violation_code', 'vtCode').getRawMany();
+      baseQb.clone()
+        .select("COALESCE(violationType.violationCode, 'Unknown')", 'code')
+        .addSelect('COUNT(*)', 'count')
+        .groupBy('violationType.violationCode')
+        .getRawMany(),
 
-    // Count by status
+      baseQb.clone()
+        .andWhere("(vehicle.registration_number IN ('UNKNOWN', 'UNREAD') OR vehicle.registration_number IS NULL)")
+        .select('UPPER(v.status)', 'status')
+        .addSelect('COUNT(*)', 'count')
+        .groupBy('UPPER(v.status)')
+        .getRawMany(),
+
+      baseQb.clone()
+        .andWhere("v.confidential_level IS NOT NULL AND v.confidential_level != ''")
+        .getCount(),
+    ]);
+
     const stats: any = {
-      total: all.length,
+      total: 0,
       pending: 0,
       verified: 0,
       rejected: 0,
+      with_confidence: withConfidenceCount,
       by_type: {} as Record<string, number>,
-      unknown_plates: { pending: 0, issued: 0, rejected: 0 }
+      unknown_plates: { pending: 0, issued: 0, rejected: 0 },
     };
 
-    for (const row of all) {
-      const status = (row.status || row.v_status || 'PENDING').toUpperCase();
-      
-      if (['PENDING', 'READY', 'UNDER_REVIEW'].includes(status)) stats.pending++;
-      else if (status === 'ISSUED' || status === 'VERIFIED' || status === 'APPROVED') stats.verified++;
-      else if (status === 'REJECTED' || status === 'AUTO_REJECTED') stats.rejected++;
+    for (const r of statusRows) {
+      const cnt = parseInt(r.count, 10) || 0;
+      stats.total += cnt;
+      const status = r.status || '';
+      if (['PENDING', 'READY', 'UNDER_REVIEW'].includes(status)) {
+        stats.pending += cnt;
+      } else if (['ISSUED', 'VERIFIED', 'APPROVED'].includes(status)) {
+        stats.verified += cnt;
+      } else if (['REJECTED', 'AUTO_REJECTED'].includes(status)) {
+        stats.rejected += cnt;
+      }
+    }
 
-      const vt = row.vtCode || row.v_violation_type_id || 'Unknown';
-      stats.by_type[vt] = (stats.by_type[vt] || 0) + 1;
+    for (const r of typeRows) {
+      const cnt = parseInt(r.count, 10) || 0;
+      stats.by_type[r.code] = cnt;
+    }
 
-      const vn = row.vn || row.vehicle_registration_number || '';
-      if (vn === 'UNKNOWN' || vn === 'UNREAD') {
-        if (['PENDING', 'READY', 'UNDER_REVIEW'].includes(status)) stats.unknown_plates.pending++;
-        else if (status === 'ISSUED' || status === 'VERIFIED' || status === 'APPROVED') stats.unknown_plates.issued++;
-        else if (status === 'REJECTED' || status === 'AUTO_REJECTED') stats.unknown_plates.rejected++;
+    for (const r of unknownRows) {
+      const cnt = parseInt(r.count, 10) || 0;
+      const status = r.status || '';
+      if (['PENDING', 'READY', 'UNDER_REVIEW'].includes(status)) {
+        stats.unknown_plates.pending += cnt;
+      } else if (['ISSUED', 'VERIFIED', 'APPROVED'].includes(status)) {
+        stats.unknown_plates.issued += cnt;
+      } else if (['REJECTED', 'AUTO_REJECTED'].includes(status)) {
+        stats.unknown_plates.rejected += cnt;
       }
     }
 
@@ -347,8 +396,14 @@ export class ViolationsService {
       reviewedAt: new Date(),
     }));
 
-    // Invalidate analytics cache so dashboard reflects the change
-    await this.cache.del('analytics-summary').catch(() => {});
+    // Invalidate analytics cache so dashboard reflects the change immediately
+    try {
+      if (typeof (this.cache as any).reset === 'function') {
+        await (this.cache as any).reset();
+      } else {
+        await this.cache.del('analytics-summary');
+      }
+    } catch (_) {}
 
     return { status: 'success', new_status: newStatus, raw_status: newStatus };
   }
@@ -364,7 +419,7 @@ export class ViolationsService {
     }
     if (dto.status) v.status = dto.status;
     await this.violationRepo.save(v);
-    return this.formatViolation(v);
+    return this.formatViolation(v, user);
   }
 
   async remove(id: string, user?: any) {
@@ -386,10 +441,10 @@ export class ViolationsService {
     return { uploaded: 0, errors: 0, files: [], error_details: null };
   }
 
-  private formatViolation(v: Violation): any {
+  private formatViolation(v: Violation, user?: any): any {
     const fullImg = v.evidence?.find(e => e.evidenceType === 'FULL_IMAGE')?.filePath ?? null;
 
-    return {
+    const baseData: any = {
       id: v.id,
       timestamp: (v.violationTimestamp ?? v.createdAt)?.toISOString() ?? null,
       type: v.violationType?.violationCode ?? 'UNKNOWN',
@@ -411,6 +466,15 @@ export class ViolationsService {
       review_notes: v.approvalNotes ?? null,
       metadata: null,
     };
+
+    if (user) {
+      const role = (user.role || '').toUpperCase();
+      if (['SUPER_ADMIN', 'ADMIN_BINU', 'ADMIN_HARISH'].includes(role)) {
+        baseData.confidential_level = v.confidentialLevel;
+      }
+    }
+
+    return baseData;
   }
 
   private mapStatus(raw: string): string {
@@ -499,6 +563,18 @@ export class ViolationsService {
     Logger.log('Running daily cleanup of old evidence files...');
     const uploadDir = this.configService.get<string>('LOCAL_UPLOAD_DIR', path.join(process.cwd(), '..', '..', 'uploads'));
 
+    // ── MODEL TRAINING FREEZE WINDOW ─────────────────────────────────────────
+    // All images from 16 Oct 2026 to 16 Nov 2026 are kept for model training.
+    // Auto-delete resumes after 16 Nov 2026.
+    const FREEZE_START = new Date('2026-10-16T00:00:00.000Z');
+    const FREEZE_END   = new Date('2026-11-16T23:59:59.999Z');
+    const now = new Date();
+    if (now >= FREEZE_START && now <= FREEZE_END) {
+      Logger.log('CLEANUP SKIPPED — Model training freeze window active (16 Oct – 16 Nov 2026). All images retained.');
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     // Reject older than 2 days
     const twoDaysAgo = new Date();
     twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
@@ -517,6 +593,12 @@ export class ViolationsService {
 
     let deletedCount = 0;
     for (const v of oldViolations) {
+      // Extra safety: never delete files for violations created during freeze window
+      const createdAt = v.createdAt || new Date(0);
+      if (createdAt >= FREEZE_START && createdAt <= FREEZE_END) {
+        Logger.log(`Skipping evidence deletion for violation ${v.id} (created during model training freeze)`);
+        continue;
+      }
       for (const ev of v.evidence || []) {
         if (ev.filePath && !ev.filePath.startsWith('http')) {
           const absPath = path.resolve(uploadDir, ev.filePath);

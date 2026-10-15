@@ -89,6 +89,10 @@ export class AuthService {
   }
 
   private async generateTokensAndSession(user: any, ipAddress?: string, deviceInfo?: string) {
+    // Enforce SINGLE CONCURRENT SESSION per account:
+    // Invalidate all previous active sessions so only one person can use this account at a time.
+    await this.usersService.invalidateAllSessions(user.id);
+
     // Update login tracking
     await this.usersService.updateLastLogin(user.id);
     const session = await this.usersService.createSession(user.id, ipAddress, deviceInfo);
@@ -153,6 +157,15 @@ export class AuthService {
       junction: user.junction ?? null,
       requiresPasswordChange: user.requiresPasswordChange ?? false,
     };
+  }
+
+  async logout(userId: string, sessionId?: string) {
+    if (sessionId) {
+      await this.usersService.invalidateSession(sessionId);
+    } else {
+      await this.usersService.invalidateAllSessions(userId);
+    }
+    await this.auditService.logAction(userId, 'LOGOUT', undefined, undefined, { sessionId });
   }
 
   async logoutAll(userId: string) {

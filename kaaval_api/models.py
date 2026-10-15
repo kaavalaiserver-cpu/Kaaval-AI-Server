@@ -55,6 +55,8 @@ class Violation(Base):
     challan_status: Mapped[str] = mapped_column(String(50), default="NOT_GENERATED")
     challan_reference: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     
+    confidential_level: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

@@ -122,8 +122,12 @@ export class AuthController {
     return { status: 'success', message: 'Logged out from all devices' };
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('logout')
-  async logout(@Res({ passthrough: true }) res: Response) {
+  async logout(@Request() req: any, @Res({ passthrough: true }) res: Response) {
+    if (req.user?.id) {
+      await this.authService.logout(req.user.id, req.user.sessionId);
+    }
     res.clearCookie('kaaval_token');
     return { status: 'success', message: 'Logged out successfully' };
   }

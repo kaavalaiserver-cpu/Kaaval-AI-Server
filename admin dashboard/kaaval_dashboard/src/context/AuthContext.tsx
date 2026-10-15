@@ -18,7 +18,8 @@ export type Role =
   | 'sub_inspector'
   | 'operator'
   | 'viewer'
-  | 'developer';
+  | 'developer'
+  | (string & {});
 
 export interface AuthUser {
   id: string;
@@ -163,6 +164,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
+          const detail = error.response?.data?.message || '';
+          if (typeof detail === 'string' && (detail.includes('another device') || detail.includes('terminated'))) {
+            alert('Your session has ended because this account was logged into from another device or browser.');
+          }
           logout();
         }
         return Promise.reject(error);
@@ -175,7 +180,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const hasRole = (...roles: Role[]) => {
     if (!user) return false;
-    return roles.includes(user.role);
+    const uRole = (user.role || '').toLowerCase();
+    const targetRoles = roles.map(r => r.toLowerCase());
+    if (targetRoles.includes(uRole)) return true;
+    const hasSubAdminReq = targetRoles.some(r => r.endsWith('_admin') && r !== 'super_admin');
+    if (hasSubAdminReq && uRole.endsWith('_admin') && uRole !== 'super_admin') {
+      return true;
+    }
+    return false;
   };
 
   return (

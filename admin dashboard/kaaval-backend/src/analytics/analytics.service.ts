@@ -64,10 +64,12 @@ export class AnalyticsService {
     }
     
     const allCount = await countQb.getCount();
-    const pendingReview = violations30.filter(v =>
-      ['PENDING', 'READY', 'UNDER_REVIEW'].includes(v.status),
-    ).length;
-    const challansIssued = violations30.filter(v => v.status === 'VERIFIED' || v.status === 'APPROVED').length;
+    const pendingReview = await countQb.clone()
+      .andWhere("v.status IN ('PENDING', 'READY', 'UNDER_REVIEW')")
+      .getCount();
+    const challansIssued = await countQb.clone()
+      .andWhere("v.status IN ('ISSUED', 'CHALLAN_ISSUED', 'VERIFIED', 'APPROVED')")
+      .getCount();
 
     // daily_last_30
     const dailyMap: Record<string, number> = {};
@@ -81,7 +83,7 @@ export class AnalyticsService {
       const dateKey = v.createdAt.toISOString().slice(0, 10);
       dailyMap[dateKey] = (dailyMap[dateKey] || 0) + 1;
 
-      if (v.status === 'VERIFIED' || v.status === 'APPROVED') {
+      if (['ISSUED', 'CHALLAN_ISSUED', 'VERIFIED', 'APPROVED'].includes(v.status)) {
         finesMap[dateKey] = (finesMap[dateKey] || 0) + 1;
       }
 
@@ -227,7 +229,7 @@ export class AnalyticsService {
       const cam = v.camera.cameraCode;
       if (!byCam[cam]) byCam[cam] = { total: 0, issued: 0, rejected: 0 };
       byCam[cam].total++;
-      if (v.status === 'CHALLAN_ISSUED') byCam[cam].issued++;
+      if (['ISSUED', 'CHALLAN_ISSUED', 'VERIFIED', 'APPROVED'].includes(v.status)) byCam[cam].issued++;
       if (['REJECTED', 'DUPLICATE'].includes(v.status)) byCam[cam].rejected++;
     }
 

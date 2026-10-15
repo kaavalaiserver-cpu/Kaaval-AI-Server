@@ -58,10 +58,15 @@ async def process_ingestion(
     logger.info(f"Incoming RDK Metadata: {meta_dict}")
     
     subdivision = meta_dict.get("subdivision", "Unknown")
+    if "crimebrach" in subdivision.lower() or "crimebranch" in subdivision.lower():
+        subdivision = "crimebranch_Colachel"
     camera_id = meta_dict.get("camera_id", "UNKNOWN_CAM")
     vehicle_number = meta_dict.get("vehicle_number")
     raw_type = meta_dict.get("violation_type", "NO_HELMET").upper().strip()
     confidence = meta_dict.get("confidence", 0.0)
+    confidential_level = meta_dict.get("confidential_level")
+    if confidential_level is not None:
+        confidential_level = str(confidential_level)
     
     # Robust substring matching for RDK strings
     if "TRIPLES_PILLION_NO_HELMET" in raw_type:
@@ -130,7 +135,8 @@ async def process_ingestion(
             vehicle_id=vehicle_uuid,
             violation_type_id=vtype_uuid,
             violation_timestamp=dt,
-            status=status
+            status=status,
+            confidential_level=confidential_level
         )
         session.add(new_violation)
         await session.flush()
@@ -202,7 +208,7 @@ async def ingest_violation(
         if not camera:
             raise HTTPException(
                 status_code=422,
-                detail=f"Unknown camera_id '{camera_id}'. Valid IDs are KAI1–KAI11."
+                detail=f"Unknown camera_id '{camera_id}'. Camera code not registered."
             )
 
         vtype_stmt = select(ViolationType).where(ViolationType.violation_code == violation_type)

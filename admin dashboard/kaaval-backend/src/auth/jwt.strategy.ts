@@ -46,11 +46,12 @@ export class JwtStrategy extends JwtPassportStrategy {
   }
 
   async validate(payload: { sub: string; username: string; role: string; name: string; subdivision?: string | null; junction?: string | null; sessionId?: string }) {
-    if (payload.sessionId) {
-      const isValid = await this.usersService.isSessionValid(payload.sessionId);
-      if (!isValid) {
-        throw new UnauthorizedException('Session has been revoked or logged out');
-      }
+    if (!payload.sessionId) {
+      throw new UnauthorizedException('Session expired. Please log in again.');
+    }
+    const isValid = await this.usersService.isSessionValid(payload.sessionId);
+    if (!isValid) {
+      throw new UnauthorizedException('Session terminated: This account was accessed from another device/browser.');
     }
 
     return {
@@ -60,6 +61,7 @@ export class JwtStrategy extends JwtPassportStrategy {
       name: payload.name,
       subdivisionId: payload.subdivision ?? null,
       junctionId: payload.junction ?? null,
+      sessionId: payload.sessionId,
     };
   }
 }

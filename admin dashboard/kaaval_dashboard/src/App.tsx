@@ -23,11 +23,23 @@ const TECH_ROLES: Role[] = ['super_admin', 'developer'];
 const CAMERA_HEALTH_ROLES: Role[] = ['super_admin', 'developer', 'sp', 'dsp', 'inspector', 'sub_inspector', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'admin_sajiv', 'admin_binu', 'admin_harish'];
 const KNOWN_VEHICLES_ROLES: Role[] = ['super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish'];
 
+const isRoleAllowed = (allowedRoles: Role[] | undefined, userRole: Role) => {
+  if (!allowedRoles) return true;
+  const uRole = (userRole || '').toLowerCase();
+  const targetRoles = allowedRoles.map(r => r.toLowerCase());
+  if (targetRoles.includes(uRole)) return true;
+  const hasSubAdminReq = targetRoles.some(r => r.endsWith('_admin') && r !== 'super_admin');
+  if (hasSubAdminReq && uRole.endsWith('_admin') && uRole !== 'super_admin') {
+    return true;
+  }
+  return false;
+};
+
 const ProtectedRoute = ({ children, roles }: { children: React.ReactNode; roles?: Role[] }) => {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
-  if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
+  if (!isRoleAllowed(roles, user.role)) return <Navigate to="/" replace />;
   return <>{children}</>;
 };
 
@@ -62,12 +74,12 @@ function AppRoutes() {
           </ProtectedRoute>
         } />
         <Route path="users" element={
-          <ProtectedRoute roles={['super_admin']}>
+          <ProtectedRoute roles={['super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish']}>
             <UsersManagement />
           </ProtectedRoute>
         } />
         <Route path="audit-log" element={
-          <ProtectedRoute roles={['super_admin']}>
+          <ProtectedRoute roles={['super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish']}>
             <AuditLog />
           </ProtectedRoute>
         } />

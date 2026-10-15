@@ -58,7 +58,7 @@ const NavItem = ({ to, icon, label, isOpen, badge, roles }: NavItemProps) => {
   );
 };
 
-const ROLE_LABELS: Record<Role, string> = {
+const ROLE_LABELS: Record<string, string> = {
   super_admin: 'Super Admin',
   admin_sajiv: 'Admin (Sajiv)',
   admin_binu: 'Admin (Binu)',
@@ -217,10 +217,10 @@ const Layout = () => {
             roles={TECH_ROLES} />
 
           <NavItem to="/users" icon={<User size={20} />} label="User Management" isOpen={isSidebarOpen}
-            roles={['super_admin']} />
+            roles={['super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish']} />
 
           <NavItem to="/audit-log" icon={<ShieldCheck size={20} />} label="Audit Log" isOpen={isSidebarOpen}
-            roles={['super_admin']} />
+            roles={['super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish']} />
 
           <NavItem to="/reports" icon={<BarChart3 size={20} />} label="Reports" isOpen={isSidebarOpen}
             roles={MANAGEMENT_ROLES} />
@@ -302,7 +302,7 @@ const Layout = () => {
               {!isMobile && (
               <div className="user-info">
                 <span className="user-name">{user?.name}</span>
-                <span className="user-role">{user ? ROLE_LABELS[user.role] : ''}</span>
+                <span className="user-role">{user ? (ROLE_LABELS[user.role] || (user.role || '').replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())) : ''}</span>
               </div>
               )}
             </div>

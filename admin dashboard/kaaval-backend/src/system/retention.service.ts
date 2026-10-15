@@ -31,6 +31,17 @@ export class RetentionService {
     this.logger.log('Starting hourly data retention & staging...');
     const now = new Date();
 
+    // ── MODEL TRAINING FREEZE WINDOW ─────────────────────────────────────────
+    // Keep ALL images (rejected, issued, pending) from 16 Oct 2026 to 16 Nov 2026
+    // for model training. Auto-archive resumes after 16 Nov 2026.
+    const FREEZE_START = new Date('2026-10-16T00:00:00.000Z');
+    const FREEZE_END   = new Date('2026-11-16T23:59:59.999Z');
+    if (now >= FREEZE_START && now <= FREEZE_END) {
+      this.logger.log('RETENTION SKIPPED — Model training freeze window active (16 Oct – 16 Nov 2026). No images archived or deleted.');
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     try {
       // 1. Pending: Archive after 7 days
       const pendingCutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -50,12 +61,21 @@ export class RetentionService {
   }
 
   private async archiveViolations(status: string, thresholdDate: Date) {
+    const FREEZE_START = new Date('2026-10-16T00:00:00.000Z');
+    const FREEZE_END   = new Date('2026-11-16T23:59:59.999Z');
+
     const violations = await this.violationsRepository.find({
       where: { status: status, updatedAt: LessThan(thresholdDate) },
       relations: ['evidence', 'vehicle', 'violationType', 'camera'],
     });
 
     for (const violation of violations) {
+      // Never archive/delete violations created during the model training freeze window
+      const createdAt = violation.createdAt || new Date(0);
+      if (createdAt >= FREEZE_START && createdAt <= FREEZE_END) {
+        this.logger.log(`FREEZE: Skipping archive of ${status} violation ${violation.id} (created during model training window)`);
+        continue;
+      }
       await this.appendToExcel(violation, status);
       this.moveAssociatedFiles(violation, status);
       await this.violationsRepository.remove(violation);

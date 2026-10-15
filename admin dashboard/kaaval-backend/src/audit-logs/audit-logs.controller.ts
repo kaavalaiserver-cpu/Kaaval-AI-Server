@@ -13,7 +13,7 @@ export class AuditLogsController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH')
   async getAuditLogs(
     @Query('page') page = 1,
     @Query('limit') limit = 50,
