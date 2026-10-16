@@ -135,6 +135,17 @@ export class CamerasService {
 
   private sanitizeCameraDto(dto: any) {
     const clean = { ...dto };
+    delete clean.id;
+    delete clean.junction;
+    delete clean.device;
+    delete clean.settings;
+    delete clean.storage;
+    delete clean.events;
+    delete clean.violations;
+    delete clean.createdAt;
+    delete clean.updatedAt;
+    delete clean.lastSeen;
+
     if (clean.forwardedPort === '' || clean.forwardedPort === undefined || clean.forwardedPort === null) {
       clean.forwardedPort = null;
     } else if (typeof clean.forwardedPort === 'string') {

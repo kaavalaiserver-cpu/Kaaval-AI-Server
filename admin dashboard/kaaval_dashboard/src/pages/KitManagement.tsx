@@ -20,7 +20,7 @@ function emptyJunction() {
   return { junctionName: '', junctionCode: '', address: '', latitude: null, longitude: null, junctionType: 'SIGNAL', isOneWay: false, subdivisionId: '', isActive: true };
 }
 function emptyCamera() {
-  return { cameraName: '', cameraCode: '', junctionId: '', streamUrl: '', ipAddress: '', status: 'OFFLINE' };
+  return { cameraName: '', cameraCode: '', junctionId: '', streamUrl: '', ipAddress: '', status: 'OFFLINE', alertOnInactivity: false };
 }
 function emptyVType() {
   return { violationCode: '', violationName: '', description: '', defaultFine: 500, color: '#FF4B4B', severity: 'HIGH' };
@@ -43,7 +43,7 @@ export default function KitManagement() {
   const [saving, setSaving]         = useState(false);
 
   const { hasRole } = useAuth();
-  const isSuperAdmin = hasRole('super_admin');
+  const isSuperAdmin = hasRole('super_admin', 'admin_sajiv');
 
   useEffect(() => { loadAll(); }, []);
 
@@ -644,7 +644,7 @@ function CameraModal({ data, junctions, saving, onChange, onSave, onClose, hasRo
             <label>Stream URL</label>
             <input value={data.streamUrl || ''} onChange={e => set('streamUrl', e.target.value)} placeholder="rtsp://..." />
           </div>
-          {hasRole && (hasRole('super_admin') || hasRole('SUPER_ADMIN')) && (
+          {hasRole && (hasRole('super_admin') || hasRole('SUPER_ADMIN') || hasRole('admin_sajiv') || hasRole('ADMIN_SAJIV')) && (
             <>
               <div className="form-group">
                 <label>Operating Start Time</label>

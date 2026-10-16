@@ -86,7 +86,7 @@ export class CamerasController {
   }
 
   @Patch(':id/toggle-inactivity-alert')
-  @Roles('SUPER_ADMIN')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV')
   toggleInactivityAlert(@Param('id') id: string, @Body() body: { alertOnInactivity: boolean }) {
     return this.camerasService.toggleInactivityAlert(id, body.alertOnInactivity);
   }

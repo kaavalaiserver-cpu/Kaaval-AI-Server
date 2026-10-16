@@ -86,7 +86,7 @@ export class SystemController {
 
   @Post('inactivity-check')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN', 'DEVELOPER')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'DEVELOPER')
   triggerInactivityCheck() {
     return this.cameraInactivityService.triggerManualCheck();
   }

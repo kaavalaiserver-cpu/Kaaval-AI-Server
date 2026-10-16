@@ -83,8 +83,10 @@ export default function ModelIntelligence() {
   const [newPassword, setNewPassword] = useState('Intern@123');
   const [creating, setCreating] = useState(false);
 
-  // Check if system developer
-  const isDeveloper = user?.role === 'developer' || user?.role === 'super_admin';
+  // Check if system developer / admin
+  const isDeveloper = ['developer', 'super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish'].includes(
+    (user?.role || '').toLowerCase()
+  );
 
   const loadAnalytics = useCallback(async () => {
     try {
