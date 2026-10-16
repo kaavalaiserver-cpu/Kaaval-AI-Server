@@ -62,6 +62,12 @@ export class Camera {
   @Column({ name: 'operating_end_time', type: 'varchar', length: 5, nullable: true })
   operatingEndTime!: string | null;
 
+  @Column({ name: 'alert_on_inactivity', type: 'boolean', default: false })
+  alertOnInactivity!: boolean;
+
+  @Column({ name: 'last_inactivity_alert_sent', type: 'timestamp', nullable: true })
+  lastInactivityAlertSent!: Date | null;
+
   @Column({ type: 'text', nullable: true })
   remarks!: string | null;
 

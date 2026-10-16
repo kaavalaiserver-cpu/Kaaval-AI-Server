@@ -204,6 +204,17 @@ export class CamerasService {
     return await this.cameraRepo.findOne({ where: { id } });
   }
 
+  async toggleInactivityAlert(id: string, alertOnInactivity: boolean) {
+    await this.cameraRepo.update(id, {
+      alertOnInactivity,
+      lastInactivityAlertSent: null, // Reset tracker on toggle change
+    });
+    return await this.cameraRepo.findOne({
+      where: { id },
+      relations: ['junction', 'junction.subdivision', 'settings', 'device'],
+    });
+  }
+
   async remove(id: string) {
     const camera = await this.cameraRepo.findOne({ where: { id } });
     if (camera) {

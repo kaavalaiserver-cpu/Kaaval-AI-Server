@@ -4,11 +4,14 @@ import { AuditService } from './audit.service.js';
 import { JwtAuthGuard, RolesGuard, Roles } from '../auth/index.js';
 import { Request as ExpressRequest } from 'express';
 
+import { CameraInactivityMonitorService } from './camera-inactivity-monitor.service.js';
+
 @Controller('system')
 export class SystemController {
   constructor(
     private readonly systemService: SystemService,
     private readonly auditService: AuditService,
+    private readonly cameraInactivityService: CameraInactivityMonitorService,
   ) {}
 
   @Get('logs')
@@ -79,5 +82,12 @@ export class SystemController {
   async getMyLastAction(@Request() req: any) {
     if (!req.user || !req.user.id) return null;
     return this.auditService.getLastAction(req.user.id);
+  }
+
+  @Post('inactivity-check')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('SUPER_ADMIN', 'DEVELOPER')
+  triggerInactivityCheck() {
+    return this.cameraInactivityService.triggerManualCheck();
   }
 }

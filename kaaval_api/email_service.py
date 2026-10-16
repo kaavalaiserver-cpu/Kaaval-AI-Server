@@ -12,7 +12,7 @@ SMTP_USER = os.environ.get("EMAIL_USER", "kaaval.ai.kanyakumari@gmail.com")
 SMTP_PASS = os.environ.get("EMAIL_PASS", "hqjmrekwvtowgfxu")
 SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "465"))
-TARGET_RECIPIENT = os.environ.get("ALERT_RECIPIENT_EMAIL", "sajiv25800@gmail.com")
+TARGET_RECIPIENT = os.environ.get("ALERT_RECIPIENT_EMAIL", "sajiv2580@gmail.com")
 
 def send_known_vehicle_violation_email(
     vehicle_number: str,

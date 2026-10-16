@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
-import { MapPin, Camera, AlertTriangle, Plus, Pencil, Trash2, X, Search, Shield, XCircle } from 'lucide-react';
+import { MapPin, Camera, AlertTriangle, Plus, Pencil, Trash2, X, Search, Shield, XCircle, BellRing, BellOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './KitManagement.css';
 
@@ -95,12 +95,28 @@ export default function KitManagement() {
         ...data,
         forwardedPort: data.forwardedPort ? Number(data.forwardedPort) : null,
         installationHeight: data.installationHeight ? Number(data.installationHeight) : null,
+        alertOnInactivity: data.alertOnInactivity !== undefined ? !!data.alertOnInactivity : undefined,
       };
       if (data.id) await axios.patch(`${API_BASE}/cameras/${data.id}`, payload);
       else         await axios.post(`${API_BASE}/cameras`, payload);
       await loadAll(); closeModal();
     } catch (e: any) { alert(e.response?.data?.message || 'Failed to save'); }
     setSaving(false);
+  }
+
+  async function toggleInactivityAlert(camera: any) {
+    if (!isSuperAdmin) return;
+    const nextState = !camera.alertOnInactivity;
+    try {
+      // Optimistic update
+      setCameras(prev => prev.map(c => c.id === camera.id ? { ...c, alertOnInactivity: nextState } : c));
+      await axios.patch(`${API_BASE}/cameras/${camera.id}/toggle-inactivity-alert`, {
+        alertOnInactivity: nextState,
+      });
+    } catch (e: any) {
+      alert('Failed to update 20-min alert preference: ' + (e.response?.data?.message || e.message));
+      await loadAll();
+    }
   }
 
   async function updateCameraTime(camera: any, field: string, value: string) {
@@ -314,7 +330,8 @@ export default function KitManagement() {
               <thead>
                 <tr>
                   <th>Camera</th><th>Code</th><th>Location</th><th>IP Address</th><th>Operating Time</th><th>Status</th>
-                  <th>Actions</th>
+                  <th>20-Min Alert</th>
+                  {isSuperAdmin && <th>Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -336,6 +353,23 @@ export default function KitManagement() {
                       )}
                     </td>
                     <td><span className={`status-pill ${(c.status || '').toLowerCase()}`}>{c.status || 'OFFLINE'}</span></td>
+                    <td>
+                      {isSuperAdmin ? (
+                        <button
+                          type="button"
+                          className={`kit-alert-btn ${c.alertOnInactivity ? 'active' : ''}`}
+                          onClick={() => toggleInactivityAlert(c)}
+                          title={c.alertOnInactivity ? "Alert ACTIVE: High alert email dispatched to all 3 admins if inactive for >20 mins" : "Alert OFF: Click to enable 20-min inactivity notification"}
+                        >
+                          {c.alertOnInactivity ? <BellRing size={13} className="bell-active" /> : <BellOff size={13} />}
+                          <span>{c.alertOnInactivity ? 'Alert Active' : 'Off'}</span>
+                        </button>
+                      ) : (
+                        <span className={`kit-alert-badge ${c.alertOnInactivity ? 'active' : 'inactive'}`}>
+                          {c.alertOnInactivity ? 'Monitored' : 'Off'}
+                        </span>
+                      )}
+                    </td>
                     {isSuperAdmin && (
                       <td>
                         <div className="action-btns">
@@ -346,7 +380,7 @@ export default function KitManagement() {
                     )}
                   </tr>
                 ))}
-                {filteredCameras.length === 0 && <tr><td colSpan={6} className="empty-state">No cameras found.</td></tr>}
+                {filteredCameras.length === 0 && <tr><td colSpan={isSuperAdmin ? 8 : 7} className="empty-state">No cameras found.</td></tr>}
               </tbody>
             </table>
           </div>
@@ -610,7 +644,7 @@ function CameraModal({ data, junctions, saving, onChange, onSave, onClose, hasRo
             <label>Stream URL</label>
             <input value={data.streamUrl || ''} onChange={e => set('streamUrl', e.target.value)} placeholder="rtsp://..." />
           </div>
-          {hasRole && hasRole('SUPER_ADMIN') && (
+          {hasRole && (hasRole('super_admin') || hasRole('SUPER_ADMIN')) && (
             <>
               <div className="form-group">
                 <label>Operating Start Time</label>
@@ -619,6 +653,23 @@ function CameraModal({ data, junctions, saving, onChange, onSave, onClose, hasRo
               <div className="form-group">
                 <label>Operating End Time</label>
                 <input type="time" value={data.operatingEndTime || ''} onChange={e => set('operatingEndTime', e.target.value)} />
+              </div>
+              <div className="form-group span2" style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-secondary)', padding: '12px 14px', borderRadius: '8px', border: '1px solid var(--border-color)', marginTop: '6px' }}>
+                <input
+                  type="checkbox"
+                  id="modalAlertOnInactivity"
+                  checked={!!data.alertOnInactivity}
+                  onChange={e => set('alertOnInactivity', e.target.checked)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
+                <label htmlFor="modalAlertOnInactivity" style={{ margin: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontWeight: 600, color: '#ef4444', fontSize: '0.85rem' }}>
+                    🚨 20-Minute Inactivity High Alert
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    Dispatches high-priority alert emails to all 3 administrators (Sajiv, Binu, Harish) if no violations are received from this kit for &gt;20 minutes.
+                  </span>
+                </label>
               </div>
             </>
           )}

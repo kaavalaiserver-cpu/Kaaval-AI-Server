@@ -11,11 +11,20 @@ import { DiskMonitorService } from './disk-monitor.service.js';
 import { RetentionService } from './retention.service.js';
 import { Violation } from '../violations/entities/violation.entity.js';
 import { MailerService } from './mailer.service.js';
+import { CameraInactivityMonitorService } from './camera-inactivity-monitor.service.js';
 
 @Module({
   imports: [TypeOrmModule.forFeature([SystemLog, Camera, AuditLog, Violation])],
   controllers: [SystemController],
-  providers: [SystemService, AuditService, BackupService, DiskMonitorService, RetentionService, MailerService],
-  exports: [SystemService, AuditService],
+  providers: [
+    SystemService,
+    AuditService,
+    BackupService,
+    DiskMonitorService,
+    RetentionService,
+    MailerService,
+    CameraInactivityMonitorService,
+  ],
+  exports: [SystemService, AuditService, MailerService, CameraInactivityMonitorService],
 })
 export class SystemModule {}
