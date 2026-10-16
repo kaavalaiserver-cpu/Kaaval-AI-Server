@@ -65,9 +65,36 @@ async def process_ingestion(
     vehicle_number = meta_dict.get("vehicle_number")
     raw_type = meta_dict.get("violation_type", "NO_HELMET").upper().strip()
     confidence = meta_dict.get("confidence", 0.0)
-    confidential_level = meta_dict.get("confidential_level")
-    if confidential_level is not None:
-        confidential_level = str(confidential_level)
+    raw_conf = (
+        meta_dict.get("confidential_level")
+        or meta_dict.get("confidence_level")
+        or meta_dict.get("confidence_score")
+        or meta_dict.get("confidentialLevel")
+        or meta_dict.get("confidenceScore")
+        or meta_dict.get("conf_level")
+    )
+    if raw_conf is not None:
+        try:
+            f_val = float(raw_conf)
+            if 0 < f_val <= 1.0:
+                confidential_level = str(round(f_val * 100))
+            else:
+                confidential_level = str(round(f_val))
+        except (ValueError, TypeError):
+            confidential_level = str(raw_conf)
+    elif "confidence" in meta_dict and meta_dict["confidence"] is not None:
+        try:
+            f_val = float(meta_dict["confidence"])
+            if 0 < f_val <= 1.0:
+                confidential_level = str(round(f_val * 100))
+            elif f_val > 1.0:
+                confidential_level = str(round(f_val))
+            else:
+                confidential_level = "6"
+        except (ValueError, TypeError):
+            confidential_level = str(meta_dict["confidence"])
+    else:
+        confidential_level = "6"
     
     # Robust substring matching for RDK strings
     if "TRIPLES_PILLION_NO_HELMET" in raw_type:

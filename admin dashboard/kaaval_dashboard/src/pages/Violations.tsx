@@ -49,8 +49,18 @@ const isPlateUnknown = (plate: string | null | undefined): boolean => {
   return upper === 'UNKNOWN' || upper === 'UNREAD' || upper === 'NIL' || upper === '';
 };
 
+const REJECTION_REASONS = [
+  'Number plate unreadable / blurred',
+  'False detection / No violation',
+  'Helmet present / False positive',
+  'Exempt vehicle (Police / Govt / Ambulance)',
+  'Plate mismatch / Wrong vehicle detected',
+  'Duplicate detection',
+  'Camera obstruction / Bad lighting',
+];
+
 const Violations = () => {
-  const { hasRole } = useAuth();
+  const { hasRole, user: currentUser } = useAuth();
   const [searchParams] = useSearchParams();
   const [violations, setViolations] = useState<ViolationItem[]>([]);
   const [stats, setStats] = useState<ViolationStats | null>(null);
@@ -104,6 +114,13 @@ const Violations = () => {
   const [showPlateText, setShowPlateText] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
+  const [selectedRejectReason, setSelectedRejectReason] = useState<string>('');
+  const [showRejectPanel, setShowRejectPanel] = useState<boolean>(false);
+
+  // Table row quick action modal
+  const [actionModal, setActionModal] = useState<{ violation: ViolationItem; action: 'approve' | 'reject' } | null>(null);
+  const [actionModalReasons, setActionModalReasons] = useState<string[]>([]);
+  const [actionModalRejectReason, setActionModalRejectReason] = useState<string>('');
 
   // Add Modal
   const [showAddModal, setShowAddModal] = useState(false);
@@ -196,22 +213,60 @@ const Violations = () => {
     }
   };
 
-  const handleVerify = async (id: string, action: string, newType?: string) => {
+  const handleVerify = async (id: string, action: string, newType?: string, reviewNotes?: string) => {
     setProcessing(true);
     try {
       const payload: any = { action };
       if (newType) payload.violationType = newType;
+      if (reviewNotes) payload.reviewNotes = reviewNotes;
       await axios.post(`${API_BASE}/violations/${id}/verify`, payload);
-      const newStatus = action === 'approve' ? 'Verified' : 'Rejected';
+      const newStatus = action === 'approve' ? 'Issued' : 'Rejected';
       const formattedType = newType ? getViolationLabels(newType) : undefined;
+      const reviewerName = (currentUser as any)?.username || (currentUser as any)?.name || 'Admin';
       
-      setViolations(prev => prev.map(v => v.id === id ? { ...v, status: newStatus, ...(formattedType && { type: formattedType }) } : v));
+      setViolations(prev => prev.map(v => v.id === id ? {
+        ...v,
+        status: newStatus,
+        review_notes: reviewNotes || v.review_notes,
+        reviewed_by: reviewerName,
+        reviewed_at: new Date().toISOString(),
+        ...(formattedType && { type: formattedType })
+      } : v));
       
       if (selectedViolation?.id === id) {
-        setSelectedViolation(prev => prev ? { ...prev, status: newStatus, ...(formattedType && { type: formattedType }) } : null);
+        setSelectedViolation(prev => prev ? {
+          ...prev,
+          status: newStatus,
+          review_notes: reviewNotes || prev.review_notes,
+          reviewed_by: reviewerName,
+          reviewed_at: new Date().toISOString(),
+          ...(formattedType && { type: formattedType })
+        } : null);
       }
     } catch (err) { console.error(err); }
     finally { setProcessing(false); }
+  };
+
+  const openActionModal = (v: ViolationItem, action: 'approve' | 'reject') => {
+    setActionModal({ violation: v, action });
+    setActionModalReasons([]);
+    setActionModalRejectReason('');
+  };
+
+  const handleConfirmActionModal = async () => {
+    if (!actionModal) return;
+    if (actionModal.action === 'approve') {
+      if (actionModalReasons.length === 0) return;
+      const reasonLabels = actionModalReasons.map(id => {
+        const matched = violationReasons.find(r => r.id === id || r.violationCode === id);
+        return matched ? matched.violationName : id;
+      }).join(', ');
+      await handleVerify(actionModal.violation.id, 'approve', actionModalReasons.join(','), reasonLabels);
+    } else {
+      if (!actionModalRejectReason) return;
+      await handleVerify(actionModal.violation.id, 'reject', undefined, actionModalRejectReason);
+    }
+    setActionModal(null);
   };
 
   const handleDelete = async (id: string) => {
@@ -272,6 +327,8 @@ const Violations = () => {
     setSelectedViolation(v); setReviewZoom(1);
     setEditMode(false); setEditedPlate(v.vehicle_number);
     setSelectedReasons([]);
+    setSelectedRejectReason('');
+    setShowRejectPanel(false);
     setShowPlateText(false);
   };
 
@@ -448,58 +505,181 @@ const Violations = () => {
                 </div>
 
                 <div className="modal-actions" style={{ marginTop: 0, paddingTop: 0, borderTop: 'none', borderBottom: '1px solid var(--border)', paddingBottom: '20px', marginBottom: '10px' }}>
-                  {/* Issue Fine (Approve) — all except developer and viewer */}
-                  {hasRole('super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'operator') && (
+                  {/* Issue Fine / Reject — all except developer and viewer */}
+                  {hasRole('super_admin', 'admin_sajiv', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'operator') && (
                     <>
                       {selectedViolation.status === 'Pending' ? (
-                        <>
-                          <div style={{ width: '100%', marginBottom: '10px' }}>
-                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Select Violation Reasons:</span>
-                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                              {violationReasons.map(reason => (
-                                <button key={reason.id} 
-                                  disabled={processing} 
-                                  onClick={() => setSelectedReasons(prev => prev.includes(reason.id) ? prev.filter(r => r !== reason.id) : [...prev, reason.id])} 
-                                  style={{ 
-                                    flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', 
-                                    fontSize: '0.85rem', fontWeight: 600, padding: '8px 16px', borderRadius: '24px', transition: 'all 0.2s', cursor: 'pointer',
-                                    background: selectedReasons.includes(reason.id) ? '#3b82f6' : 'var(--bg-secondary)', 
-                                    color: selectedReasons.includes(reason.id) ? '#fff' : 'var(--text-primary)',
-                                    border: `1px solid ${selectedReasons.includes(reason.id) ? '#3b82f6' : 'var(--border)'}`
-                                  }}>
-                                  {selectedReasons.includes(reason.id) && <CheckCircle size={14} />}
-                                  {reason.violationName}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                          
-                          <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '15px' }}>
-                            <button className="btn-approve" disabled={processing || selectedReasons.length === 0} onClick={() => handleVerify(selectedViolation.id, 'approve', selectedReasons.join(','))} style={{ flex: 1, justifyContent: 'center', padding: '10px', opacity: selectedReasons.length === 0 ? 0.5 : 1, fontSize: '0.85rem' }}>
-                              <CheckCircle size={16} /> Issue Fine
+                        <div style={{ width: '100%', marginBottom: '10px' }}>
+                          <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+                            <button
+                              type="button"
+                              onClick={() => setShowRejectPanel(false)}
+                              style={{
+                                flex: 1,
+                                padding: '8px 12px',
+                                borderRadius: '6px',
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                background: !showRejectPanel ? 'rgba(34, 197, 94, 0.15)' : 'var(--bg-secondary)',
+                                color: !showRejectPanel ? '#22c55e' : 'var(--text-secondary)',
+                                border: `1px solid ${!showRejectPanel ? '#22c55e' : 'var(--border)'}`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px'
+                              }}
+                            >
+                              <CheckCircle size={15} /> Issue Fine
                             </button>
-                            
-                            {/* Reject — all except viewer */}
-                            {hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'operator') && (
-                              <button className="btn-reject" disabled={processing} onClick={() => handleVerify(selectedViolation.id, 'reject')} style={{ flex: 1, justifyContent: 'center', padding: '10px', fontSize: '0.85rem' }}>
-                                <XCircle size={16} /> Reject
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={() => setShowRejectPanel(true)}
+                              style={{
+                                flex: 1,
+                                padding: '8px 12px',
+                                borderRadius: '6px',
+                                fontSize: '0.85rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                background: showRejectPanel ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-secondary)',
+                                color: showRejectPanel ? '#ef4444' : 'var(--text-secondary)',
+                                border: `1px solid ${showRejectPanel ? '#ef4444' : 'var(--border)'}`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px'
+                              }}
+                            >
+                              <XCircle size={15} /> Reject
+                            </button>
                           </div>
-                        </>
-                      ) : selectedViolation.status === 'Verified' || selectedViolation.status === 'Challan Issued' ? (
-                        <div style={{ padding: '12px', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', borderRadius: '8px', border: '1px solid #22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600 }}>
-                          <CheckCircle size={18} /> Fine Issued (Approved)
+
+                          {!showRejectPanel ? (
+                            <div>
+                              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                Select Violation Reason (Mandatory):
+                              </span>
+                              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                                {violationReasons.map(reason => (
+                                  <button
+                                    key={reason.id}
+                                    type="button"
+                                    disabled={processing}
+                                    onClick={() => setSelectedReasons(prev => prev.includes(reason.id) ? prev.filter(r => r !== reason.id) : [...prev, reason.id])}
+                                    style={{
+                                      flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                      fontSize: '0.85rem', fontWeight: 600, padding: '8px 16px', borderRadius: '24px', transition: 'all 0.2s', cursor: 'pointer',
+                                      background: selectedReasons.includes(reason.id) ? '#3b82f6' : 'var(--bg-secondary)',
+                                      color: selectedReasons.includes(reason.id) ? '#fff' : 'var(--text-primary)',
+                                      border: `1px solid ${selectedReasons.includes(reason.id) ? '#3b82f6' : 'var(--border)'}`
+                                    }}
+                                  >
+                                    {selectedReasons.includes(reason.id) && <CheckCircle size={14} />}
+                                    {reason.violationName}
+                                  </button>
+                                ))}
+                              </div>
+                              {selectedReasons.length === 0 && (
+                                <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '6px' }}>
+                                  * Please select at least one violation reason before issuing fine.
+                                </div>
+                              )}
+                              <button
+                                className="btn-approve"
+                                disabled={processing || selectedReasons.length === 0}
+                                onClick={() => {
+                                  const reasonLabels = selectedReasons.map(id => {
+                                    const m = violationReasons.find(r => r.id === id || r.violationCode === id);
+                                    return m ? m.violationName : id;
+                                  }).join(', ');
+                                  handleVerify(selectedViolation.id, 'approve', selectedReasons.join(','), reasonLabels);
+                                }}
+                                style={{
+                                  width: '100%',
+                                  marginTop: '14px',
+                                  justifyContent: 'center',
+                                  padding: '11px',
+                                  opacity: selectedReasons.length === 0 ? 0.4 : 1,
+                                  cursor: selectedReasons.length === 0 ? 'not-allowed' : 'pointer',
+                                  fontSize: '0.88rem'
+                                }}
+                              >
+                                <CheckCircle size={16} /> Confirm Issue Fine
+                              </button>
+                            </div>
+                          ) : (
+                            <div>
+                              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                Select Rejection Reason (Mandatory):
+                              </span>
+                              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                                {REJECTION_REASONS.map(r => (
+                                  <button
+                                    key={r}
+                                    type="button"
+                                    disabled={processing}
+                                    onClick={() => setSelectedRejectReason(r)}
+                                    style={{
+                                      flex: '1 1 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                      fontSize: '0.82rem', fontWeight: 600, padding: '7px 14px', borderRadius: '24px', transition: 'all 0.2s', cursor: 'pointer',
+                                      background: selectedRejectReason === r ? 'rgba(239, 68, 68, 0.2)' : 'var(--bg-secondary)',
+                                      color: selectedRejectReason === r ? '#ef4444' : 'var(--text-primary)',
+                                      border: `1px solid ${selectedRejectReason === r ? '#ef4444' : 'var(--border)'}`
+                                    }}
+                                  >
+                                    {selectedRejectReason === r && <CheckCircle size={14} />}
+                                    {r}
+                                  </button>
+                                ))}
+                              </div>
+                              {!selectedRejectReason && (
+                                <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '6px' }}>
+                                  * Please select a reason before rejecting this violation.
+                                </div>
+                              )}
+                              <button
+                                className="btn-reject"
+                                disabled={processing || !selectedRejectReason}
+                                onClick={() => handleVerify(selectedViolation.id, 'reject', undefined, selectedRejectReason)}
+                                style={{
+                                  width: '100%',
+                                  marginTop: '14px',
+                                  justifyContent: 'center',
+                                  padding: '11px',
+                                  opacity: !selectedRejectReason ? 0.4 : 1,
+                                  cursor: !selectedRejectReason ? 'not-allowed' : 'pointer',
+                                  fontSize: '0.88rem'
+                                }}
+                              >
+                                <XCircle size={16} /> Confirm Reject
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ) : selectedViolation.status === 'Verified' || selectedViolation.status === 'Challan Issued' || selectedViolation.status === 'Issued' ? (
+                        <div style={{ padding: '12px', background: 'rgba(34, 197, 94, 0.15)', color: '#22c55e', borderRadius: '8px', border: '1px solid #22c55e', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+                            <CheckCircle size={18} /> Fine Issued (Approved)
+                          </div>
+                          {selectedViolation.review_notes && (
+                            <div style={{ fontSize: '0.82rem', color: '#16a34a' }}>Reason: {selectedViolation.review_notes}</div>
+                          )}
                         </div>
                       ) : selectedViolation.status === 'Rejected' ? (
-                        <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', borderRadius: '8px', border: '1px solid #ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: 600 }}>
-                          <XCircle size={18} /> Violation Rejected
+                        <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', borderRadius: '8px', border: '1px solid #ef4444', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+                            <XCircle size={18} /> Violation Rejected
+                          </div>
+                          {selectedViolation.review_notes && (
+                            <div style={{ fontSize: '0.82rem', color: '#dc2626' }}>Reason: {selectedViolation.review_notes}</div>
+                          )}
                         </div>
                       ) : null}
                     </>
                   )}
                   {/* Delete — only super_admin, developer, sp, dsp */}
-                  {hasRole('super_admin', 'developer', 'sp', 'dsp') && (
+                  {hasRole('super_admin', 'admin_sajiv', 'developer', 'sp', 'dsp') && (
                     <button className="btn-delete" disabled={processing} onClick={() => handleDelete(selectedViolation.id)}>
                       <Trash2 size={16} /> Delete
                     </button>
@@ -522,7 +702,19 @@ const Violations = () => {
                   <span className="label">Camera:</span>
                   <span className="value" style={{ fontSize: '0.95rem' }}>{selectedViolation.location} <span style={{ color: 'var(--text-dim)', fontSize: '0.8em' }}>({selectedViolation.camera_id})</span></span>
                 </div>
-                {selectedViolation.confidential_level && hasRole('super_admin', 'admin_binu', 'admin_harish') && (
+                {selectedViolation.review_notes && (
+                  <div className="detail-row" style={{
+                    background: selectedViolation.status === 'Rejected' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                    border: `1px solid ${selectedViolation.status === 'Rejected' ? '#ef4444' : '#22c55e'}`,
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    marginTop: '8px'
+                  }}>
+                    <span className="label" style={{ color: selectedViolation.status === 'Rejected' ? '#ef4444' : '#22c55e', fontWeight: 600 }}>Action Reason:</span>
+                    <span className="value" style={{ fontWeight: 600, color: selectedViolation.status === 'Rejected' ? '#ef4444' : '#22c55e' }}>{selectedViolation.review_notes}</span>
+                  </div>
+                )}
+                {selectedViolation.confidential_level && hasRole('super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish', 'developer') && (
                   <div className="detail-row" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', padding: '4px 8px', borderRadius: '4px', marginTop: '8px' }}>
                     <span className="label" style={{ color: '#ef4444' }}>Confidence Score:</span>
                     <span className="value" style={{ fontWeight: 'bold', color: '#ef4444' }}>{selectedViolation.confidential_level}%</span>
@@ -862,7 +1054,7 @@ const Violations = () => {
                     <span className="plate-number">{v.vehicle_number}</span>
                   )}
                   <span className="vehicle-type">{v.vehicle_type}</span>
-                  {v.confidential_level && hasRole('super_admin', 'admin_binu', 'admin_harish') && (
+                  {v.confidential_level && hasRole('super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish', 'developer') && (
                     <div style={{ marginTop: '4px', fontSize: '0.75rem', fontWeight: 600, color: '#ef4444', background: 'rgba(239, 68, 68, 0.1)', padding: '2px 6px', borderRadius: '4px', display: 'inline-block' }}>
                       Confidence Score: {v.confidential_level}%
                     </div>
@@ -892,9 +1084,36 @@ const Violations = () => {
                 <td>
                   {v.reviewed_by ? (
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      {v.status === 'Verified' || v.status === 'Challan Issued' ? 'Fine Issued by ' : v.status === 'Rejected' ? 'Violation rejected by ' : 'Reviewed by '}
-                      <strong>{v.reviewed_by}</strong><br/>
-                      at {new Date(v.reviewed_at!).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false })}
+                      <div>
+                        {v.status === 'Verified' || v.status === 'Challan Issued' || v.status === 'Issued' ? (
+                          <span style={{ color: '#22c55e', fontWeight: 600 }}>Fine Issued by </span>
+                        ) : v.status === 'Rejected' ? (
+                          <span style={{ color: '#ef4444', fontWeight: 600 }}>Violation rejected by </span>
+                        ) : (
+                          <span>Reviewed by </span>
+                        )}
+                        <strong>{v.reviewed_by}</strong>
+                      </div>
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.72rem', marginTop: '2px' }}>
+                        at {new Date(v.reviewed_at!).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false })}
+                      </div>
+                      {v.review_notes && (
+                        <div style={{
+                          marginTop: '5px',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          background: v.status === 'Rejected' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(34, 197, 94, 0.12)',
+                          color: v.status === 'Rejected' ? '#ef4444' : '#22c55e',
+                          border: `1px solid ${v.status === 'Rejected' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(34, 197, 94, 0.3)'}`,
+                          display: 'inline-block',
+                          maxWidth: '220px',
+                          wordBreak: 'break-word',
+                        }}>
+                          Reason: {v.review_notes}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <span style={{ color: 'var(--text-muted)' }}>—</span>
@@ -902,12 +1121,12 @@ const Violations = () => {
                 </td>
                 <td>
                   <div className="action-btns">
-                    {v.status === 'Pending' && hasRole('super_admin', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
+                    {v.status === 'Pending' && hasRole('super_admin', 'admin_sajiv', 'developer', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector') && (
                       <>
-                        <button className="act-btn approve" title="Approve Fine" onClick={() => handleVerify(v.id, 'approve')}>
+                        <button className="act-btn approve" title="Issue Fine" onClick={() => openActionModal(v, 'approve')}>
                           <CheckCircle size={14} />
                         </button>
-                        <button className="act-btn reject" title="Reject" onClick={() => handleVerify(v.id, 'reject')}>
+                        <button className="act-btn reject" title="Reject" onClick={() => openActionModal(v, 'reject')}>
                           <XCircle size={14} />
                         </button>
                       </>
@@ -915,7 +1134,7 @@ const Violations = () => {
                     <button className="act-btn view" title="View Evidence" onClick={() => openReviewModal(v)}>
                       <Maximize2 size={14} />
                     </button>
-                    {hasRole('super_admin', 'developer') && (
+                    {hasRole('super_admin', 'admin_sajiv', 'developer') && (
                       <button className="act-btn delete" title="Delete" onClick={() => handleDelete(v.id)}>
                         <Trash2 size={14} />
                       </button>
@@ -952,6 +1171,131 @@ const Violations = () => {
           <button onClick={handlePageJump}>Go</button>
         </div>
       </div>
+
+      {/* Table Quick Action Reason Modal */}
+      {actionModal && (
+        <div className="modal-backdrop" onClick={() => setActionModal(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px', padding: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px', color: actionModal.action === 'approve' ? '#22c55e' : '#ef4444' }}>
+                {actionModal.action === 'approve' ? <CheckCircle size={20} /> : <XCircle size={20} />}
+                {actionModal.action === 'approve' ? 'Issue Fine Confirmation' : 'Reject Violation Confirmation'}
+              </h3>
+              <button onClick={() => setActionModal(null)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+
+            <div style={{ background: 'var(--bg-secondary)', padding: '12px 16px', borderRadius: '8px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid var(--border)' }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '1.15rem', letterSpacing: '1px', fontFamily: 'monospace' }}>{actionModal.violation.vehicle_number}</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  {actionModal.violation.location} • {actionModal.violation.camera_id}
+                </div>
+              </div>
+              <span className="violation-type-badge">{actionModal.violation.type}</span>
+            </div>
+
+            <div style={{ marginBottom: '18px' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '10px', color: actionModal.action === 'approve' ? 'var(--text-secondary)' : '#ef4444' }}>
+                {actionModal.action === 'approve' ? 'Select Violation Reason (Mandatory):' : 'Select Rejection Reason (Mandatory):'}
+              </label>
+
+              {actionModal.action === 'approve' ? (
+                <div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {violationReasons.map(r => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => setActionModalReasons(prev => prev.includes(r.id) ? prev.filter(x => x !== r.id) : [...prev, r.id])}
+                        style={{
+                          padding: '8px 14px',
+                          borderRadius: '20px',
+                          fontSize: '0.82rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: `1px solid ${actionModalReasons.includes(r.id) ? '#3b82f6' : 'var(--border)'}`,
+                          background: actionModalReasons.includes(r.id) ? '#3b82f6' : 'var(--bg-secondary)',
+                          color: actionModalReasons.includes(r.id) ? '#fff' : 'var(--text-primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        {actionModalReasons.includes(r.id) && <CheckCircle size={14} />}
+                        {r.violationName}
+                      </button>
+                    ))}
+                  </div>
+                  {actionModalReasons.length === 0 && (
+                    <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '8px' }}>
+                      * You must choose at least one reason to issue fine.
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {REJECTION_REASONS.map(r => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setActionModalRejectReason(r)}
+                        style={{
+                          padding: '7px 14px',
+                          borderRadius: '20px',
+                          fontSize: '0.82rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          border: `1px solid ${actionModalRejectReason === r ? '#ef4444' : 'var(--border)'}`,
+                          background: actionModalRejectReason === r ? 'rgba(239, 68, 68, 0.2)' : 'var(--bg-secondary)',
+                          color: actionModalRejectReason === r ? '#ef4444' : 'var(--text-primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        {actionModalRejectReason === r && <CheckCircle size={14} />}
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                  {!actionModalRejectReason && (
+                    <div style={{ fontSize: '0.75rem', color: '#f59e0b', marginTop: '8px' }}>
+                      * You must select a reason to reject this violation.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              <button
+                className="btn-secondary"
+                onClick={() => setActionModal(null)}
+                style={{ flex: 1, padding: '10px', justifyContent: 'center' }}
+              >
+                Cancel
+              </button>
+              <button
+                className={actionModal.action === 'approve' ? 'btn-approve' : 'btn-reject'}
+                disabled={processing || (actionModal.action === 'approve' ? actionModalReasons.length === 0 : !actionModalRejectReason)}
+                onClick={handleConfirmActionModal}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  justifyContent: 'center',
+                  opacity: (actionModal.action === 'approve' ? actionModalReasons.length === 0 : !actionModalRejectReason) ? 0.4 : 1,
+                  cursor: (actionModal.action === 'approve' ? actionModalReasons.length === 0 : !actionModalRejectReason) ? 'not-allowed' : 'pointer',
+                  fontSize: '0.88rem'
+                }}
+              >
+                {actionModal.action === 'approve' ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                {actionModal.action === 'approve' ? 'Confirm Issue Fine' : 'Confirm Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

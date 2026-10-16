@@ -723,11 +723,8 @@
   margin-top: 2px;
 }
 
-.time-cell { white-space: nowrap; font-size: 0.84rem; color: #ffffff; }
-.time-sub { color: #ffffff; font-size: 0.76rem; margin-top: 2px; display: block; }
-
-  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
-}
+.time-cell { white-space: nowrap; font-size: 0.84rem; color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+.time-sub { color: #ffffff; font-size: 0.76rem; margin-top: 2px; display: block; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
 
 .conf-na {
   font-size: 0.7rem;

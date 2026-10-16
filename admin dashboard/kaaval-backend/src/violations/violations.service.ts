@@ -357,7 +357,20 @@ export class ViolationsService {
     v.status = newStatus;
     v.reviewedByUserId = user?.id;
     v.reviewedAt = new Date();
-    if (dto.reviewNotes) v.approvalNotes = dto.reviewNotes;
+    if (dto.reviewNotes) {
+      v.approvalNotes = dto.reviewNotes;
+      if (newStatus === 'REJECTED') {
+        v.rejectedReason = dto.reviewNotes;
+      }
+    }
+    if (dto.violationType) {
+      const vtypes = await this.violationTypeRepo.find();
+      const firstType = dto.violationType.split(',')[0].trim();
+      const matched = vtypes.find(vt => vt.id === firstType || vt.violationCode === firstType || vt.violationName === firstType);
+      if (matched) {
+        v.violationTypeId = matched.id;
+      }
+    }
 
     if (newStatus === 'ISSUED' || newStatus === 'REJECTED') {
       const folderName = newStatus === 'ISSUED' ? 'issued' : 'rejected';
@@ -463,13 +476,13 @@ export class ViolationsService {
       challan_issued_at: null,
       reviewed_by: (v.reviewedBy as any)?.username ?? (v.reviewedBy as any)?.fullName ?? v.reviewedByUserId ?? null,
       reviewed_at: v.reviewedAt?.toISOString() ?? null,
-      review_notes: v.approvalNotes ?? null,
+      review_notes: (v.status === 'REJECTED' ? v.rejectedReason : v.approvalNotes) || v.approvalNotes || v.rejectedReason || (v.status === 'ISSUED' ? (v.violationType?.violationName || v.violationType?.violationCode || 'Violation Verified') : null),
       metadata: null,
     };
 
     if (user) {
       const role = (user.role || '').toUpperCase();
-      if (['SUPER_ADMIN', 'ADMIN_BINU', 'ADMIN_HARISH'].includes(role)) {
+      if (['SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'DEVELOPER'].includes(role)) {
         baseData.confidential_level = v.confidentialLevel;
       }
     }
