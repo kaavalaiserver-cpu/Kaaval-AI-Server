@@ -139,6 +139,10 @@ export class MailerService {
               <td class="val">${currentIst} IST</td>
             </tr>
             <tr>
+              <td class="label">Daily Active Window</td>
+              <td class="val" style="color: #38bdf8; font-weight: 600;">08:00 AM – 06:00 PM IST (Daylight Operations Only)</td>
+            </tr>
+            <tr>
               <td class="label">Alert Recipient Group</td>
               <td class="val" style="font-size: 12px; color: #94a3b8;">Sajiv, Binu, Harish (High Alert Distribution)</td>
             </tr>

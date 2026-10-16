@@ -330,7 +330,7 @@ export default function KitManagement() {
               <thead>
                 <tr>
                   <th>Camera</th><th>Code</th><th>Location</th><th>IP Address</th><th>Operating Time</th><th>Status</th>
-                  <th>20-Min Alert</th>
+                  <th>20-Min Alert (8AM–6PM)</th>
                   {isSuperAdmin && <th>Actions</th>}
                 </tr>
               </thead>
@@ -359,13 +359,13 @@ export default function KitManagement() {
                           type="button"
                           className={`kit-alert-btn ${c.alertOnInactivity ? 'active' : ''}`}
                           onClick={() => toggleInactivityAlert(c)}
-                          title={c.alertOnInactivity ? "Alert ACTIVE: High alert email dispatched to all 3 admins if inactive for >20 mins" : "Alert OFF: Click to enable 20-min inactivity notification"}
+                          title={c.alertOnInactivity ? "Alert ACTIVE: High alert email sent if inactive for >20 mins during active hours (8 AM – 6 PM IST)" : "Alert OFF: Click to enable 20-min inactivity notification (active 8 AM – 6 PM IST)"}
                         >
                           {c.alertOnInactivity ? <BellRing size={13} className="bell-active" /> : <BellOff size={13} />}
                           <span>{c.alertOnInactivity ? 'Alert Active' : 'Off'}</span>
                         </button>
                       ) : (
-                        <span className={`kit-alert-badge ${c.alertOnInactivity ? 'active' : 'inactive'}`}>
+                        <span className={`kit-alert-badge ${c.alertOnInactivity ? 'active' : 'inactive'}`} title="Monitored between 8 AM - 6 PM IST">
                           {c.alertOnInactivity ? 'Monitored' : 'Off'}
                         </span>
                       )}
@@ -667,7 +667,7 @@ function CameraModal({ data, junctions, saving, onChange, onSave, onClose, hasRo
                     🚨 20-Minute Inactivity High Alert
                   </span>
                   <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                    Dispatches high-priority alert emails to all 3 administrators (Sajiv, Binu, Harish) if no violations are received from this kit for &gt;20 minutes.
+                    Dispatches high-priority alert emails to all 3 administrators (Sajiv, Binu, Harish) if no violations are received from this kit for &gt;20 minutes during daily operations (8:00 AM – 6:00 PM IST).
                   </span>
                 </label>
               </div>
