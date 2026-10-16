@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
-import { Search, Plus, EyeOff, Trash2, X, Clock, FileText } from 'lucide-react';
+import { Search, Plus, EyeOff, Trash2, X, Clock, FileText, Eye, ExternalLink } from 'lucide-react';
 import { formatDateIST } from '../utils/dateIST';
 import { useAuth } from '../context/AuthContext';
 import './KnownVehicles.css';
@@ -19,6 +19,7 @@ export default function KnownVehicles() {
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState('');
+  const [previewImage, setPreviewImage] = useState<{ url: string; title: string; timestamp?: string } | null>(null);
 
   const { hasRole } = useAuth();
   const canManage = hasRole('super_admin');
@@ -192,7 +193,7 @@ export default function KnownVehicles() {
 
       {historyModalOpen && (
         <div className="modal-backdrop">
-          <div className="modal-content medium-modal">
+          <div className="modal-content history-modal-dialog">
             <div className="modal-header">
               <h3><FileText size={20} /> Suppressed Violations: {selectedVehicle}</h3>
               <button className="btn-close" onClick={() => setHistoryModalOpen(false)}><X size={20} /></button>
@@ -206,6 +207,7 @@ export default function KnownVehicles() {
                 <table className="history-table">
                   <thead>
                     <tr>
+                      <th style={{ width: '90px' }}>Evidence</th>
                       <th>Date & Time</th>
                       <th>Violation Type</th>
                       <th>Camera / Location</th>
@@ -215,8 +217,28 @@ export default function KnownVehicles() {
                   <tbody>
                     {historyData.map(h => (
                       <tr key={h.id}>
+                        <td className="history-evidence-cell">
+                          {h.imageUrl ? (
+                            <div 
+                              className="history-thumb-box"
+                              onClick={() => setPreviewImage({
+                                url: h.imageUrl,
+                                title: `${h.vehicleNumber} — ${h.violationType || 'Violation'}`,
+                                timestamp: h.hitTimestamp
+                              })}
+                              title="Click to view full image"
+                            >
+                              <img src={h.imageUrl} alt="Violation Evidence" className="history-thumb-img" />
+                              <div className="history-thumb-overlay">
+                                <Eye size={14} />
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="no-img-pill">No image</span>
+                          )}
+                        </td>
                         <td>{formatDateIST(h.hitTimestamp)}</td>
-                        <td>{h.violationType || 'Unknown'}</td>
+                        <td><span className="violation-tag">{h.violationType || 'Unknown'}</span></td>
                         <td>{h.cameraName || h.cameraId}</td>
                         <td>{h.confidence ? `${(h.confidence * 100).toFixed(1)}%` : '-'}</td>
                       </tr>
@@ -224,6 +246,34 @@ export default function KnownVehicles() {
                   </tbody>
                 </table>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {previewImage && (
+        <div className="modal-backdrop preview-backdrop" onClick={() => setPreviewImage(null)}>
+          <div className="image-preview-modal" onClick={e => e.stopPropagation()}>
+            <div className="preview-modal-header">
+              <div>
+                <h4>{previewImage.title}</h4>
+                {previewImage.timestamp && <span className="preview-sub">{formatDateIST(previewImage.timestamp)}</span>}
+              </div>
+              <div className="preview-actions">
+                <a 
+                  href={previewImage.url} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="btn-open-ext"
+                  title="Open full image in new tab"
+                >
+                  <ExternalLink size={16} /> Open Original
+                </a>
+                <button className="btn-close" onClick={() => setPreviewImage(null)}><X size={20} /></button>
+              </div>
+            </div>
+            <div className="preview-modal-body">
+              <img src={previewImage.url} alt="Full evidence preview" className="full-preview-img" />
             </div>
           </div>
         </div>

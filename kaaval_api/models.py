@@ -92,3 +92,4 @@ class KnownVehicleHit(Base):
     location: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     hit_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    image_path: Mapped[Optional[str]] = mapped_column(String, nullable=True)

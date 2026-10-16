@@ -342,7 +342,7 @@ const Dashboard = () => {
           <div className="card-header">
             <h3><Camera size={18} /> Camera Status</h3>
             {canUseDistrictFeatures && (
-              <button className="link-btn" onClick={() => navigate('/cameras')}>
+              <button className="link-btn" onClick={() => navigate('/kit-management')}>
                 Details
               </button>
             )}

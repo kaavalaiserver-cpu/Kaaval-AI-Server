@@ -17,8 +17,9 @@ from local_storage import upload_image
 from security import verify_api_key
 import pipeline
 import io
-
+import asyncio
 from PIL import Image
+from email_service import send_known_vehicle_violation_email
 
 logger = logging.getLogger("kaaval_api.ingest")
 
@@ -223,7 +224,7 @@ async def ingest_violation(
             kv_result = await session.execute(kv_stmt)
             known_vehicle = kv_result.scalars().first()
             if known_vehicle:
-                # Record a hit in history instead of processing the violation
+                # Record a hit in history with image proof and email alert instead of public challan
                 confidence = meta_dict.get("confidence")
                 
                 timestamp_str = meta_dict.get("timestamp")
@@ -234,23 +235,55 @@ async def ingest_violation(
                         dt = datetime.now()
                 else:
                     dt = datetime.now()
-                    
+                
+                year, month, day = dt.strftime("%Y"), dt.strftime("%m"), dt.strftime("%d")
+                subdivision = meta_dict.get("subdivision", "Unknown")
+                if "crimebrach" in subdivision.lower() or "crimebranch" in subdivision.lower():
+                    subdivision = "crimebranch_Colachel"
+                
+                # Archive the full violation evidence image
+                hit_id = str(uuid.uuid4())
+                image_key = f"Kaniyakumari/{subdivision}/{camera_id}/{year}-{month}-{day}/known_{hit_id}.jpg"
+                full_bytes = await full_image.read()
+                
+                upload_image(settings.s3_images_bucket, image_key, full_bytes, full_image.content_type or "image/jpeg")
+
                 hit = KnownVehicleHit(
-                    id=str(uuid.uuid4()),
+                    id=hit_id,
                     known_vehicle_id=known_vehicle.id,
                     vehicle_number=normalized_plate,
                     violation_type=violation_type,
                     camera_id=camera.id,
                     camera_name=camera.camera_name,
-                    location=None, # Location might not be in camera model, or we can leave it null
+                    location=None,
                     confidence=float(confidence) if confidence is not None else None,
-                    hit_timestamp=dt
+                    hit_timestamp=dt,
+                    image_path=image_key
                 )
                 session.add(hit)
                 await session.commit()
-                logger.info(f"[{violation_id}] Suppressed known vehicle {normalized_plate}. Recorded in history.")
+                logger.info(f"[{violation_id}] Suppressed known vehicle {normalized_plate}. Recorded in history with image {image_key}.")
+
+                # Send vehicle details, timestamp, and image proof to sajiv25800@gmail.com asynchronously
+                try:
+                    asyncio.create_task(
+                        asyncio.to_thread(
+                            send_known_vehicle_violation_email,
+                            vehicle_number=normalized_plate,
+                            violation_type=violation_type,
+                            camera_name=camera.camera_name or camera_id,
+                            camera_code=camera.camera_code or camera_id,
+                            hit_timestamp=dt,
+                            reason=known_vehicle.reason or "Exempt / Known Vehicle",
+                            confidence=float(confidence) if confidence is not None else None,
+                            image_bytes=full_bytes
+                        )
+                    )
+                except Exception as mail_err:
+                    logger.error(f"Failed to schedule email alert task: {mail_err}")
+
                 return IngestResult(
-                    status="queued", # Pretend it was queued successfully to satisfy RDK
+                    status="queued",
                     violation_id=violation_id,
                     uploaded=True
                 )

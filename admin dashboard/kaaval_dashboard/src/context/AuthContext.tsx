@@ -14,10 +14,10 @@ export type Role =
   | 'colachel_admin'
   | 'kanyakumari_admin'
   | 'marthandam_admin'
+  | 'crimebranch_colachel_admin'
   | 'inspector'
   | 'sub_inspector'
-  | 'operator'
-  | 'viewer'
+  | 'intern'
   | 'developer'
   | (string & {});
 

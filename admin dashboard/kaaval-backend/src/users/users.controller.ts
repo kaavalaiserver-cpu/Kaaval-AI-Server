@@ -4,7 +4,7 @@ import { JwtAuthGuard, RolesGuard, Roles } from '../auth/index.js';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH')
+@Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'DEVELOPER')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 

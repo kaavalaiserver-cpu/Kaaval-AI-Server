@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE } from '../config';
 import { useAuth } from '../context/AuthContext';
@@ -25,6 +25,8 @@ import {
   ShieldAlert,
   ShieldCheck,
   EyeOff,
+  Brain,
+  CheckSquare,
 } from 'lucide-react';
 import type { SystemStatus } from '../types';
 import NotificationPanel from './NotificationPanel';
@@ -81,9 +83,11 @@ const TECH_ROLES: Role[] = ['super_admin', 'developer'];
 const MANAGEMENT_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'admin_sajiv', 'admin_binu', 'admin_harish'];
 const CAMERA_HEALTH_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer', 'admin_sajiv', 'admin_binu', 'admin_harish'];
 const KNOWN_VEHICLES_ROLES: Role[] = ['super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish'];
+const REVIEW_STUDIO_ROLES: Role[] = ['intern', 'developer', 'super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish', 'inspector', 'sub_inspector'];
 const Layout = () => {
   const { user, logout, hasRole } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   
   // Mobile check state
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -94,6 +98,14 @@ const Layout = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [theme, setTheme] = useState(document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
   const [lastAction, setLastAction] = useState<any>(null);
+
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+    navigate(`/violations?search=${encodeURIComponent(q)}`);
+    setSearchOpen(false);
+  };
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
@@ -189,43 +201,58 @@ const Layout = () => {
         </div>
 
         <nav className="nav-menu">
-          <div className="nav-section-label">{isOpen(isSidebarOpen, 'MAIN')}</div>
-          <NavItem to="/" icon={<LayoutDashboard size={20} />} label="Dashboard" isOpen={isSidebarOpen} />
-          
-          <NavItem to="/violations" icon={<AlertTriangle size={20} />} label="Violations" isOpen={isSidebarOpen} />
-            
+          {user?.role === 'intern' ? (
+            <>
+              <div className="nav-section-label">{isOpen(isSidebarOpen, 'STUDIO')}</div>
+              <NavItem to="/review-studio" icon={<CheckSquare size={20} />} label="Model Review Studio" isOpen={isSidebarOpen} />
+              <div className="nav-section-label">{isOpen(isSidebarOpen, 'ACCOUNT')}</div>
+              <NavItem to="/settings" icon={<Settings size={20} />} label="Settings" isOpen={isSidebarOpen} />
+            </>
+          ) : (
+            <>
+              <div className="nav-section-label">{isOpen(isSidebarOpen, 'MAIN')}</div>
+              <NavItem to="/" icon={<LayoutDashboard size={20} />} label="Dashboard" isOpen={isSidebarOpen} />
+              
+              <NavItem to="/violations" icon={<AlertTriangle size={20} />} label="Violations" isOpen={isSidebarOpen} />
 
+              <NavItem to="/review-studio" icon={<CheckSquare size={20} />} label="Model Review Studio" isOpen={isSidebarOpen}
+                roles={REVIEW_STUDIO_ROLES} />
 
-          {hasRole(...MANAGEMENT_ROLES) && <div className="nav-section-label">{isOpen(isSidebarOpen, 'INSIGHTS')}</div>}
-          <NavItem to="/analytics" icon={<BarChart3 size={20} />} label="Analytics" isOpen={isSidebarOpen} 
-            roles={MANAGEMENT_ROLES} />
-          
-          <NavItem to="/dev-analytics" icon={<Code2 size={20} />} label="Dev Analytics" isOpen={isSidebarOpen}
-            roles={TECH_ROLES} />
+              {hasRole(...MANAGEMENT_ROLES) && <div className="nav-section-label">{isOpen(isSidebarOpen, 'INSIGHTS')}</div>}
+              <NavItem to="/analytics" icon={<BarChart3 size={20} />} label="Analytics" isOpen={isSidebarOpen} 
+                roles={MANAGEMENT_ROLES} />
+              
+              <NavItem to="/dev-analytics" icon={<Code2 size={20} />} label="Dev Analytics" isOpen={isSidebarOpen}
+                roles={TECH_ROLES} />
 
-          {hasRole(...CAMERA_HEALTH_ROLES) && <div className="nav-section-label">{isOpen(isSidebarOpen, 'SYSTEM')}</div>}
-          <NavItem to="/kit-management" icon={<MapPin size={20} />} label="Camera Network" isOpen={isSidebarOpen}
-            roles={CAMERA_HEALTH_ROLES} />
-            
-          <NavItem to="/wanted-vehicles" icon={<ShieldAlert size={20} />} label="Wanted Vehicles" isOpen={isSidebarOpen}
-            roles={CAMERA_HEALTH_ROLES} />
+              <NavItem to="/model-intelligence" icon={<Brain size={20} />} label="Model Intelligence" isOpen={isSidebarOpen}
+                roles={TECH_ROLES} />
 
-          <NavItem to="/known-vehicles" icon={<EyeOff size={20} />} label="Known Vehicles" isOpen={isSidebarOpen}
-            roles={KNOWN_VEHICLES_ROLES} />
+              {hasRole(...CAMERA_HEALTH_ROLES) && <div className="nav-section-label">{isOpen(isSidebarOpen, 'SYSTEM')}</div>}
+              <NavItem to="/kit-management" icon={<MapPin size={20} />} label="Camera Network" isOpen={isSidebarOpen}
+                roles={CAMERA_HEALTH_ROLES} />
+                
+              <NavItem to="/wanted-vehicles" icon={<ShieldAlert size={20} />} label="Wanted Vehicles" isOpen={isSidebarOpen}
+                roles={CAMERA_HEALTH_ROLES} />
 
-          <NavItem to="/system" icon={<Activity size={20} />} label="System Metrics" isOpen={isSidebarOpen}
-            roles={TECH_ROLES} />
+              <NavItem to="/known-vehicles" icon={<EyeOff size={20} />} label="Known Vehicles" isOpen={isSidebarOpen}
+                roles={KNOWN_VEHICLES_ROLES} />
 
-          <NavItem to="/users" icon={<User size={20} />} label="User Management" isOpen={isSidebarOpen}
-            roles={['super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish']} />
+              <NavItem to="/system" icon={<Activity size={20} />} label="System Metrics" isOpen={isSidebarOpen}
+                roles={TECH_ROLES} />
 
-          <NavItem to="/audit-log" icon={<ShieldCheck size={20} />} label="Audit Log" isOpen={isSidebarOpen}
-            roles={['super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish']} />
+              <NavItem to="/users" icon={<User size={20} />} label="User Management" isOpen={isSidebarOpen}
+                roles={['super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish']} />
 
-          <NavItem to="/reports" icon={<BarChart3 size={20} />} label="Reports" isOpen={isSidebarOpen}
-            roles={MANAGEMENT_ROLES} />
+              <NavItem to="/audit-log" icon={<ShieldCheck size={20} />} label="Audit Log" isOpen={isSidebarOpen}
+                roles={['super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish']} />
 
-          <NavItem to="/settings" icon={<Settings size={20} />} label="Settings" isOpen={isSidebarOpen} />
+              <NavItem to="/reports" icon={<BarChart3 size={20} />} label="Reports" isOpen={isSidebarOpen}
+                roles={MANAGEMENT_ROLES} />
+
+              <NavItem to="/settings" icon={<Settings size={20} />} label="Settings" isOpen={isSidebarOpen} />
+            </>
+          )}
           
           {!hasRole('super_admin', 'developer') && lastAction && isSidebarOpen && (
             <div className="last-action-widget" style={{ padding: '10px 16px', margin: '15px 10px', background: 'var(--bg-card-hover)', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.75rem' }}>
@@ -270,23 +297,33 @@ const Layout = () => {
 
           <div className="top-bar-right">
             {/* Search */}
-            <div className={`search-container ${searchOpen ? 'open' : ''}`}>
+            <form onSubmit={handleSearchSubmit} className={`search-container ${searchOpen ? 'open' : ''}`}>
               {searchOpen && (
                 <input
                   type="text"
-                  placeholder="Search vehicle, camera, violation..."
+                  placeholder="Search vehicle plate..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   autoFocus
                 />
               )}
               <button
+                type={searchOpen && searchQuery.trim() ? "submit" : "button"}
                 className="icon-btn"
-                onClick={() => setSearchOpen(!searchOpen)}
+                onClick={() => {
+                  if (!searchOpen) {
+                    setSearchOpen(true);
+                  } else if (searchQuery.trim()) {
+                    handleSearchSubmit();
+                  } else {
+                    setSearchOpen(false);
+                  }
+                }}
+                title="Search violations"
               >
                 <Search size={18} />
               </button>
-            </div>
+            </form>
 
             {/* Theme Switcher */}
             <button className="icon-btn" onClick={toggleTheme} title="Toggle Theme">

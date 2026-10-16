@@ -23,9 +23,9 @@ export class SystemService {
   ) {}
 
   async getAiStatus() {
-    const aiUrl = this.config.get<string>('AI_BACKEND_URL', 'http://127.0.0.1:8000');
+    const aiUrl = this.config.get<string>('AI_BACKEND_URL', 'http://evidence_api:8001');
     try {
-      const res = await fetch(`${aiUrl}/status`, { signal: AbortSignal.timeout(2000) });
+      const res = await fetch(`${aiUrl}/health`, { signal: AbortSignal.timeout(2000) });
       if (!res.ok) throw new Error('AI Backend unreachable');
       return await res.json();
     } catch {
@@ -141,11 +141,16 @@ export class SystemService {
     // AI Pipeline status
     let aiStatus = 'offline';
     try {
-      const aiUrl = this.config.get<string>('AI_BACKEND_URL', 'http://127.0.0.1:8000');
-      const res = await fetch(`${aiUrl}/status`, { signal: AbortSignal.timeout(1500) });
+      const aiUrl = this.config.get<string>('AI_BACKEND_URL', 'http://evidence_api:8001');
+      const res = await fetch(`${aiUrl}/health`, { signal: AbortSignal.timeout(2000) });
       if (res.ok) aiStatus = 'healthy';
     } catch {
-      aiStatus = 'offline';
+      try {
+        const res2 = await fetch('http://127.0.0.1:8001/health', { signal: AbortSignal.timeout(1000) });
+        if (res2.ok) aiStatus = 'healthy';
+      } catch {
+        aiStatus = 'offline';
+      }
     }
 
     return {
@@ -164,7 +169,7 @@ export class SystemService {
     const port = this.config.get<string>('PORT', '8003');
     const nodeEnv = this.config.get<string>('NODE_ENV', 'development');
     const isRedis = !!this.config.get('REDIS_HOST');
-    const aiUrl = this.config.get<string>('AI_BACKEND_URL', 'http://127.0.0.1:8000');
+    const aiUrl = this.config.get<string>('AI_BACKEND_URL', 'http://evidence_api:8001');
 
     return {
       status: 'healthy',
@@ -172,8 +177,8 @@ export class SystemService {
       redis: isRedis ? 'ok' : 'in-memory',
       timestamp: new Date().toISOString(),
       config: {
-        cacheType: isRedis ? 'Redis' : 'In-Memory Cache',
-        aiBackend: `CV Pipeline (${aiUrl})`,
+        cacheType: isRedis ? 'Redis' : 'In-Memory Cache (Active)',
+        aiBackend: `Evidence & AI Engine (${aiUrl})`,
         apiPort: port,
         environment: nodeEnv,
       },

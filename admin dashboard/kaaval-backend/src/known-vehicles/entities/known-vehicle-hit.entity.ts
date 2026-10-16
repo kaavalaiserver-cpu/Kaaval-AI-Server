@@ -37,6 +37,9 @@ export class KnownVehicleHit {
   @CreateDateColumn({ name: 'hit_timestamp' })
   hitTimestamp!: Date;
 
+  @Column({ name: 'image_path', type: 'varchar', nullable: true })
+  imagePath!: string | null;
+
   @ManyToOne(() => KnownVehicle, (kv) => kv.hits, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'known_vehicle_id' })
   knownVehicle!: KnownVehicle;

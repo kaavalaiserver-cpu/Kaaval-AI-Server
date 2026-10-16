@@ -48,7 +48,8 @@ const SystemStatus = () => {
   }
 
   const dbOk = health && (health as { database?: string }).database === 'ok';
-  const redisOk = health && (health as { redis?: string }).redis === 'ok';
+  const cacheOk = health && ((health as any).redis === 'ok' || (health as any).redis === 'in-memory');
+  const cacheLabel = (health as any)?.redis === 'ok' ? 'Redis Connected' : 'In-Memory Active';
 
   return (
     <div className="sysstatus-page">
@@ -75,14 +76,14 @@ const SystemStatus = () => {
         />
         <HealthCard
           icon={<HardDrive size={20} />}
-          label="Redis Cache"
-          status={redisOk ? 'Connected' : 'Disconnected'}
-          ok={!!redisOk}
+          label="Cache Layer"
+          status={cacheOk ? cacheLabel : 'Disconnected'}
+          ok={!!cacheOk}
         />
         <HealthCard
           icon={<Cpu size={20} />}
           label="AI Pipeline"
-          status={status.aiPipelineStatus ?? 'Unknown'}
+          status={status.aiPipelineStatus === 'healthy' ? 'Active' : 'Offline'}
           ok={status.aiPipelineStatus === 'healthy'}
         />
       </div>

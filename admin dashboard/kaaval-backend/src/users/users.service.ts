@@ -46,7 +46,7 @@ export class UsersService implements OnModuleInit {
         { code: 'DSP', name: 'Deputy SP', level: 20 },
         { code: 'INSPECTOR', name: 'Traffic Inspector', level: 30 },
         { code: 'SUB_INSPECTOR', name: 'Sub-Inspector', level: 40 },
-        { code: 'OPERATOR', name: 'Control Room Operator', level: 50 },
+        { code: 'INTERN', name: 'Intern Reviewer', level: 60 },
         { code: 'NAGERCOIL_ADMIN', name: 'Nagercoil Sub-Admin', level: 25 },
         { code: 'THUCKALAY_ADMIN', name: 'Thuckalay Sub-Admin', level: 25 },
         { code: 'COLACHEL_ADMIN', name: 'Colachel Sub-Admin', level: 25 },
@@ -90,7 +90,7 @@ export class UsersService implements OnModuleInit {
       const developerRole = await this.rolesRepository.findOneBy({ roleCode: 'DEVELOPER' });
       const spRole = await this.rolesRepository.findOneBy({ roleCode: 'SP' });
       const inspectorRole = await this.rolesRepository.findOneBy({ roleCode: 'INSPECTOR' });
-      const operatorRole = await this.rolesRepository.findOneBy({ roleCode: 'OPERATOR' });
+      const internRole = await this.rolesRepository.findOneBy({ roleCode: 'INTERN' });
 
       const adminSajivRole = await this.rolesRepository.findOneBy({ roleCode: 'ADMIN_SAJIV' });
       const adminBinuRole  = await this.rolesRepository.findOneBy({ roleCode: 'ADMIN_BINU' });
@@ -246,23 +246,36 @@ export class UsersService implements OnModuleInit {
     });
   }
 
+  private isUUID(val: any): boolean {
+    if (typeof val !== 'string') return false;
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim());
+  }
+
   private async resolveRelations(data: any): Promise<any> {
     const resolved = { ...data };
     
-    if (resolved.role) {
-      const roleStr = String(resolved.role).toUpperCase();
-      let roleEntity = await this.rolesRepository.findOneBy({ roleCode: roleStr });
+    // ── 1. Resolve Role ──────────────────────────────────────────
+    const rawRole = resolved.role !== undefined ? resolved.role : resolved.roleId;
+    if (rawRole) {
+      const roleStr = String(rawRole).trim();
+      let roleEntity: Role | null = null;
+      if (this.isUUID(roleStr)) {
+        roleEntity = await this.rolesRepository.findOne({ where: { id: roleStr } });
+      }
       if (!roleEntity) {
+        const upper = roleStr.toUpperCase();
         roleEntity = await this.rolesRepository
           .createQueryBuilder('r')
-          .where('UPPER(r.role_code) = :rc', { rc: roleStr })
+          .where('UPPER(r.role_code) = :rc', { rc: upper })
+          .orWhere('UPPER(r.display_name) = :dn', { dn: upper })
           .getOne();
       }
       if (roleEntity) {
         resolved.roleId = roleEntity.id;
+        const roleCode = roleEntity.roleCode;
         // Auto-link subdivision if selecting a subdivision admin role and subdivision is not explicitly specified
-        if (!resolved.subdivision && !resolved.subdivisionId && roleStr.endsWith('_ADMIN') && roleStr !== 'SUPER_ADMIN') {
-          const subNameGuess = roleStr.replace(/_ADMIN$/, '');
+        if (!resolved.subdivision && !resolved.subdivisionId && roleCode.endsWith('_ADMIN') && roleCode !== 'SUPER_ADMIN') {
+          const subNameGuess = roleCode.replace(/_ADMIN$/, '');
           const matchedSub = await this.subdivisionsRepository
             .createQueryBuilder('s')
             .where('REPLACE(UPPER(s.subdivision_name), \' \', \'_\') = :sn', { sn: subNameGuess })
@@ -277,46 +290,103 @@ export class UsersService implements OnModuleInit {
       }
       delete resolved.role;
     }
+
+    if (resolved.roleId && !this.isUUID(resolved.roleId)) {
+      resolved.roleId = null;
+    }
     
-    if (resolved.subdivision) {
-      let sub = await this.subdivisionsRepository.findOneBy({ id: resolved.subdivision });
-      if (!sub) {
-        sub = await this.subdivisionsRepository.findOneBy({ subdivisionName: resolved.subdivision });
-      }
-      if (!sub) {
-        sub = await this.subdivisionsRepository
-          .createQueryBuilder('s')
-          .where('LOWER(s.subdivision_name) = LOWER(:name)', { name: resolved.subdivision })
-          .getOne();
-      }
-      if (sub) {
-        resolved.subdivisionId = sub.id;
-        resolved.districtId = sub.districtId;
+    // ── 2. Resolve Subdivision ────────────────────────────────────
+    const rawSub = resolved.subdivision !== undefined ? resolved.subdivision : resolved.subdivisionId;
+    if (rawSub !== undefined) {
+      const subVal = typeof rawSub === 'string' ? rawSub.trim() : rawSub;
+      if (!subVal || ['none', 'NONE', 'all', 'ALL', 'district wide', 'DISTRICT WIDE'].includes(String(subVal).toLowerCase())) {
+        resolved.subdivisionId = null;
+        resolved.districtId = null;
+      } else {
+        let sub: Subdivision | null = null;
+        if (this.isUUID(subVal)) {
+          sub = await this.subdivisionsRepository.findOne({ where: { id: subVal } });
+        }
+        if (!sub) {
+          sub = await this.subdivisionsRepository
+            .createQueryBuilder('s')
+            .where('LOWER(s.subdivision_name) = LOWER(:name)', { name: String(subVal) })
+            .orWhere('LOWER(REPLACE(s.subdivision_name, \' \', \'_\')) = LOWER(:name2)', { name2: String(subVal).replace(/ /g, '_') })
+            .orWhere('LOWER(s.subdivision_code) = LOWER(:code)', { code: String(subVal) })
+            .getOne();
+        }
+        if (sub) {
+          resolved.subdivisionId = sub.id;
+          resolved.districtId = sub.districtId;
+        } else {
+          resolved.subdivisionId = null;
+        }
       }
       delete resolved.subdivision;
     }
+
+    if (resolved.subdivisionId && !this.isUUID(resolved.subdivisionId)) {
+      resolved.subdivisionId = null;
+    }
     
-    if (resolved.junction) {
-      let junc = await this.junctionsRepository.findOneBy({ id: resolved.junction });
-      if (!junc) {
-        junc = await this.junctionsRepository.findOneBy({ junctionName: resolved.junction });
-      }
-      if (!junc) {
-        junc = await this.junctionsRepository
-          .createQueryBuilder('j')
-          .where('LOWER(j.junction_name) = LOWER(:name)', { name: resolved.junction })
-          .getOne();
-      }
-      if (junc) {
-        resolved.junctionId = junc.id;
-        resolved.subdivisionId = junc.subdivisionId;
-        const sub = await this.subdivisionsRepository.findOneBy({ id: junc.subdivisionId });
-        if (sub) resolved.districtId = sub.districtId;
+    // ── 3. Resolve Junction ───────────────────────────────────────
+    const rawJunc = resolved.junction !== undefined ? resolved.junction : resolved.junctionId;
+    if (rawJunc !== undefined) {
+      const jVal = typeof rawJunc === 'string' ? rawJunc.trim() : rawJunc;
+      if (!jVal || ['none', 'NONE'].includes(String(jVal).toLowerCase())) {
+        resolved.junctionId = null;
+      } else {
+        let junc: Junction | null = null;
+        if (this.isUUID(jVal)) {
+          junc = await this.junctionsRepository.findOne({ where: { id: jVal } });
+        }
+        if (!junc) {
+          junc = await this.junctionsRepository
+            .createQueryBuilder('j')
+            .where('LOWER(j.junction_name) = LOWER(:name)', { name: String(jVal) })
+            .orWhere('LOWER(j.junction_code) = LOWER(:code)', { code: String(jVal) })
+            .getOne();
+        }
+        if (junc) {
+          resolved.junctionId = junc.id;
+          resolved.subdivisionId = junc.subdivisionId;
+          if (this.isUUID(junc.subdivisionId)) {
+            const sub = await this.subdivisionsRepository.findOne({ where: { id: junc.subdivisionId } });
+            if (sub) resolved.districtId = sub.districtId;
+          }
+        } else {
+          resolved.junctionId = null;
+        }
       }
       delete resolved.junction;
     }
+
+    if (resolved.junctionId && !this.isUUID(resolved.junctionId)) {
+      resolved.junctionId = null;
+    }
     
-    if (resolved.district !== undefined) delete resolved.district;
+    // ── 4. Resolve District ───────────────────────────────────────
+    const rawDist = resolved.district !== undefined ? resolved.district : resolved.districtId;
+    if (rawDist !== undefined) {
+      const dVal = typeof rawDist === 'string' ? rawDist.trim() : rawDist;
+      if (dVal && !['none', 'NONE'].includes(String(dVal).toLowerCase())) {
+        if (this.isUUID(dVal)) {
+          resolved.districtId = dVal;
+        } else {
+          const dist = await this.districtsRepository
+            .createQueryBuilder('d')
+            .where('LOWER(d.district_name) = LOWER(:name)', { name: String(dVal) })
+            .orWhere('LOWER(d.district_code) = LOWER(:code)', { code: String(dVal) })
+            .getOne();
+          if (dist) resolved.districtId = dist.id;
+        }
+      }
+      delete resolved.district;
+    }
+
+    if (resolved.districtId && !this.isUUID(resolved.districtId)) {
+      resolved.districtId = null;
+    }
     
     return resolved;
   }
@@ -352,6 +422,7 @@ export class UsersService implements OnModuleInit {
   }
 
   async updateUser(id: string, data: any, adminId: string, reason: string, ip?: string): Promise<Omit<User, 'passwordHash'> | null> {
+    if (!this.isUUID(id)) return null;
     const resolvedData = await this.resolveRelations(data);
     
     await this.usersRepository.update(id, { ...resolvedData, updatedByUserId: adminId });
@@ -363,6 +434,7 @@ export class UsersService implements OnModuleInit {
   }
 
   async updateStatus(id: string, isActive: boolean, adminId: string, reason: string, ip?: string): Promise<Omit<User, 'passwordHash'> | null> {
+    if (!this.isUUID(id)) return null;
     await this.usersRepository.update(id, { isActive, updatedByUserId: adminId });
     const user = await this.usersRepository.findOne({ where: { id }, relations: ['role', 'subdivision', 'district', 'junction'] });
     if (user) {
@@ -372,6 +444,7 @@ export class UsersService implements OnModuleInit {
   }
 
   async resetPassword(id: string, adminId: string, reason: string, ip?: string, customPassword?: string): Promise<string | null> {
+    if (!this.isUUID(id)) return null;
     const user = await this.usersRepository.findOneBy({ id });
     if (!user) return null;
 
@@ -394,10 +467,12 @@ export class UsersService implements OnModuleInit {
   }
 
   async findById(id: string): Promise<User | null> {
+    if (!this.isUUID(id)) return null;
     return this.usersRepository.findOne({ where: { id }, relations: ['role'] });
   }
 
   async setPasswordHash(id: string, hash: string): Promise<void> {
+    if (!this.isUUID(id)) return;
     await this.usersRepository.update(id, {
       passwordHash: hash,
       requiresPasswordChange: false,
@@ -407,6 +482,7 @@ export class UsersService implements OnModuleInit {
   }
 
   async incrementFailedLogins(id: string): Promise<void> {
+    if (!this.isUUID(id)) return;
     const user = await this.usersRepository.findOneBy({ id });
     if (user) {
       user.failedLoginAttempts += 1;
@@ -418,10 +494,12 @@ export class UsersService implements OnModuleInit {
   }
 
   async resetFailedLogins(id: string): Promise<void> {
+    if (!this.isUUID(id)) return;
     await this.usersRepository.update(id, { failedLoginAttempts: 0, lockedUntil: null });
   }
 
   async deleteUser(id: string, adminId: string, ip?: string): Promise<boolean> {
+    if (!this.isUUID(id)) return false;
     const user = await this.usersRepository.findOneBy({ id });
     if (user) {
       await this.usersRepository.delete(id);

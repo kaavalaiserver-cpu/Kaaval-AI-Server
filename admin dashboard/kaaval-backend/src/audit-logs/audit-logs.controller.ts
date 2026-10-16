@@ -79,7 +79,7 @@ export class AuditLogsController {
 
   @Get('actions')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('SUPER_ADMIN')
+  @Roles('SUPER_ADMIN', 'ADMIN_SAJIV', 'ADMIN_BINU', 'ADMIN_HARISH', 'DEVELOPER')
   async getDistinctActions() {
     const rows = await this.auditRepo
       .createQueryBuilder('log')

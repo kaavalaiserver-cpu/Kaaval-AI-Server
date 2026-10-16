@@ -28,6 +28,7 @@ export class KnownVehiclesService {
     cameraName?: string;
     location?: string;
     confidence?: number;
+    imagePath?: string;
   }): Promise<KnownVehicleHit> {
     const hit = this.hitRepo.create({
       knownVehicleId: dto.knownVehicleId,
@@ -37,6 +38,7 @@ export class KnownVehiclesService {
       cameraName: dto.cameraName ?? null,
       location: dto.location ?? null,
       confidence: dto.confidence ?? null,
+      imagePath: dto.imagePath ?? null,
     });
     return this.hitRepo.save(hit);
   }
@@ -46,13 +48,17 @@ export class KnownVehiclesService {
     return this.kvRepo.find({ order: { createdAt: 'DESC' } });
   }
 
-  /** Get history of suppressed hits for a specific vehicle — text only, no images */
-  async getHistory(vehicleNumber: string): Promise<KnownVehicleHit[]> {
+  /** Get history of suppressed hits for a specific vehicle with image proof */
+  async getHistory(vehicleNumber: string): Promise<any[]> {
     const normalized = vehicleNumber.trim().toUpperCase().replace(/\s+/g, '');
-    return this.hitRepo.find({
+    const hits = await this.hitRepo.find({
       where: { vehicleNumber: normalized },
       order: { hitTimestamp: 'DESC' },
     });
+    return hits.map(h => ({
+      ...h,
+      imageUrl: h.imagePath ? `/api/violations/image/by-key?key=${encodeURIComponent(h.imagePath)}` : null,
+    }));
   }
 
   /** Add a vehicle to the known list — super_admin only */

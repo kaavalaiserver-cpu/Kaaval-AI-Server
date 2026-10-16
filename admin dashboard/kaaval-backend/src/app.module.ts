@@ -18,6 +18,7 @@ import { UsersModule } from './users/users.module.js';
 import { ReportsModule } from './reports/reports.module.js';
 import { AuditLogsModule } from './audit-logs/audit-logs.module.js';
 import { KnownVehiclesModule } from './known-vehicles/known-vehicles.module.js';
+import { ModelEvaluationsModule } from './model-evaluations/model-evaluations.module.js';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
@@ -121,6 +122,7 @@ function checkPort(host: string, port: number, timeout = 2000): Promise<boolean>
     ReportsModule,
     AuditLogsModule,
     KnownVehiclesModule,
+    ModelEvaluationsModule,
   ],
   controllers: [AppController],
   providers: [

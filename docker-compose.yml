@@ -37,6 +37,7 @@ services:
       - LOCAL_UPLOAD_DIR=${LOCAL_UPLOAD_DIR}
       - LOCAL_BACKUP_DIR=${LOCAL_BACKUP_DIR}
       - LOCAL_EXPORT_DIR=${LOCAL_EXPORT_DIR}
+      - AI_BACKEND_URL=http://evidence_api:8001
     volumes:
       - F:/kaaval ai database/uploads:/app/data/uploads
       - F:/kaaval ai database/logs:/usr/src/app/logs
@@ -93,6 +94,9 @@ services:
       - CORS_ORIGINS=["http://localhost:3000","http://127.0.0.1:3000","http://localhost:80","http://localhost"]
       - AI_MODELS_DIR=${AI_MODELS_DIR}
       - LOCAL_UPLOAD_DIR=${LOCAL_UPLOAD_DIR}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - ALERT_RECIPIENT_EMAIL=${ALERT_RECIPIENT_EMAIL}
     volumes:
       - F:/kaaval ai database/ai_models:/app/ai_models
       - F:/kaaval ai database/uploads:/app/data/uploads

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { API_BASE } from '../config';
 import type { ViolationItem, ViolationStats, PaginatedViolations } from '../types';
@@ -50,11 +51,31 @@ const isPlateUnknown = (plate: string | null | undefined): boolean => {
 
 const Violations = () => {
   const { hasRole } = useAuth();
+  const [searchParams] = useSearchParams();
   const [violations, setViolations] = useState<ViolationItem[]>([]);
   const [stats, setStats] = useState<ViolationStats | null>(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<Filters>(() => {
+    const q = new URLSearchParams(window.location.search).get('search') || new URLSearchParams(window.location.search).get('vehicleNumber');
+    if (q) {
+      return { ...EMPTY_FILTERS, vehicleNumber: q.trim().toUpperCase(), dateFrom: '', dateTo: '' };
+    }
+    return EMPTY_FILTERS;
+  });
+
+  useEffect(() => {
+    const q = searchParams.get('search') || searchParams.get('vehicleNumber');
+    if (q) {
+      setPage(1);
+      setFilters(prev => ({
+        ...prev,
+        vehicleNumber: q.trim().toUpperCase(),
+        dateFrom: '',
+        dateTo: '',
+      }));
+    }
+  }, [searchParams]);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);

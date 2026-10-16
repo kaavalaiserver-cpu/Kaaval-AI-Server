@@ -30,8 +30,7 @@ const ROLES = [
   'marthandam_admin',
   'inspector',
   'sub_inspector',
-  'operator',
-  'viewer',
+  'intern',
   'developer'
 ];
 

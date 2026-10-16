@@ -15,11 +15,14 @@ import KitManagement from './pages/KitManagement';
 import WantedVehicles from './pages/WantedVehicles';
 import KnownVehicles from './pages/KnownVehicles';
 import AuditLog from './pages/AuditLog';
+import ModelReviewStudio from './pages/ModelReviewStudio';
+import ModelIntelligence from './pages/ModelIntelligence';
 
 const FULL_ACCESS_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer', 'admin_sajiv', 'admin_binu', 'admin_harish'];
 const MANAGEMENT_ROLES: Role[] = ['super_admin', 'sp', 'dsp', 'developer', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'admin_sajiv', 'admin_binu', 'admin_harish'];
-const ALL_EXCEPT_VIEWERS: Role[] = ['super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'developer', 'operator', 'admin_sajiv', 'admin_binu', 'admin_harish'];
+const ALL_EXCEPT_VIEWERS: Role[] = ['super_admin', 'sp', 'dsp', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'inspector', 'sub_inspector', 'developer', 'admin_sajiv', 'admin_binu', 'admin_harish'];
 const TECH_ROLES: Role[] = ['super_admin', 'developer'];
+const REVIEW_STUDIO_ROLES: Role[] = ['intern', 'developer', 'super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish', 'inspector', 'sub_inspector'];
 const CAMERA_HEALTH_ROLES: Role[] = ['super_admin', 'developer', 'sp', 'dsp', 'inspector', 'sub_inspector', 'nagercoil_admin', 'thuckalay_admin', 'colachel_admin', 'kanyakumari_admin', 'marthandam_admin', 'admin_sajiv', 'admin_binu', 'admin_harish'];
 const KNOWN_VEHICLES_ROLES: Role[] = ['super_admin', 'admin_sajiv', 'admin_binu', 'admin_harish'];
 
@@ -49,9 +52,19 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/login" element={user ? (user.role === 'intern' ? <Navigate to="/review-studio" replace /> : <Navigate to="/" replace />) : <Login />} />
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-        <Route index element={<Dashboard />} />
+        <Route index element={user?.role === 'intern' ? <Navigate to="/review-studio" replace /> : <Dashboard />} />
+        <Route path="review-studio" element={
+          <ProtectedRoute roles={REVIEW_STUDIO_ROLES}>
+            <ModelReviewStudio />
+          </ProtectedRoute>
+        } />
+        <Route path="model-intelligence" element={
+          <ProtectedRoute roles={TECH_ROLES}>
+            <ModelIntelligence />
+          </ProtectedRoute>
+        } />
         <Route path="violations" element={
           <ProtectedRoute roles={ALL_EXCEPT_VIEWERS}>
             <Violations />
